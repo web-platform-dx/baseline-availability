@@ -20,6 +20,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,7 +41,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Authenticate to Google Cloud
-        if: "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' || secrets.GCP_SA_KEY != '' }}"
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != '' || env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID || secrets.GOOGLE_CLOUD_PROJECT }}
@@ -47,7 +50,7 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Fetch BigQuery Data
-        if: "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' || secrets.GCP_SA_KEY != '' }}"
+        if: env.GCP_WORKLOAD_IDENTITY_PROVIDER != '' || env.GCP_SA_KEY != ''
         env:
           GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID || secrets.GOOGLE_CLOUD_PROJECT }}
         run: npm run fetch-data
