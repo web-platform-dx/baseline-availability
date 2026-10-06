@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {# Note: frame-ancestors is omitted from <meta> CSP because browsers only support it via HTTP response headers #}
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self';">
+  <title>{{ title or site.title }}</title>
+  <meta name="description" content="{{ description or site.description }}">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="org-badge">{{ site.organization }}</span>
+        <a href="/" class="brand-title">{{ site.title }}</a>
+      </div>
+      <nav aria-label="Primary navigation">
+        <a href="{{ site.repositoryUrl }}" class="nav-link" rel="noopener noreferrer" target="_blank">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container main-content" id="main-content">
+    {{ content | safe }}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>Maintained by the <strong>{{ site.organization }}</strong> organization.</p>
+    </div>
+  </footer>
+</body>
+</html>

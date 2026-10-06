@@ -1,0 +1,43 @@
+---
+layout: layouts/base.njk
+title: Baseline Availability
+---
+
+<section class="hero-section">
+  <h1>{{ site.title }}</h1>
+  <p class="lead">{{ site.description }}</p>
+</section>
+
+<section class="status-card" aria-labelledby="pipeline-status-heading">
+  <div class="status-header">
+    <h2 id="pipeline-status-heading">BigQuery Data Snapshot</h2>
+    {% if bigquery.example_summary.generatedAt %}
+      <span class="timestamp">Last updated: <code>{{ bigquery.example_summary.generatedAt }}</code></span>
+    {% endif %}
+  </div>
+
+  {% if bigquery.example_summary.rows and bigquery.example_summary.rows.length > 0 %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Status</th>
+            <th scope="col">Sample Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in bigquery.example_summary.rows %}
+            <tr>
+              <td>{{ row.status }}</td>
+              <td>{{ row.sample_count | formatNumber }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty-state">
+      No BigQuery rows loaded yet. Run <code>npm run fetch-data</code> to query BigQuery and populate <code>src/_data/bigquery/</code>.
+    </p>
+  {% endif %}
+</section>

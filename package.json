@@ -1,0 +1,27 @@
+{
+  "name": "baseline-availability",
+  "version": "0.1.0",
+  "description": "Public HTML dashboard for Web Platform Baseline data, built with BigQuery and 11ty",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/web-platform-dx/baseline-availability.git"
+  },
+  "scripts": {
+    "fetch-data": "node scripts/fetch-data.js",
+    "fetch-data:dry-run": "node scripts/fetch-data.js --dry-run",
+    "build": "eleventy",
+    "serve": "eleventy --serve",
+    "clean": "rm -rf _site"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^7.9.0"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

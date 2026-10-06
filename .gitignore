@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# 11ty build output
+_site/
+
+# Local environment & credentials
+.env
+.env.*
+!.env.example
+*.pem
+*credentials*.json
+*service-account*.json
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
