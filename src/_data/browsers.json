@@ -1,0 +1,278 @@
+{
+  "description": "Browser shortname definitions mapping RUM Archive USERAGENTFAMILY values to compact codes and baseline-browser-mapping identifiers.",
+  "familyToShort": {
+    "Chrome": "c",
+    "Chrome Mobile": "ca",
+    "Mobile Safari": "si",
+    "Chrome Mobile Webview": "wva",
+    "Edge": "e",
+    "Samsung Internet": "sa",
+    "Firefox": "f",
+    "Safari": "s",
+    "Mobile Safari Webview": "siw",
+    "Chrome Derivative": "cd",
+    "UCBrowser Mobile": "u",
+    "Opera Mobile": "oa",
+    "Instagram": "ia",
+    "Opera": "o",
+    "Facebook": "fb",
+    "Samsung TV": "stv",
+    "Silk": "slk",
+    "Firefox Mobile": "fa",
+    "Yandex": "yd",
+    "Chromium": "cr",
+    "UCBrowser": "uc",
+    "Yandex Mobile": "y",
+    "Aloha Browser": "alo",
+    "Snapchat": "snp",
+    "Flipboard": "flp",
+    "Puffin": "puf",
+    "Yandex Search App": "ysa",
+    "IE": "ie",
+    "Pinterest": "pin",
+    "Coc Coc Mobile": "ccm",
+    "Brave": "brv",
+    "Coc Coc": "cc",
+    "Microsoft365": "m365",
+    "Playstation": "ps",
+    "Smart TV": "tv"
+  },
+  "shortToFamily": {
+    "c": "Chrome",
+    "ca": "Chrome Mobile",
+    "si": "Mobile Safari",
+    "wva": "Chrome Mobile Webview",
+    "e": "Edge",
+    "sa": "Samsung Internet",
+    "f": "Firefox",
+    "s": "Safari",
+    "siw": "Mobile Safari Webview",
+    "cd": "Chrome Derivative",
+    "u": "UCBrowser Mobile",
+    "oa": "Opera Mobile",
+    "ia": "Instagram",
+    "o": "Opera",
+    "fb": "Facebook",
+    "stv": "Samsung TV",
+    "slk": "Silk",
+    "fa": "Firefox Mobile",
+    "yd": "Yandex",
+    "cr": "Chromium",
+    "uc": "UCBrowser",
+    "y": "Yandex Mobile",
+    "alo": "Aloha Browser",
+    "snp": "Snapchat",
+    "flp": "Flipboard",
+    "puf": "Puffin",
+    "ysa": "Yandex Search App",
+    "ie": "IE",
+    "pin": "Pinterest",
+    "ccm": "Coc Coc Mobile",
+    "brv": "Brave",
+    "cc": "Coc Coc",
+    "m365": "Microsoft365",
+    "ps": "Playstation",
+    "tv": "Smart TV"
+  },
+  "definitions": {
+    "c": {
+      "shortName": "c",
+      "userAgentFamily": "Chrome",
+      "baselineBrowser": "chrome",
+      "baselineBrowserByOs": {
+        "Android OS": "chrome_android",
+        "iOS": "safari_ios"
+      }
+    },
+    "ca": {
+      "shortName": "ca",
+      "userAgentFamily": "Chrome Mobile",
+      "baselineBrowser": "chrome_android",
+      "baselineBrowserByOs": {
+        "Android OS": "chrome_android",
+        "iOS": "safari_ios"
+      }
+    },
+    "si": {
+      "shortName": "si",
+      "userAgentFamily": "Mobile Safari",
+      "baselineBrowser": "safari_ios"
+    },
+    "wva": {
+      "shortName": "wva",
+      "userAgentFamily": "Chrome Mobile Webview",
+      "baselineBrowser": "webview_android"
+    },
+    "e": {
+      "shortName": "e",
+      "userAgentFamily": "Edge",
+      "baselineBrowser": "edge"
+    },
+    "sa": {
+      "shortName": "sa",
+      "userAgentFamily": "Samsung Internet",
+      "baselineBrowser": "samsunginternet_android"
+    },
+    "f": {
+      "shortName": "f",
+      "userAgentFamily": "Firefox",
+      "baselineBrowser": "firefox",
+      "baselineBrowserByOs": {
+        "Android OS": "firefox_android",
+        "iOS": "safari_ios"
+      }
+    },
+    "s": {
+      "shortName": "s",
+      "userAgentFamily": "Safari",
+      "baselineBrowser": "safari"
+    },
+    "siw": {
+      "shortName": "siw",
+      "userAgentFamily": "Mobile Safari Webview",
+      "baselineBrowser": "safari_ios"
+    },
+    "cd": {
+      "shortName": "cd",
+      "userAgentFamily": "Chrome Derivative",
+      "baselineBrowser": null
+    },
+    "u": {
+      "shortName": "u",
+      "userAgentFamily": "UCBrowser Mobile",
+      "baselineBrowser": "uc_android"
+    },
+    "oa": {
+      "shortName": "oa",
+      "userAgentFamily": "Opera Mobile",
+      "baselineBrowser": "opera_android"
+    },
+    "ia": {
+      "shortName": "ia",
+      "userAgentFamily": "Instagram",
+      "baselineBrowser": "instagram_android",
+      "baselineBrowserByOs": {
+        "Android OS": "instagram_android",
+        "iOS": "safari_ios"
+      }
+    },
+    "o": {
+      "shortName": "o",
+      "userAgentFamily": "Opera",
+      "baselineBrowser": "opera"
+    },
+    "fb": {
+      "shortName": "fb",
+      "userAgentFamily": "Facebook",
+      "baselineBrowser": "facebook_android",
+      "baselineBrowserByOs": {
+        "Android OS": "facebook_android",
+        "iOS": "safari_ios"
+      }
+    },
+    "stv": {
+      "shortName": "stv",
+      "userAgentFamily": "Samsung TV",
+      "baselineBrowser": null
+    },
+    "slk": {
+      "shortName": "slk",
+      "userAgentFamily": "Silk",
+      "baselineBrowser": null
+    },
+    "fa": {
+      "shortName": "fa",
+      "userAgentFamily": "Firefox Mobile",
+      "baselineBrowser": "firefox_android",
+      "baselineBrowserByOs": {
+        "Android OS": "firefox_android",
+        "iOS": "safari_ios"
+      }
+    },
+    "yd": {
+      "shortName": "yd",
+      "userAgentFamily": "Yandex",
+      "baselineBrowser": null
+    },
+    "cr": {
+      "shortName": "cr",
+      "userAgentFamily": "Chromium",
+      "baselineBrowser": "chrome"
+    },
+    "uc": {
+      "shortName": "uc",
+      "userAgentFamily": "UCBrowser",
+      "baselineBrowser": null
+    },
+    "y": {
+      "shortName": "y",
+      "userAgentFamily": "Yandex Mobile",
+      "baselineBrowser": "ya_android"
+    },
+    "alo": {
+      "shortName": "alo",
+      "userAgentFamily": "Aloha Browser",
+      "baselineBrowser": null
+    },
+    "snp": {
+      "shortName": "snp",
+      "userAgentFamily": "Snapchat",
+      "baselineBrowser": null
+    },
+    "flp": {
+      "shortName": "flp",
+      "userAgentFamily": "Flipboard",
+      "baselineBrowser": null
+    },
+    "puf": {
+      "shortName": "puf",
+      "userAgentFamily": "Puffin",
+      "baselineBrowser": null
+    },
+    "ysa": {
+      "shortName": "ysa",
+      "userAgentFamily": "Yandex Search App",
+      "baselineBrowser": "ya_android"
+    },
+    "ie": {
+      "shortName": "ie",
+      "userAgentFamily": "IE",
+      "baselineBrowser": null
+    },
+    "pin": {
+      "shortName": "pin",
+      "userAgentFamily": "Pinterest",
+      "baselineBrowser": null
+    },
+    "ccm": {
+      "shortName": "ccm",
+      "userAgentFamily": "Coc Coc Mobile",
+      "baselineBrowser": null
+    },
+    "brv": {
+      "shortName": "brv",
+      "userAgentFamily": "Brave",
+      "baselineBrowser": "chrome"
+    },
+    "cc": {
+      "shortName": "cc",
+      "userAgentFamily": "Coc Coc",
+      "baselineBrowser": null
+    },
+    "m365": {
+      "shortName": "m365",
+      "userAgentFamily": "Microsoft365",
+      "baselineBrowser": null
+    },
+    "ps": {
+      "shortName": "ps",
+      "userAgentFamily": "Playstation",
+      "baselineBrowser": null
+    },
+    "tv": {
+      "shortName": "tv",
+      "userAgentFamily": "Smart TV",
+      "baselineBrowser": null
+    }
+  }
+}

@@ -8,15 +8,49 @@ title: Baseline Availability
   <p class="lead">{{ site.description }}</p>
 </section>
 
+{% set dailySummary = bigquery.global_daily_aggregates | summarizeDailyAggregates(25) %}
+
 <section class="status-card" aria-labelledby="pipeline-status-heading">
   <div class="status-header">
-    <h2 id="pipeline-status-heading">BigQuery Data Snapshot</h2>
-    {% if bigquery.example_summary.generatedAt %}
+    <h2 id="pipeline-status-heading">RUM Archive Global Daily Aggregates</h2>
+    {% if dailySummary and dailySummary.generatedAt %}
+      <span class="timestamp">Last updated: <code>{{ dailySummary.generatedAt }}</code></span>
+    {% elif bigquery.example_summary.generatedAt %}
       <span class="timestamp">Last updated: <code>{{ bigquery.example_summary.generatedAt }}</code></span>
     {% endif %}
   </div>
 
-  {% if bigquery.example_summary.rows and bigquery.example_summary.rows.length > 0 %}
+  {% if dailySummary and dailySummary.rows.length > 0 %}
+    <p class="data-summary">
+      Loaded <strong>{{ dailySummary.totalRows | formatNumber }}</strong> daily aggregate combinations across <strong>{{ dailySummary.dayCount }}</strong> days (<code>{{ dailySummary.startDate }}</code> to <code>{{ dailySummary.endDate }}</code>). Showing top entries:
+    </p>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Browser</th>
+            <th scope="col">Version</th>
+            <th scope="col">OS</th>
+            <th scope="col">OS Version</th>
+            <th scope="col">Page Load Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in dailySummary.rows %}
+            <tr>
+              <td>{{ row.DATE }}</td>
+              <td>{{ row.USERAGENTFAMILY }}</td>
+              <td>{{ row.USERAGENTVERSION }}</td>
+              <td>{{ row.OS }}</td>
+              <td>{{ row.OSVERSION }}</td>
+              <td>{{ row.count | formatNumber }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% elif bigquery.example_summary.rows and bigquery.example_summary.rows.length > 0 %}
     <div class="table-wrapper">
       <table class="data-table">
         <thead>
