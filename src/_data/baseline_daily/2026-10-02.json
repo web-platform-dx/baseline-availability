@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-10-07T14:10:26.441Z",
+  "date": "2026-10-02",
+  "totalPageLoads": 20771662900,
+  "mappedPageLoads": 18355266400,
+  "unmappedPageLoads": 2416396500,
+  "mappedPercentage": 88.37,
+  "widelyAvailable": {
+    "compatiblePageLoads": 16520972000,
+    "percentage": 90.01,
+    "percentageOfTotal": 79.54
+  },
+  "newlyAvailable": {
+    "compatiblePageLoads": 9693649900,
+    "percentage": 52.81,
+    "percentageOfTotal": 46.67
+  },
+  "annualTargets": {
+    "2015": {
+      "compatiblePageLoads": 18341840600,
+      "percentage": 99.93,
+      "percentageOfTotal": 88.3
+    },
+    "2016": {
+      "compatiblePageLoads": 18328220300,
+      "percentage": 99.85,
+      "percentageOfTotal": 88.24
+    },
+    "2017": {
+      "compatiblePageLoads": 18319146600,
+      "percentage": 99.8,
+      "percentageOfTotal": 88.19
+    },
+    "2018": {
+      "compatiblePageLoads": 18314567000,
+      "percentage": 99.78,
+      "percentageOfTotal": 88.17
+    },
+    "2019": {
+      "compatiblePageLoads": 18312656400,
+      "percentage": 99.77,
+      "percentageOfTotal": 88.16
+    },
+    "2020": {
+      "compatiblePageLoads": 18230246100,
+      "percentage": 99.32,
+      "percentageOfTotal": 87.76
+    },
+    "2021": {
+      "compatiblePageLoads": 18122631000,
+      "percentage": 98.73,
+      "percentageOfTotal": 87.25
+    },
+    "2022": {
+      "compatiblePageLoads": 17649023300,
+      "percentage": 96.15,
+      "percentageOfTotal": 84.97
+    },
+    "2023": {
+      "compatiblePageLoads": 16804295700,
+      "percentage": 91.55,
+      "percentageOfTotal": 80.9
+    },
+    "2024": {
+      "compatiblePageLoads": 16086122200,
+      "percentage": 87.64,
+      "percentageOfTotal": 77.44
+    },
+    "2025": {
+      "compatiblePageLoads": 14827721800,
+      "percentage": 80.78,
+      "percentageOfTotal": 71.38
+    },
+    "2026": {
+      "compatiblePageLoads": 9693649900,
+      "percentage": 52.81,
+      "percentageOfTotal": 46.67
+    }
+  }
+}

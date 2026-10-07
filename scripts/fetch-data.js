@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BigQuery } from "@google-cloud/bigquery";
+import { calculateAllDailyBaseline } from "./calculate-baseline.js";
 
 // Automatically load .env file if present in working directory (Node.js 20.6+)
 try {
@@ -222,7 +223,8 @@ async function writeLocalData(outputFileName, data) {
 }
 
 const RUMARCHIVE_TABLE =
-  process.env.RUMARCHIVE_TABLE || "cf-open-web-performance.rumarchive.rumarchive_page_loads";
+  process.env.RUMARCHIVE_TABLE ||
+  "cf-open-web-performance.rumarchive.rumarchive_user_agent";
 
 /**
  * Define the BigQuery queries to execute, optional parameters, and post-processing.
@@ -234,7 +236,7 @@ const QUERY_JOBS = [
     name: "global_daily_aggregates",
     sqlFile: "global_daily_aggregates.sql",
     outputSubDir: "global_daily_aggregates",
-    minStartDate: "2026-09-21",
+    minStartDate: "2026-09-28",
     schema: [
       "USERAGENTFAMILY",
       "USERAGENTVERSION",
@@ -242,8 +244,8 @@ const QUERY_JOBS = [
       "USERAGENTENGINEVERSION",
       "OS",
       "OSVERSION",
-      "row_count",
-      "count",
+      "ROWCOUNT",
+      "TOTAL",
     ],
     params: {},
     templateVars: {
@@ -308,8 +310,8 @@ async function main() {
       const startDate = computeNextStartDate(jobDef.minStartDate, existingDates);
       params = {
         ...params,
-        startDate,
-        existingDates,
+        startDate: BigQuery.date(startDate),
+        existingDates: existingDates.map((d) => BigQuery.date(d)),
       };
       types = {
         startDate: "DATE",
@@ -345,6 +347,10 @@ async function main() {
       const processed = typeof jobDef.process === "function" ? await jobDef.process(rows) : rows;
       await writeLocalData(jobDef.outputFile, processed);
     }
+  }
+
+  if (!isDryRun) {
+    await calculateAllDailyBaseline();
   }
 
   console.log("BigQuery data pipeline completed.");
