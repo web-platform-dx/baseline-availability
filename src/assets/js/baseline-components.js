@@ -713,6 +713,86 @@ class BaselineTimeseriesChart extends HTMLElement {
   }
 }
 
+const THEME_STORAGE_KEY = "baseline-theme";
+
+function getStoredTheme() {
+  try {
+    const val = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (val === "light" || val === "dark") {
+      return val;
+    }
+  } catch {
+    // Storage access unavailable
+  }
+  return null;
+}
+
+function setStoredTheme(theme) {
+  try {
+    if (theme === "light" || theme === "dark") {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } else {
+      window.localStorage.removeItem(THEME_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage write errors
+  }
+}
+
+function getSystemTheme() {
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function getEffectiveTheme() {
+  const attr = document.documentElement.getAttribute("data-theme");
+  if (attr === "light" || attr === "dark") {
+    return attr;
+  }
+  return getSystemTheme();
+}
+
+function initThemeToggle() {
+  const stored = getStoredTheme();
+  if (stored) {
+    document.documentElement.setAttribute("data-theme", stored);
+  }
+
+  const toggleBtn = document.getElementById("theme-toggle");
+  const toggleLabel = document.getElementById("theme-toggle-label");
+  if (!toggleBtn) return;
+
+  const syncButtonUi = () => {
+    const isDark = getEffectiveTheme() === "dark";
+    const actionLabel = isDark ? "Switch to light theme" : "Switch to dark theme";
+    toggleBtn.setAttribute("aria-pressed", isDark ? "true" : "false");
+    toggleBtn.setAttribute("aria-label", actionLabel);
+    toggleBtn.setAttribute("title", actionLabel);
+    if (toggleLabel) {
+      toggleLabel.textContent = isDark ? "Light" : "Dark";
+    }
+  };
+
+  toggleBtn.addEventListener("click", () => {
+    const nextTheme = getEffectiveTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    setStoredTheme(nextTheme);
+    syncButtonUi();
+  });
+
+  if (window.matchMedia) {
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    mql.addEventListener("change", () => {
+      syncButtonUi();
+    });
+  }
+
+  syncButtonUi();
+}
+
+initThemeToggle();
+
 if (!customElements.get("baseline-summary-table")) {
   customElements.define("baseline-summary-table", BaselineSummaryTable);
 }

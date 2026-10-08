@@ -1,6 +1,6 @@
 {
   "title": "Baseline Availability",
-  "description": "Public metrics and insights for Web Platform Baseline, powered by BigQuery and 11ty.",
+  "description": "Public metrics and insights for Web Platform Baseline, powered by Cloudflare BEACON.",
   "organization": "web-platform-dx",
   "repositoryUrl": "https://github.com/web-platform-dx/baseline-availability"
 }
