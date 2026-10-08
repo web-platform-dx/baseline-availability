@@ -117,6 +117,16 @@ const DOWNSTREAM_SHORT_TO_BBM = {
   ia: "instagram_android",
 };
 
+const ANDROID_WEBVIEW_FAMILIES = new Set([
+  "wva",
+  "Chrome Mobile Webview",
+]);
+
+const IOS_WEBVIEW_FAMILIES = new Set([
+  "siw",
+  "Mobile Safari Webview",
+]);
+
 const BLINK_BROWSER_SHORTS = new Set([
   "c",
   "ca",
@@ -142,17 +152,36 @@ const BLINK_BROWSER_SHORTS = new Set([
 ]);
 
 /**
+ * Identifies whether a row represents an Android WebView (`wva`) or iOS WebView (`siw`).
+ * @param {unknown[]} row
+ * @param {Record<string, number>} colIdx
+ * @returns {"android" | "ios" | null}
+ */
+function getWebviewType(row, colIdx) {
+  const ua = String(row[colIdx.USERAGENTFAMILY] ?? "");
+  if (ANDROID_WEBVIEW_FAMILIES.has(ua)) return "android";
+  if (IOS_WEBVIEW_FAMILIES.has(ua)) return "ios";
+  return null;
+}
+
+/**
  * Resolves a daily aggregate row to a `baseline-browser-mapping` browser ID and version.
  *
  * Rules:
- * 1. WebKit browsers: Use the browser version (`USERAGENTVERSION`) or OS version (`OSVERSION`)
- *    when it matches a valid Safari / iOS major version in `baseline-browser-mapping`.
- * 2. Blink browsers: If `USERAGENTENGINEVERSION` is absent and `USERAGENTVERSION` matches a known
- *    downstream browser version in `baseline-browser-mapping`, use that downstream browser.
- *    Otherwise, use the Blink engine version (`USERAGENTENGINEVERSION` or `USERAGENTVERSION`)
- *    and map it to Chrome (`chrome`, `chrome_android`, `edge`, or `webview_android`).
- * 3. Gecko browsers: Use the Gecko engine version (`USERAGENTENGINEVERSION` or `USERAGENTVERSION`)
- *    and map it to Firefox (`firefox` or `firefox_android`).
+ * 1. iOS (`OS === "iOS"`):
+ *    - If `USERAGENTFAMILY` is Mobile Safari (`"si"`), map to `safari_ios` using `USERAGENTVERSION`.
+ *    - If `USERAGENTFAMILY` is not Mobile Safari, map to `safari_ios` using `OSVERSION`.
+ *    - If the required version is unavailable or invalid, return `null` (recorded as unmapped).
+ * 2. Android (`OS === "Android OS"`):
+ *    - Chrome Mobile Webview (`"wva"`) maps to `webview_android` and all other Blink browsers map to
+ *      `chrome_android` using their engine version (`USERAGENTENGINEVERSION`, or `USERAGENTVERSION`
+ *      for Chromium-versioned families).
+ *    - Gecko browsers map to `firefox_android` using their engine version (`USERAGENTENGINEVERSION`
+ *      or `USERAGENTVERSION`).
+ * 3. Other OSes (Desktop / etc.):
+ *    - WebKit / Safari rows map to `safari` using `USERAGENTVERSION` (or `OSVERSION` >= 26 on macOS).
+ *    - Blink rows map to `edge` (`"e"`), `chrome_android` (`"ca"`), `webview_android` (`"wva"`), or `chrome`.
+ *    - Gecko rows map to `firefox` (or `firefox_android` for `"fa"`).
  *
  * @param {unknown[]} row
  * @param {Record<string, number>} colIdx
@@ -167,12 +196,55 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
   const os = String(row[colIdx.OS] ?? "");
   const osv = row[colIdx.OSVERSION];
 
+  // 1. All iOS rows map to safari_ios: Mobile Safari via UAVERSION, all others via OSVERSION
+  if (os === "iOS") {
+    const isMobileSafari = ua === "si" || ua === "Mobile Safari";
+    const candidateVersion = isMobileSafari ? uav : osv;
+    if (
+      isValidVersion(candidateVersion) &&
+      lookups.safariMajorVersions.has(getMajorVersion(candidateVersion))
+    ) {
+      return { browser: "safari_ios", version: String(candidateVersion) };
+    }
+    return null;
+  }
+
   const isBlink = eng === "Blink";
   const isGecko = eng === "Gecko";
   const isWebKit = eng === "WebKit" || eng === "Web Kit";
 
-  // 1. WebKit / iOS / Safari rows
-  if (isWebKit || ua === "s" || ua === "si" || ua === "siw" || os === "iOS") {
+  // 2. Android OS rows: map Blink to chrome_android (or webview_android for wva) and Gecko to firefox_android
+  if (os === "Android OS") {
+    if (isBlink || BLINK_BROWSER_SHORTS.has(ua)) {
+      const targetBrowser = ANDROID_WEBVIEW_FAMILIES.has(ua) ? "webview_android" : "chrome_android";
+      if (isValidVersion(engv)) {
+        return { browser: targetBrowser, version: String(engv) };
+      }
+
+      if (!Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua) && isValidVersion(uav)) {
+        return { browser: targetBrowser, version: String(uav) };
+      }
+
+      return null;
+    }
+
+    if (isGecko || ua === "f" || ua === "fa") {
+      const geckoVersion = isValidVersion(engv)
+        ? String(engv)
+        : isValidVersion(uav)
+          ? String(uav)
+          : null;
+
+      if (geckoVersion) {
+        return { browser: "firefox_android", version: geckoVersion };
+      }
+    }
+
+    return null;
+  }
+
+  // 3. Non-iOS WebKit / Safari rows (e.g. macOS Safari)
+  if (isWebKit || ua === "s" || ua === "si" || ua === "siw") {
     const targetBrowser = os === "Mac OS X" || ua === "s" ? "safari" : "safari_ios";
 
     if (isValidVersion(uav) && lookups.safariMajorVersions.has(getMajorVersion(uav))) {
@@ -180,8 +252,7 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
     }
 
     if (isValidVersion(osv) && lookups.safariMajorVersions.has(getMajorVersion(osv))) {
-      // On iOS, OS version maps directly to Safari iOS version; on macOS, unified 26+ maps to Safari 26+
-      if (os === "iOS" || Number(getMajorVersion(osv)) >= 26) {
+      if (Number(getMajorVersion(osv)) >= 26) {
         return { browser: targetBrowser, version: String(osv) };
       }
     }
@@ -189,18 +260,21 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
     return null;
   }
 
-  // 2. Blink rows
+  // 4. Non-Android Blink rows
   if (isBlink || BLINK_BROWSER_SHORTS.has(ua)) {
-    if (!isValidVersion(engv) && Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua) && isValidVersion(uav)) {
-      const bbmBrowser = DOWNSTREAM_SHORT_TO_BBM[ua];
-      const knownSet = lookups.knownVersionsByBrowser[bbmBrowser];
-      const uavStr = String(uav);
-      if (knownSet?.has(uavStr)) {
-        return { browser: bbmBrowser, version: uavStr };
+    if (!isValidVersion(engv) && Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua)) {
+      if (isValidVersion(uav)) {
+        const bbmBrowser = DOWNSTREAM_SHORT_TO_BBM[ua];
+        const knownSet = lookups.knownVersionsByBrowser[bbmBrowser];
+        const uavStr = String(uav);
+        if (knownSet?.has(uavStr)) {
+          return { browser: bbmBrowser, version: uavStr };
+        }
+        if (knownSet?.has(`${uavStr}.0`)) {
+          return { browser: bbmBrowser, version: `${uavStr}.0` };
+        }
       }
-      if (knownSet?.has(`${uavStr}.0`)) {
-        return { browser: bbmBrowser, version: `${uavStr}.0` };
-      }
+      return null;
     }
 
     const blinkVersion = isValidVersion(engv)
@@ -212,14 +286,14 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
     if (blinkVersion) {
       if (ua === "e") return { browser: "edge", version: blinkVersion };
       if (ua === "wva") return { browser: "webview_android", version: blinkVersion };
-      if (os === "Android OS" || ua === "ca") return { browser: "chrome_android", version: blinkVersion };
+      if (ua === "ca") return { browser: "chrome_android", version: blinkVersion };
       return { browser: "chrome", version: blinkVersion };
     }
 
     return null;
   }
 
-  // 3. Gecko rows
+  // 5. Non-Android Gecko rows
   if (isGecko || ua === "f" || ua === "fa") {
     const geckoVersion = isValidVersion(engv)
       ? String(engv)
@@ -229,7 +303,7 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
 
     if (geckoVersion) {
       return {
-        browser: os === "Android OS" ? "firefox_android" : "firefox",
+        browser: ua === "fa" ? "firefox_android" : "firefox",
         version: geckoVersion,
       };
     }
@@ -283,16 +357,43 @@ function round2(value) {
 }
 
 /**
- * Formats compatibility metrics for a single Baseline target.
+ * Formats compatibility metrics for a single Baseline target, including separated
+ * Android WebView (`wva`) and iOS WebView (`siw`) proportions.
  * @param {number} compatiblePageLoads
+ * @param {number} androidWebviewCompatiblePageLoads
+ * @param {number} iosWebviewCompatiblePageLoads
  * @param {number} mappedPageLoads
  * @param {number} totalPageLoads
  */
-function formatTargetMetrics(compatiblePageLoads, mappedPageLoads, totalPageLoads) {
+function formatTargetMetrics(
+  compatiblePageLoads,
+  androidWebviewCompatiblePageLoads,
+  iosWebviewCompatiblePageLoads,
+  mappedPageLoads,
+  totalPageLoads
+) {
   return {
     compatiblePageLoads,
     percentage: mappedPageLoads > 0 ? round2((compatiblePageLoads / mappedPageLoads) * 100) : 0,
     percentageOfTotal: totalPageLoads > 0 ? round2((compatiblePageLoads / totalPageLoads) * 100) : 0,
+    androidWebviewCompatiblePageLoads,
+    androidWebviewPercentageOfCompatible:
+      compatiblePageLoads > 0
+        ? round2((androidWebviewCompatiblePageLoads / compatiblePageLoads) * 100)
+        : 0,
+    androidWebviewPercentageOfMapped:
+      mappedPageLoads > 0 ? round2((androidWebviewCompatiblePageLoads / mappedPageLoads) * 100) : 0,
+    androidWebviewPercentageOfTotal:
+      totalPageLoads > 0 ? round2((androidWebviewCompatiblePageLoads / totalPageLoads) * 100) : 0,
+    iosWebviewCompatiblePageLoads,
+    iosWebviewPercentageOfCompatible:
+      compatiblePageLoads > 0
+        ? round2((iosWebviewCompatiblePageLoads / compatiblePageLoads) * 100)
+        : 0,
+    iosWebviewPercentageOfMapped:
+      mappedPageLoads > 0 ? round2((iosWebviewCompatiblePageLoads / mappedPageLoads) * 100) : 0,
+    iosWebviewPercentageOfTotal:
+      totalPageLoads > 0 ? round2((iosWebviewCompatiblePageLoads / totalPageLoads) * 100) : 0,
   };
 }
 
@@ -375,10 +476,26 @@ export async function calculateAllDailyBaseline({ force = false } = {}) {
 
     let totalPageLoads = 0;
     let mappedPageLoads = 0;
+    let androidWebviewPageLoads = 0;
+    let mappedAndroidWebviewPageLoads = 0;
+    let iosWebviewPageLoads = 0;
+    let mappedIosWebviewPageLoads = 0;
     let widelyCompatibleLoads = 0;
+    let widelyAndroidWebviewCompatibleLoads = 0;
+    let widelyIosWebviewCompatibleLoads = 0;
     let newlyCompatibleLoads = 0;
+    let newlyAndroidWebviewCompatibleLoads = 0;
+    let newlyIosWebviewCompatibleLoads = 0;
     /** @type {Record<string, number>} */
     const annualCompatibleLoads = Object.fromEntries(
+      Object.keys(annualMinMaps).map((year) => [year, 0])
+    );
+    /** @type {Record<string, number>} */
+    const annualAndroidWebviewCompatibleLoads = Object.fromEntries(
+      Object.keys(annualMinMaps).map((year) => [year, 0])
+    );
+    /** @type {Record<string, number>} */
+    const annualIosWebviewCompatibleLoads = Object.fromEntries(
       Object.keys(annualMinMaps).map((year) => [year, 0])
     );
 
@@ -387,27 +504,54 @@ export async function calculateAllDailyBaseline({ force = false } = {}) {
       const count = Number(row[countCol] || 0);
       totalPageLoads += count;
 
+      const webviewType = getWebviewType(row, colIdx);
+      if (webviewType === "android") {
+        androidWebviewPageLoads += count;
+      } else if (webviewType === "ios") {
+        iosWebviewPageLoads += count;
+      }
+
       const resolved = resolveRowToBaselineBrowser(row, colIdx, lookups);
       if (!resolved) {
         continue;
       }
 
       mappedPageLoads += count;
+      if (webviewType === "android") {
+        mappedAndroidWebviewPageLoads += count;
+      } else if (webviewType === "ios") {
+        mappedIosWebviewPageLoads += count;
+      }
 
       const widelyMin = widelyMinMap[resolved.browser];
       if (widelyMin !== undefined && compareVersions(resolved.version, widelyMin) >= 0) {
         widelyCompatibleLoads += count;
+        if (webviewType === "android") {
+          widelyAndroidWebviewCompatibleLoads += count;
+        } else if (webviewType === "ios") {
+          widelyIosWebviewCompatibleLoads += count;
+        }
       }
 
       const newlyMin = newlyMinMap[resolved.browser];
       if (newlyMin !== undefined && compareVersions(resolved.version, newlyMin) >= 0) {
         newlyCompatibleLoads += count;
+        if (webviewType === "android") {
+          newlyAndroidWebviewCompatibleLoads += count;
+        } else if (webviewType === "ios") {
+          newlyIosWebviewCompatibleLoads += count;
+        }
       }
 
       for (const [year, minMap] of Object.entries(annualMinMaps)) {
         const minVer = minMap[resolved.browser];
         if (minVer !== undefined && compareVersions(resolved.version, minVer) >= 0) {
           annualCompatibleLoads[year] += count;
+          if (webviewType === "android") {
+            annualAndroidWebviewCompatibleLoads[year] += count;
+          } else if (webviewType === "ios") {
+            annualIosWebviewCompatibleLoads[year] += count;
+          }
         }
       }
     }
@@ -415,7 +559,13 @@ export async function calculateAllDailyBaseline({ force = false } = {}) {
     /** @type {Record<string, ReturnType<typeof formatTargetMetrics>>} */
     const annualTargets = {};
     for (const [year, loads] of Object.entries(annualCompatibleLoads)) {
-      annualTargets[year] = formatTargetMetrics(loads, mappedPageLoads, totalPageLoads);
+      annualTargets[year] = formatTargetMetrics(
+        loads,
+        annualAndroidWebviewCompatibleLoads[year],
+        annualIosWebviewCompatibleLoads[year],
+        mappedPageLoads,
+        totalPageLoads
+      );
     }
 
     const payload = {
@@ -425,8 +575,34 @@ export async function calculateAllDailyBaseline({ force = false } = {}) {
       mappedPageLoads,
       unmappedPageLoads: totalPageLoads - mappedPageLoads,
       mappedPercentage: totalPageLoads > 0 ? round2((mappedPageLoads / totalPageLoads) * 100) : 0,
-      widelyAvailable: formatTargetMetrics(widelyCompatibleLoads, mappedPageLoads, totalPageLoads),
-      newlyAvailable: formatTargetMetrics(newlyCompatibleLoads, mappedPageLoads, totalPageLoads),
+      androidWebviewPageLoads,
+      mappedAndroidWebviewPageLoads,
+      unmappedAndroidWebviewPageLoads: androidWebviewPageLoads - mappedAndroidWebviewPageLoads,
+      androidWebviewPercentageOfTotal:
+        totalPageLoads > 0 ? round2((androidWebviewPageLoads / totalPageLoads) * 100) : 0,
+      androidWebviewPercentageOfMapped:
+        mappedPageLoads > 0 ? round2((mappedAndroidWebviewPageLoads / mappedPageLoads) * 100) : 0,
+      iosWebviewPageLoads,
+      mappedIosWebviewPageLoads,
+      unmappedIosWebviewPageLoads: iosWebviewPageLoads - mappedIosWebviewPageLoads,
+      iosWebviewPercentageOfTotal:
+        totalPageLoads > 0 ? round2((iosWebviewPageLoads / totalPageLoads) * 100) : 0,
+      iosWebviewPercentageOfMapped:
+        mappedPageLoads > 0 ? round2((mappedIosWebviewPageLoads / mappedPageLoads) * 100) : 0,
+      widelyAvailable: formatTargetMetrics(
+        widelyCompatibleLoads,
+        widelyAndroidWebviewCompatibleLoads,
+        widelyIosWebviewCompatibleLoads,
+        mappedPageLoads,
+        totalPageLoads
+      ),
+      newlyAvailable: formatTargetMetrics(
+        newlyCompatibleLoads,
+        newlyAndroidWebviewCompatibleLoads,
+        newlyIosWebviewCompatibleLoads,
+        mappedPageLoads,
+        totalPageLoads
+      ),
       annualTargets,
     };
 
