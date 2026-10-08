@@ -4,74 +4,136 @@ title: Baseline Availability
 ---
 
 <section class="hero-section">
-  <h1>{{ site.title }}</h1>
-  <p class="lead">{{ site.description }}</p>
-</section>
-
-{% set dailySummary = bigquery.global_daily_aggregates | summarizeDailyAggregates(25) %}
-
-<section class="status-card" aria-labelledby="pipeline-status-heading">
-  <div class="status-header">
-    <h2 id="pipeline-status-heading">RUM Archive Global Daily Aggregates</h2>
-    {% if dailySummary and dailySummary.generatedAt %}
-      <span class="timestamp">Last updated: <code>{{ dailySummary.generatedAt }}</code></span>
-    {% elif bigquery.example_summary.generatedAt %}
-      <span class="timestamp">Last updated: <code>{{ bigquery.example_summary.generatedAt }}</code></span>
-    {% endif %}
+  <div class="hero-title-row">
+    <img src="/assets/img/baseline-wordmark.svg" alt="Baseline" class="hero-wordmark" width="180" height="40">
+    <h1>{{ site.title }}</h1>
   </div>
-
-  {% if dailySummary and dailySummary.rows.length > 0 %}
-    <p class="data-summary">
-      Loaded <strong>{{ dailySummary.totalRows | formatNumber }}</strong> daily aggregate combinations across <strong>{{ dailySummary.dayCount }}</strong> days (<code>{{ dailySummary.startDate }}</code> to <code>{{ dailySummary.endDate }}</code>). Showing top entries:
-    </p>
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th scope="col">Date</th>
-            <th scope="col">Browser</th>
-            <th scope="col">Version</th>
-            <th scope="col">OS</th>
-            <th scope="col">OS Version</th>
-            <th scope="col">Page Load Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in dailySummary.rows %}
-            <tr>
-              <td>{{ row.DATE }}</td>
-              <td>{{ row.USERAGENTFAMILY }}</td>
-              <td>{{ row.USERAGENTVERSION }}</td>
-              <td>{{ row.OS }}</td>
-              <td>{{ row.OSVERSION }}</td>
-              <td>{{ row.count | formatNumber }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <p class="lead">{{ site.description }}</p>
+  {% if baseline_summary and baseline_summary.rows %}
+    <div class="meta-pills" aria-label="Dataset summary">
+      <span class="meta-pill">
+        <strong>{{ baseline_summary.recentWindowDays }}-day window:</strong>
+        <code>{{ baseline_summary.recentStartDate }}</code> &rarr; <code>{{ baseline_summary.recentEndDate }}</code>
+      </span>
+      <span class="meta-pill">
+        <strong>Mapped traffic:</strong> {{ baseline_summary.avgMappedPercentage | formatPct }}
+      </span>
+      <span class="meta-pill">
+        <strong>Initial payload:</strong> <code>{{ baseline_summary.bundleSizeBytes | formatNumber }} B</code>
+      </span>
     </div>
-  {% elif bigquery.example_summary.rows and bigquery.example_summary.rows.length > 0 %}
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th scope="col">Status</th>
-            <th scope="col">Sample Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in bigquery.example_summary.rows %}
-            <tr>
-              <td>{{ row.status }}</td>
-              <td>{{ row.sample_count | formatNumber }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <p class="empty-state">
-      No BigQuery rows loaded yet. Run <code>npm run fetch-data</code> to query BigQuery and populate <code>src/_data/bigquery/</code>.
-    </p>
   {% endif %}
 </section>
+
+{% if baseline_summary and baseline_summary.rows and baseline_summary.rows.length > 0 %}
+  <section class="status-card" aria-labelledby="avg-table-heading">
+    <baseline-summary-table id="baseline-summary-table">
+      <div class="status-header">
+        <div>
+          <h2 id="avg-table-heading">Last {{ baseline_summary.recentWindowDays }} Days Average Availability</h2>
+          <p class="section-subtitle">
+            Average global browser compatibility across RUM Archive page loads (click or hover any row to highlight on the chart below).
+          </p>
+        </div>
+        <div class="metric-toggle-group" role="group" aria-label="Availability denominator">
+          <button type="button" class="metric-toggle-btn" data-metric-mode="pct" aria-pressed="true" id="btn-mode-mapped">
+            % of Mapped
+          </button>
+          <button type="button" class="metric-toggle-btn" data-metric-mode="pctTotal" aria-pressed="false" id="btn-mode-total">
+            % of Total
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table baseline-avg-table" id="baseline-7day-table">
+          <thead>
+            <tr>
+              <th scope="col">Baseline Target</th>
+              <th scope="col">7-Day Average</th>
+              <th scope="col" class="num-col">% of Total</th>
+              <th scope="col" class="num-col">7-Day Change</th>
+              <th scope="col" class="num-col">Android WebView Share</th>
+              <th scope="col" class="num-col">iOS WebView Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in baseline_summary.rows %}
+              <tr
+                class="target-row target-row-{{ row.kind }}"
+                data-target-id="{{ row.id }}"
+                tabindex="0"
+                role="button"
+                aria-selected="false"
+              >
+                <th scope="row" class="target-name-cell">
+                  <div class="target-identity">
+                    {% if row.kind == "widely" %}
+                      <img
+                        src="/assets/img/baseline-widely-icon.svg"
+                        alt="Baseline Widely available"
+                        class="target-logo"
+                        width="32"
+                        height="18"
+                      >
+                    {% elif row.kind == "newly" %}
+                      <img
+                        src="/assets/img/baseline-newly-icon.svg"
+                        alt="Baseline Newly available"
+                        class="target-logo"
+                        width="32"
+                        height="18"
+                      >
+                    {% else %}
+                      <span class="year-badge" aria-hidden="true">{{ row.year }}</span>
+                    {% endif %}
+                    <span class="target-label-text">{{ row.label }}</span>
+                  </div>
+                </th>
+                <td class="primary-metric-cell">
+                  <div class="pct-bar-cell">
+                    <span class="pct-value-strong" data-cell-primary-value>{{ row.avgPercentage | formatPct }}</span>
+                    <svg class="pct-bar-svg" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true">
+                      <rect class="pct-bar-track" x="0" y="0" width="100" height="6" rx="3"></rect>
+                      <rect class="pct-bar-fill pct-fill-{{ row.kind }}" x="0" y="0" width="{{ row.avgPercentage }}" height="6" rx="3"></rect>
+                    </svg>
+                  </div>
+                </td>
+                <td class="num-col muted-num">{{ row.avgPercentageOfTotal | formatPct }}</td>
+                <td class="num-col">
+                  <span class="delta-badge {% if row.delta7 > 0 %}delta-pos{% elif row.delta7 < 0 %}delta-neg{% else %}delta-neutral{% endif %}">
+                    {{ row.delta7 | formatDelta }}
+                  </span>
+                </td>
+                <td class="num-col muted-num">{{ row.avgAndroidWebviewPercentage | formatPct }}</td>
+                <td class="num-col muted-num">{{ row.avgIosWebviewPercentage | formatPct }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </baseline-summary-table>
+  </section>
+
+  <section class="status-card chart-card" aria-labelledby="timeseries-heading">
+    <div class="status-header">
+      <div>
+        <h2 id="timeseries-heading">Baseline Availability Over Time</h2>
+        <p class="section-subtitle">
+          Showing {{ baseline_summary.dayCount }} day{% if baseline_summary.dayCount != 1 %}s{% endif %} of global daily availability (up to 3 months). Hover over any date or line to inspect target compatibility.
+        </p>
+      </div>
+      <span class="timestamp">
+        <code>{{ baseline_summary.startDate }}</code> &ndash; <code>{{ baseline_summary.endDate }}</code>
+      </span>
+    </div>
+
+    <baseline-timeseries-chart id="baseline-timeseries-chart"></baseline-timeseries-chart>
+  </section>
+{% else %}
+  <section class="status-card">
+    <p class="empty-state">
+      No Baseline summary data generated yet. Run <code>npm run fetch-data</code> to query BigQuery and compute daily Baseline metrics.
+    </p>
+  </section>
+{% endif %}

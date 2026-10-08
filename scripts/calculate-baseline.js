@@ -612,6 +612,223 @@ export async function calculateAllDailyBaseline({ force = false } = {}) {
         `(Widely: ${payload.widelyAvailable.percentage}%, Newly: ${payload.newlyAvailable.percentage}%)`
     );
   }
+
+  await writeInitialViewBundle();
+}
+
+const SUMMARY_DATA_PATH = path.resolve(PROJECT_ROOT, "src", "_data", "baseline_summary.json");
+const INITIAL_JS_BUNDLE_PATH = path.resolve(PROJECT_ROOT, "src", "assets", "js", "baseline-initial-data.js");
+const MAX_CHART_DAYS = 90;
+const AVG_WINDOW_DAYS = 7;
+
+/**
+ * Delta-encodes an array of percentage values in basis points (0..10000).
+ * Collapses constant series (e.g. all zeros) to a single integer.
+ * @param {number[]} values
+ * @returns {number | number[]}
+ */
+function encodeBasisPointsSeries(values) {
+  const bp = values.map((v) => Math.round(Number(v || 0) * 100));
+  if (bp.length === 0) return 0;
+  const first = bp[0];
+  if (bp.every((v) => v === first)) {
+    return first;
+  }
+  const out = [first];
+  for (let i = 1; i < bp.length; i++) {
+    out.push(bp[i] - bp[i - 1]);
+  }
+  return out;
+}
+
+/**
+ * Computes the arithmetic mean rounded to 2 decimal places.
+ * @param {number[]} values
+ * @returns {number}
+ */
+function meanRound2(values) {
+  if (values.length === 0) return 0;
+  const sum = values.reduce((acc, v) => acc + Number(v || 0), 0);
+  return round2(sum / values.length);
+}
+
+/**
+ * Builds both:
+ * 1. `src/assets/js/baseline-initial-data.js`: an ultra-minimal delta-encoded, self-unpacking JS file
+ *    for the initial 7-day table and 3-month (up to 90-day) time series chart.
+ * 2. `src/_data/baseline_summary.json`: build-time 11ty data for server-rendering the 7-day summary table.
+ */
+export async function writeInitialViewBundle() {
+  let entries = [];
+  try {
+    entries = await fs.readdir(OUTPUT_DIR);
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+    throw error;
+  }
+
+  const allFiles = entries
+    .filter((f) => f.endsWith(".json") && DATE_PATTERN.test(f.slice(0, -5)))
+    .sort();
+
+  if (allFiles.length === 0) return;
+
+  const selectedFiles = allFiles.slice(-MAX_CHART_DAYS);
+  const dailyPayloads = [];
+  for (const fileName of selectedFiles) {
+    const filePath = resolveSafeFilePath(OUTPUT_DIR, fileName);
+    dailyPayloads.push(JSON.parse(await fs.readFile(filePath, "utf8")));
+  }
+
+  const dates = dailyPayloads.map((d) => d.date);
+  const startDate = dates[0];
+  const endDate = dates[dates.length - 1];
+
+  // Check if dates are strictly contiguous (+1 day each)
+  let isContiguous = true;
+  const dayGaps = [];
+  for (let i = 1; i < dates.length; i++) {
+    const prevMs = Date.parse(`${dates[i - 1]}T00:00:00Z`);
+    const currMs = Date.parse(`${dates[i]}T00:00:00Z`);
+    const diffDays = Math.round((currMs - prevMs) / 86400000);
+    dayGaps.push(diffDays);
+    if (diffDays !== 1) {
+      isContiguous = false;
+    }
+  }
+
+  // Collect all annual target years in descending order (e.g. 2026 down to 2015)
+  const latestDay = dailyPayloads[dailyPayloads.length - 1];
+  const yearsDesc = Object.keys(latestDay.annualTargets || {})
+    .map(Number)
+    .filter((y) => !Number.isNaN(y))
+    .sort((a, b) => b - a);
+  const minYear = yearsDesc.length > 0 ? yearsDesc[yearsDesc.length - 1] : 2015;
+  const maxYear = yearsDesc.length > 0 ? yearsDesc[0] : Number(endDate.slice(0, 4));
+
+  const targetDefs = [
+    {
+      key: "w",
+      id: "widely",
+      label: "Widely available",
+      kind: "widely",
+      extract: (d) => d.widelyAvailable,
+    },
+    {
+      key: "n",
+      id: "newly",
+      label: "Newly available",
+      kind: "newly",
+      extract: (d) => d.newlyAvailable,
+    },
+    ...yearsDesc.map((yr) => ({
+      key: String(yr),
+      id: String(yr),
+      label: `Baseline ${yr}`,
+      kind: "year",
+      year: yr,
+      extract: (d) => d.annualTargets?.[String(yr)],
+    })),
+  ];
+
+  /** @type {Record<string, Array<number | number[]>>} */
+  const packedTargets = {};
+  const summaryRows = [];
+  const recentSliceCount = Math.min(AVG_WINDOW_DAYS, dailyPayloads.length);
+
+  for (const def of targetDefs) {
+    const pctSeries = dailyPayloads.map((d) => def.extract(d)?.percentage ?? 0);
+    const pctTotalSeries = dailyPayloads.map((d) => def.extract(d)?.percentageOfTotal ?? 0);
+    const androidWvSeries = dailyPayloads.map(
+      (d) => def.extract(d)?.androidWebviewPercentageOfCompatible ?? 0
+    );
+    const iosWvSeries = dailyPayloads.map(
+      (d) => def.extract(d)?.iosWebviewPercentageOfCompatible ?? 0
+    );
+
+    packedTargets[def.key] = [
+      encodeBasisPointsSeries(pctSeries),
+      encodeBasisPointsSeries(pctTotalSeries),
+      encodeBasisPointsSeries(androidWvSeries),
+      encodeBasisPointsSeries(iosWvSeries),
+    ];
+
+    const recentPct = pctSeries.slice(-recentSliceCount);
+    const recentPctTotal = pctTotalSeries.slice(-recentSliceCount);
+    const recentAndroidWv = androidWvSeries.slice(-recentSliceCount);
+    const recentIosWv = iosWvSeries.slice(-recentSliceCount);
+    const delta7 =
+      recentPct.length > 1 ? round2(recentPct[recentPct.length - 1] - recentPct[0]) : 0;
+
+    summaryRows.push({
+      id: def.id,
+      key: def.key,
+      label: def.label,
+      kind: def.kind,
+      year: def.year ?? null,
+      avgPercentage: meanRound2(recentPct),
+      avgPercentageOfTotal: meanRound2(recentPctTotal),
+      avgAndroidWebviewPercentage: meanRound2(recentAndroidWv),
+      avgIosWebviewPercentage: meanRound2(recentIosWv),
+      latestPercentage: recentPct[recentPct.length - 1] ?? 0,
+      delta7,
+    });
+  }
+
+  const packedData = {
+    s: startDate,
+    n: dates.length,
+    ...(isContiguous ? {} : { g: dayGaps }),
+    y: [minYear, maxYear],
+    m: encodeBasisPointsSeries(dailyPayloads.map((d) => d.mappedPercentage ?? 0)),
+    t: packedTargets,
+  };
+
+  // Self-unpacking minified JS bundle
+  const jsBundle =
+    `(()=>{const P=${JSON.stringify(packedData)},` +
+    `D=(s,n)=>{if(typeof s==="number")return Array(n).fill(s/100);const o=[s[0]/100];let v=s[0];for(let i=1;i<s.length;i++){v+=s[i];o.push(v/100)}return o},` +
+    `M=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:0,` +
+    `n=P.n,dates=[P.s];let ms=Date.parse(P.s+"T00:00:00Z");` +
+    `for(let i=1;i<n;i++){ms+=(P.g?P.g[i-1]:1)*864e5;dates.push(new Date(ms).toISOString().slice(0,10))}` +
+    `const keys=["w","n"];for(let y=P.y[1];y>=P.y[0];y--)keys.push(""+y);` +
+    `const w=Math.min(7,n),targets=keys.map(k=>{const raw=P.t[k]||[0,0,0,0],` +
+    `pct=D(raw[0],n),pctTotal=D(raw[1],n),androidWv=D(raw[2],n),iosWv=D(raw[3],n),` +
+    `rp=pct.slice(-w),rt=pctTotal.slice(-w),ra=androidWv.slice(-w),ri=iosWv.slice(-w);` +
+    `return{id:k==="w"?"widely":k==="n"?"newly":k,key:k,` +
+    `label:k==="w"?"Widely available":k==="n"?"Newly available":"Baseline "+k,` +
+    `kind:k==="w"?"widely":k==="n"?"newly":"year",year:k==="w"||k==="n"?null:+k,` +
+    `avg7:{pct:M(rp),pctTotal:M(rt),androidWv:M(ra),iosWv:M(ri),` +
+    `delta:rp.length>1?Math.round((rp[rp.length-1]-rp[0])*100)/100:0},` +
+    `series:{pct,pctTotal,androidWv,iosWv}}});` +
+    `window.BASELINE_INITIAL_DATA={dates,startDate:dates[0],endDate:dates[n-1],dayCount:n,recentWindowDays:w,mappedPct:D(P.m,n),targets};` +
+    `window.dispatchEvent(new CustomEvent("baseline-data-ready",{detail:window.BASELINE_INITIAL_DATA}))})();\n`;
+
+  await fs.mkdir(path.dirname(INITIAL_JS_BUNDLE_PATH), { recursive: true });
+  await fs.writeFile(INITIAL_JS_BUNDLE_PATH, jsBundle, "utf8");
+
+  const recentMappedPct = dailyPayloads
+    .slice(-recentSliceCount)
+    .map((d) => d.mappedPercentage ?? 0);
+  const recentStartDate = dates[Math.max(0, dates.length - recentSliceCount)];
+
+  const summaryPayload = {
+    generatedAt: latestDay.generatedAt || new Date().toISOString(),
+    dayCount: dates.length,
+    startDate,
+    endDate,
+    recentWindowDays: recentSliceCount,
+    recentStartDate,
+    recentEndDate: endDate,
+    avgMappedPercentage: meanRound2(recentMappedPct),
+    bundleSizeBytes: Buffer.byteLength(jsBundle, "utf8"),
+    rows: summaryRows,
+  };
+
+  await fs.writeFile(SUMMARY_DATA_PATH, JSON.stringify(summaryPayload, null, 2) + "\n", "utf8");
+  console.log(
+    `Wrote initial view JS bundle (${summaryPayload.bundleSizeBytes} bytes) -> ${path.relative(PROJECT_ROOT, INITIAL_JS_BUNDLE_PATH)}`
+  );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

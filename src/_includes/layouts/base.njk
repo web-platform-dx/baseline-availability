@@ -8,13 +8,16 @@
   <title>{{ title or site.title }}</title>
   <meta name="description" content="{{ description or site.description }}">
   <link rel="stylesheet" href="/css/styles.css">
+  <script src="/assets/js/baseline-initial-data.js" defer></script>
+  <script src="/assets/js/baseline-components.js" defer></script>
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
       <div class="brand">
-        <span class="org-badge">{{ site.organization }}</span>
+        <img src="/assets/img/baseline-widely-icon.svg" alt="" class="brand-logo" width="28" height="16">
         <a href="/" class="brand-title">{{ site.title }}</a>
+        <span class="org-badge">{{ site.organization }}</span>
       </div>
       <nav aria-label="Primary navigation">
         <a href="{{ site.repositoryUrl }}" class="nav-link" rel="noopener noreferrer" target="_blank">GitHub</a>

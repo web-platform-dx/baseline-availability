@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HtmlBasePlugin } from "@11ty/eleventy";
+import { getCompatibleVersions } from "baseline-browser-mapping";
+import esbuild from "esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const browsersDefinitions = JSON.parse(
@@ -9,15 +11,61 @@ const browsersDefinitions = JSON.parse(
 );
 const shortToFamily = browsersDefinitions.shortToFamily || {};
 
+// Map baseline-browser-mapping browser keys to esbuild target names
+const BBM_TO_ESBUILD = {
+  chrome: "chrome",
+  edge: "edge",
+  firefox: "firefox",
+  safari: "safari",
+  safari_ios: "ios",
+};
+
+const esbuildTargets = getCompatibleVersions({ suppressWarnings: true })
+  .filter((b) => b.browser in BBM_TO_ESBUILD)
+  .map((b) => `${BBM_TO_ESBUILD[b.browser]}${b.version}`);
+
 /** @param {import("@11ty/eleventy").UserConfig} eleventyConfig */
 export default function (eleventyConfig) {
   // Automatically prefix internal URLs when deployed to a GitHub Pages project site
   // (e.g. https://web-platform-dx.github.io/baseline-availability/)
   eleventyConfig.addPlugin(HtmlBasePlugin);
 
-  // Copy static assets directly to the output directory
-  eleventyConfig.addPassthroughCopy("src/css");
-  eleventyConfig.addPassthroughCopy("src/assets");
+  // Copy static SVG/image assets directly to the output directory
+  eleventyConfig.addPassthroughCopy("src/assets/img");
+
+  // Compile CSS files targeting Baseline Widely available via esbuild
+  eleventyConfig.addTemplateFormats("css");
+  eleventyConfig.addExtension("css", {
+    outputFileExtension: "css",
+    compile: async function (inputContent, inputPath) {
+      return async () => {
+        const result = await esbuild.transform(inputContent, {
+          loader: "css",
+          target: esbuildTargets,
+          minify: true,
+          sourcefile: inputPath,
+        });
+        return result.code;
+      };
+    },
+  });
+
+  // Compile JS files targeting Baseline Widely available via esbuild
+  eleventyConfig.addTemplateFormats("js");
+  eleventyConfig.addExtension("js", {
+    outputFileExtension: "js",
+    compile: async function (inputContent, inputPath) {
+      return async () => {
+        const result = await esbuild.transform(inputContent, {
+          loader: "js",
+          target: esbuildTargets,
+          minify: true,
+          sourcefile: inputPath,
+        });
+        return result.code;
+      };
+    },
+  });
 
   // Bind local dev server strictly to localhost
   eleventyConfig.setServerOptions({
@@ -29,6 +77,18 @@ export default function (eleventyConfig) {
   eleventyConfig.addFilter("formatNumber", (value) => {
     if (typeof value !== "number") return value;
     return new Intl.NumberFormat("en-US").format(value);
+  });
+
+  eleventyConfig.addFilter("formatPct", (value) => {
+    const num = Number(value);
+    if (Number.isNaN(num)) return "0.00%";
+    return `${num.toFixed(2)}%`;
+  });
+
+  eleventyConfig.addFilter("formatDelta", (value) => {
+    const num = Number(value);
+    if (Number.isNaN(num) || num === 0) return "0.00%";
+    return `${num > 0 ? "+" : ""}${num.toFixed(2)}%`;
   });
 
   // Unpacks per-day files in src/_data/bigquery/global_daily_aggregates/<YYYY-MM-DD>.json
@@ -71,6 +131,9 @@ export default function (eleventyConfig) {
               rowObj[col] = val;
             }
           }
+          if (rowObj.count === undefined && rowObj.TOTAL !== undefined) {
+            rowObj.count = rowObj.TOTAL;
+          }
           sampleRows.push(rowObj);
         }
       }
@@ -94,7 +157,7 @@ export default function (eleventyConfig) {
       data: "_data",
       output: "_site",
     },
-    templateFormats: ["njk", "md", "html"],
+    templateFormats: ["njk", "md", "html", "css", "js"],
     htmlTemplateEngine: "njk",
     markdownTemplateEngine: "njk",
   };
