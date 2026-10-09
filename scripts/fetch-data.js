@@ -252,6 +252,27 @@ const QUERY_JOBS = [
       RUMARCHIVE_TABLE,
     },
   },
+  {
+    name: "country_daily_aggregates",
+    sqlFile: "country_daily_aggregates.sql",
+    outputSubDir: "country_daily_aggregates",
+    minStartDate: "2026-09-28",
+    schema: [
+      "COUNTRY",
+      "USERAGENTFAMILY",
+      "USERAGENTVERSION",
+      "USERAGENTENGINE",
+      "USERAGENTENGINEVERSION",
+      "OS",
+      "OSVERSION",
+      "ROWCOUNT",
+      "TOTAL",
+    ],
+    params: {},
+    templateVars: {
+      RUMARCHIVE_TABLE,
+    },
+  },
 ];
 
 async function main() {
