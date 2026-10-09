@@ -80,11 +80,26 @@ function buildBbmLookups() {
 
   /** @type {Record<string, Set<string>>} */
   const knownVersionsByBrowser = {};
+  /** @type {Record<string, Record<string, { releaseDate: string | null, engine: string | null, engineVersion: string | null }>>} */
+  const versionMetaByBrowser = {};
   for (const entry of allKnownVersions) {
     if (!knownVersionsByBrowser[entry.browser]) {
       knownVersionsByBrowser[entry.browser] = new Set();
     }
     knownVersionsByBrowser[entry.browser].add(entry.version);
+
+    if (!versionMetaByBrowser[entry.browser]) {
+      versionMetaByBrowser[entry.browser] = {};
+    }
+    const relDate =
+      typeof entry.release_date === "string" && DATE_PATTERN.test(entry.release_date)
+        ? entry.release_date
+        : null;
+    versionMetaByBrowser[entry.browser][entry.version] = {
+      releaseDate: relDate,
+      engine: entry.engine || null,
+      engineVersion: entry.engine_version || null,
+    };
   }
 
   const safariMajorVersions = new Set();
@@ -101,6 +116,7 @@ function buildBbmLookups() {
 
   return {
     knownVersionsByBrowser,
+    versionMetaByBrowser,
     safariMajorVersions,
     timelineEvents,
   };
@@ -617,9 +633,64 @@ export async function calculateAllDailyBaseline({ force = false } = {}) {
 }
 
 const SUMMARY_DATA_PATH = path.resolve(PROJECT_ROOT, "src", "_data", "baseline_summary.json");
+const BREAKDOWN_DATA_PATH = path.resolve(
+  PROJECT_ROOT,
+  "src",
+  "_data",
+  "baseline_browser_breakdown.json"
+);
 const INITIAL_JS_BUNDLE_PATH = path.resolve(PROJECT_ROOT, "src", "assets", "js", "baseline-initial-data.js");
+const BREAKDOWN_JS_BUNDLE_PATH = path.resolve(
+  PROJECT_ROOT,
+  "src",
+  "assets",
+  "js",
+  "baseline-browser-breakdown.js"
+);
 const MAX_CHART_DAYS = 90;
 const AVG_WINDOW_DAYS = 7;
+
+const BBM_BROWSER_NAMES = {
+  chrome: "Chrome",
+  chrome_android: "Chrome for Android",
+  edge: "Edge",
+  firefox: "Firefox",
+  firefox_android: "Firefox for Android",
+  safari: "Safari",
+  safari_ios: "Safari on iOS",
+  webview_android: "WebView Android",
+  samsunginternet_android: "Samsung Internet",
+  opera: "Opera",
+  opera_android: "Opera Android",
+  uc_android: "UC Browser Mobile",
+  ya_android: "Yandex Browser Mobile",
+  qq_android: "QQ Browser Mobile",
+  facebook_android: "Facebook for Android",
+  instagram_android: "Instagram for Android",
+  kai_os: "KaiOS",
+};
+
+const DOWNSTREAM_BBM_BROWSERS = new Set([
+  "webview_android",
+  "samsunginternet_android",
+  "opera",
+  "opera_android",
+  "uc_android",
+  "ya_android",
+  "qq_android",
+  "facebook_android",
+  "instagram_android",
+  "kai_os",
+]);
+
+/**
+ * Rounds a number to 4 decimal places for fine-grained browser share precision.
+ * @param {number} value
+ * @returns {number}
+ */
+function round4(value) {
+  return Math.round(value * 10000) / 10000;
+}
 
 /**
  * Delta-encodes an array of percentage values in basis points (0..10000).
@@ -650,6 +721,211 @@ function meanRound2(values) {
   if (values.length === 0) return 0;
   const sum = values.reduce((acc, v) => acc + Number(v || 0), 0);
   return round2(sum / values.length);
+}
+
+/**
+ * Aggregates browser versions over the last 7 days of raw daily aggregate files and writes:
+ * 1. `src/_data/baseline_browser_breakdown.json` for build-time template metadata
+ * 2. `src/assets/js/baseline-browser-breakdown.js` for the interactive horizontal breakdown bar chart and sortable tables
+ */
+export async function writeBrowserBreakdownBundle() {
+  let aggEntries = [];
+  try {
+    aggEntries = await fs.readdir(AGGREGATES_DIR);
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+    throw error;
+  }
+
+  const dailyFiles = aggEntries
+    .filter((f) => f.endsWith(".json") && DATE_PATTERN.test(f.slice(0, -5)))
+    .sort();
+
+  if (dailyFiles.length === 0) return;
+
+  const recentFiles = dailyFiles.slice(-AVG_WINDOW_DAYS);
+  const recentDates = recentFiles.map((f) => f.slice(0, -5));
+  const startDate = recentDates[0];
+  const endDate = recentDates[recentDates.length - 1];
+  const dataYear = Number(endDate.slice(0, 4));
+
+  const lookups = buildBbmLookups();
+
+  let totalPageLoads = 0;
+  let mappedPageLoads = 0;
+  /** @type {Map<string, { browser: string, version: string, pageLoads: number }>} */
+  const countsByBrowserVer = new Map();
+
+  for (const fileName of recentFiles) {
+    const inputPath = resolveSafeFilePath(AGGREGATES_DIR, fileName);
+    const raw = JSON.parse(await fs.readFile(inputPath, "utf8"));
+    const schema = Array.isArray(raw.schema) ? raw.schema : [];
+    const rows = Array.isArray(raw.rows) ? raw.rows : [];
+
+    /** @type {Record<string, number>} */
+    const colIdx = {};
+    schema.forEach((col, idx) => {
+      colIdx[col] = idx;
+    });
+
+    const countCol = colIdx.TOTAL ?? colIdx.count;
+    for (const row of rows) {
+      const count = Number(row[countCol] || 0);
+      if (count <= 0) continue;
+      totalPageLoads += count;
+
+      const resolved = resolveRowToBaselineBrowser(row, colIdx, lookups);
+      if (!resolved) continue;
+
+      mappedPageLoads += count;
+      const key = `${resolved.browser}|${resolved.version}`;
+      const existing = countsByBrowserVer.get(key);
+      if (existing) {
+        existing.pageLoads += count;
+      } else {
+        countsByBrowserVer.set(key, {
+          browser: resolved.browser,
+          version: resolved.version,
+          pageLoads: count,
+        });
+      }
+    }
+  }
+
+  // Build minimum compatible version maps for each target as of `endDate`
+  const widelyMinMap = toMinVersionMap(
+    getCompatibleVersions({
+      widelyAvailableOnDate: endDate,
+      includeDownstreamBrowsers: true,
+      suppressWarnings: true,
+    })
+  );
+  const newlyMinMap = getNewlyAvailableMinVersionsOnDate(endDate, lookups.timelineEvents);
+
+  /** @type {Record<string, Record<string, string>>} */
+  const targetMinMaps = {
+    widely: widelyMinMap,
+    newly: newlyMinMap,
+  };
+  const targetsList = [
+    { id: "newly", label: "Baseline Newly available", shortLabel: "Newly available", kind: "newly" },
+    { id: "widely", label: "Baseline Widely available", shortLabel: "Widely available", kind: "widely" },
+  ];
+
+  for (let year = 2015; year <= dataYear; year++) {
+    const yearStr = String(year);
+    const yearEndCutoff = `${yearStr}-12-31` <= endDate ? `${yearStr}-12-31` : endDate;
+    targetMinMaps[yearStr] = getNewlyAvailableMinVersionsOnDate(
+      yearEndCutoff,
+      lookups.timelineEvents
+    );
+    targetsList.push({
+      id: yearStr,
+      label: `Baseline ${yearStr}`,
+      shortLabel: yearStr,
+      kind: "year",
+      year,
+    });
+  }
+
+  // Enrich each browser+version entry with releaseDate, engine, engineVersion, engineReleaseDate
+  const browsers = [...countsByBrowserVer.values()]
+    .sort((a, b) => b.pageLoads - a.pageLoads)
+    .map((item) => {
+      const { browser, version, pageLoads } = item;
+      const meta = lookups.versionMetaByBrowser[browser]?.[version] || null;
+      const isDownstream = DOWNSTREAM_BBM_BROWSERS.has(browser);
+
+      const releaseDate = meta?.releaseDate || null;
+      let engine = null;
+      let engineVersion = null;
+      let engineReleaseDate = null;
+
+      if (isDownstream) {
+        engine = meta?.engine || (browser === "kai_os" ? "Gecko" : "Blink");
+        engineVersion =
+          meta?.engineVersion || (browser === "webview_android" ? version : null);
+        if (engine && engineVersion) {
+          if (engine === "Gecko") {
+            engineReleaseDate =
+              lookups.versionMetaByBrowser.firefox?.[engineVersion]?.releaseDate ||
+              lookups.versionMetaByBrowser.firefox_android?.[engineVersion]?.releaseDate ||
+              null;
+          } else {
+            engineReleaseDate =
+              lookups.versionMetaByBrowser.chrome?.[engineVersion]?.releaseDate ||
+              lookups.versionMetaByBrowser.chrome_android?.[engineVersion]?.releaseDate ||
+              null;
+          }
+        }
+      }
+
+      return {
+        browser,
+        name: BBM_BROWSER_NAMES[browser] || browser,
+        version,
+        isDownstream,
+        releaseDate,
+        engine,
+        engineVersion,
+        engineReleaseDate,
+        pageLoads,
+        pct: mappedPageLoads > 0 ? round4((pageLoads / mappedPageLoads) * 100) : 0,
+        pctTotal: totalPageLoads > 0 ? round4((pageLoads / totalPageLoads) * 100) : 0,
+      };
+    });
+
+  const breakdownPayload = {
+    generatedAt: new Date().toISOString(),
+    windowDays: recentFiles.length,
+    startDate,
+    endDate,
+    totalPageLoads,
+    mappedPageLoads,
+    unmappedPageLoads: totalPageLoads - mappedPageLoads,
+    mappedPercentage: totalPageLoads > 0 ? round2((mappedPageLoads / totalPageLoads) * 100) : 0,
+    browserVersionCount: browsers.length,
+    targets: targetsList,
+    targetMinMaps,
+    browsers,
+  };
+
+  await fs.mkdir(path.dirname(BREAKDOWN_DATA_PATH), { recursive: true });
+  await fs.writeFile(BREAKDOWN_DATA_PATH, JSON.stringify(breakdownPayload, null, 2) + "\n", "utf8");
+
+  // Compact client-side bundle for the browser breakdown chart and sortable tables
+  const compactClientData = {
+    w: recentFiles.length,
+    s: startDate,
+    e: endDate,
+    m: breakdownPayload.mappedPercentage,
+    names: BBM_BROWSER_NAMES,
+    targets: targetsList,
+    minMaps: targetMinMaps,
+    // Each row: [browser, version, pctOfMapped, pctOfTotal, releaseDate, engine, engineVersion, engineReleaseDate]
+    rows: browsers.map((b) => [
+      b.browser,
+      b.version,
+      b.pct,
+      b.pctTotal,
+      b.releaseDate,
+      b.engine,
+      b.engineVersion,
+      b.engineReleaseDate,
+    ]),
+  };
+
+  const breakdownJs =
+    `(()=>{const D=${JSON.stringify(compactClientData)};` +
+    `const browsers=D.rows.map(r=>({browser:r[0],name:D.names[r[0]]||r[0],version:r[1],pct:r[2],pctTotal:r[3],releaseDate:r[4],engine:r[5],engineVersion:r[6],engineReleaseDate:r[7],isDownstream:Boolean(r[5])}));` +
+    `window.BASELINE_BROWSER_BREAKDOWN={windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:D.m,targets:D.targets,targetMinMaps:D.minMaps,browsers};` +
+    `window.dispatchEvent(new CustomEvent("baseline-breakdown-ready",{detail:window.BASELINE_BROWSER_BREAKDOWN}))})();\n`;
+
+  await fs.mkdir(path.dirname(BREAKDOWN_JS_BUNDLE_PATH), { recursive: true });
+  await fs.writeFile(BREAKDOWN_JS_BUNDLE_PATH, breakdownJs, "utf8");
+  console.log(
+    `Wrote 7-day browser breakdown (${browsers.length} browser versions, ${Buffer.byteLength(breakdownJs, "utf8")} bytes) -> ${path.relative(PROJECT_ROOT, BREAKDOWN_JS_BUNDLE_PATH)}`
+  );
 }
 
 /**
@@ -829,6 +1105,8 @@ export async function writeInitialViewBundle() {
   console.log(
     `Wrote initial view JS bundle (${summaryPayload.bundleSizeBytes} bytes) -> ${path.relative(PROJECT_ROOT, INITIAL_JS_BUNDLE_PATH)}`
   );
+
+  await writeBrowserBreakdownBundle();
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

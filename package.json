@@ -2,6 +2,7 @@
   "name": "baseline-availability",
   "version": "0.1.0",
   "description": "Public HTML dashboard for Web Platform Baseline data, built with BigQuery and 11ty",
+  "license": "Apache-2.0",
   "type": "module",
   "private": true,
   "repository": {

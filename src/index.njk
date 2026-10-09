@@ -135,6 +135,22 @@ title: Baseline Availability
 
     <baseline-timeseries-chart id="baseline-timeseries-chart"></baseline-timeseries-chart>
   </section>
+
+  <section class="status-card breakdown-card" aria-labelledby="breakdown-heading">
+    <div class="status-header">
+      <div>
+        <h2 id="breakdown-heading">Browser Compatibility Breakdown</h2>
+        <p class="section-subtitle">
+          Based on the last {{ baseline_summary.recentWindowDays }} days of available data (<code>{{ baseline_summary.recentStartDate }}</code> &ndash; <code>{{ baseline_summary.recentEndDate }}</code>). Select a Baseline target below to inspect compatible and incompatible browser versions.
+        </p>
+      </div>
+      <span class="timestamp">
+        Last {{ baseline_summary.recentWindowDays }} days: <code>{{ baseline_summary.recentStartDate }}</code> &ndash; <code>{{ baseline_summary.recentEndDate }}</code>
+      </span>
+    </div>
+
+    <baseline-browser-breakdown id="baseline-browser-breakdown"></baseline-browser-breakdown>
+  </section>
 {% else %}
   <section class="status-card">
     <p class="empty-state">
