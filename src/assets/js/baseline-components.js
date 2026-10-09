@@ -106,6 +106,17 @@ class BaselineSummaryTable extends HTMLElement {
       const targetId = row.getAttribute("data-target-id");
       if (!targetId) return;
 
+      const togglePin = () => {
+        if (viewState.pinnedTargetId === targetId) {
+          viewState.pinnedTargetId = null;
+          viewState.highlightedTargetId = null;
+        } else {
+          viewState.pinnedTargetId = targetId;
+          viewState.highlightedTargetId = targetId;
+        }
+        notifyStateChange("table");
+      };
+
       row.addEventListener("mouseenter", () => {
         if (!viewState.pinnedTargetId) {
           viewState.highlightedTargetId = targetId;
@@ -120,23 +131,17 @@ class BaselineSummaryTable extends HTMLElement {
         }
       });
 
-      row.addEventListener("click", () => {
-        if (viewState.pinnedTargetId === targetId) {
-          viewState.pinnedTargetId = null;
-          viewState.highlightedTargetId = null;
-        } else {
-          viewState.pinnedTargetId = targetId;
-          viewState.highlightedTargetId = targetId;
-        }
-        notifyStateChange("table");
+      row.addEventListener("click", (e) => {
+        if (e.target.closest("button[data-target-btn]")) return;
+        togglePin();
       });
 
-      row.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          row.click();
-        }
-      });
+      const btn = row.querySelector("button[data-target-btn]");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          togglePin();
+        });
+      }
     });
 
     const modeButtons = this.querySelectorAll("button[data-metric-mode]");
@@ -157,6 +162,14 @@ class BaselineSummaryTable extends HTMLElement {
     const activeTargetId = viewState.pinnedTargetId || viewState.highlightedTargetId;
     const rows = this.querySelectorAll("tbody tr[data-target-id]");
 
+    const primaryHeader = this.querySelector("[data-primary-metric-header]");
+    if (primaryHeader) {
+      primaryHeader.textContent =
+        viewState.metricMode === "pctTotal"
+          ? "7-Day Average (% of Total)"
+          : "7-Day Average (% of Mapped)";
+    }
+
     const targetMap = new Map();
     if (this.data && Array.isArray(this.data.targets)) {
       for (const t of this.data.targets) {
@@ -170,9 +183,21 @@ class BaselineSummaryTable extends HTMLElement {
       const isPinned = viewState.pinnedTargetId === id;
       row.toggleAttribute("data-highlighted", isHighlighted);
       row.toggleAttribute("data-pinned", isPinned);
-      row.setAttribute("aria-selected", isPinned ? "true" : "false");
 
       const target = targetMap.get(id);
+      const btn = row.querySelector("button[data-target-btn]");
+      if (btn) {
+        btn.setAttribute("aria-pressed", isPinned ? "true" : "false");
+        if (target) {
+          btn.setAttribute(
+            "aria-label",
+            isPinned
+              ? `${target.label} (pinned on charts, activate to unpin)`
+              : `${target.label} (activate to pin on charts)`
+          );
+        }
+      }
+
       if (target) {
         const primaryVal =
           viewState.metricMode === "pctTotal" ? target.avg7.pctTotal : target.avg7.pct;
@@ -260,6 +285,7 @@ class BaselineTimeseriesChart extends HTMLElement {
       btn.className = `legend-pill legend-pill-${t.kind}`;
       btn.setAttribute("data-target-id", t.id);
       btn.setAttribute("aria-pressed", "false");
+      btn.setAttribute("aria-label", `Pin ${t.label} on chart`);
 
       const swatch = document.createElement("span");
       swatch.className = `legend-swatch swatch-${t.kind}`;
@@ -300,6 +326,13 @@ class BaselineTimeseriesChart extends HTMLElement {
     controlsRow.appendChild(legendGroup);
     this.appendChild(controlsRow);
 
+    // Polite screen-reader announcer for keyboard date stepping
+    this.liveAnnouncer = document.createElement("div");
+    this.liveAnnouncer.className = "sr-only";
+    this.liveAnnouncer.setAttribute("aria-live", "polite");
+    this.liveAnnouncer.setAttribute("aria-atomic", "true");
+    this.appendChild(this.liveAnnouncer);
+
     // 2. SVG Time-Series Chart Canvas
     const svgWrap = document.createElement("div");
     svgWrap.className = "chart-svg-container";
@@ -318,13 +351,14 @@ class BaselineTimeseriesChart extends HTMLElement {
     const svg = createSvgEl("svg", {
       viewBox: `0 0 ${W} ${H}`,
       class: "timeseries-svg",
-      role: "img",
-      "aria-label": `Baseline availability percentage time series from ${dates[0]} to ${dates[dayCount - 1]}`,
+      role: "group",
+      "aria-label": `Interactive Baseline availability time series chart from ${dates[0]} to ${dates[dayCount - 1]}. Use Left and Right arrow keys to step through dates.`,
       tabindex: "0",
     });
+    this.svgEl = svg;
 
     // Horizontal Y-axis gridlines & 0-100% labels
-    const gridGroup = createSvgEl("g", { class: "chart-grid" });
+    const gridGroup = createSvgEl("g", { class: "chart-grid", "aria-hidden": "true" });
     for (let pct = 0; pct <= 100; pct += 20) {
       const y = padT + plotH - (pct / 100) * plotH;
       const line = createSvgEl("line", {
@@ -386,12 +420,13 @@ class BaselineTimeseriesChart extends HTMLElement {
       x2: padL,
       y2: padT + plotH,
       class: "chart-crosshair",
+      "aria-hidden": "true",
     });
     svg.appendChild(this.crosshairLine);
 
     // Target lines group (years rendered first, Widely & Newly rendered on top)
-    this.linesGroup = createSvgEl("g", { class: "chart-lines" });
-    this.dotsGroup = createSvgEl("g", { class: "chart-dots" });
+    this.linesGroup = createSvgEl("g", { class: "chart-lines", "aria-hidden": "true" });
+    this.dotsGroup = createSvgEl("g", { class: "chart-dots", "aria-hidden": "true" });
     svg.appendChild(this.linesGroup);
     svg.appendChild(this.dotsGroup);
 
@@ -399,6 +434,7 @@ class BaselineTimeseriesChart extends HTMLElement {
     this.tooltipGroup = createSvgEl("g", {
       class: "svg-tooltip",
       transform: "translate(70, 32)",
+      "aria-hidden": "true",
     });
     this.tooltipBg = createSvgEl("rect", {
       x: 0,
@@ -442,6 +478,7 @@ class BaselineTimeseriesChart extends HTMLElement {
       width: plotW,
       height: plotH,
       class: "chart-hit-overlay",
+      "aria-hidden": "true",
     });
 
     const handlePointer = (clientX, clientY) => {
@@ -478,7 +515,7 @@ class BaselineTimeseriesChart extends HTMLElement {
         }
       }
 
-      this.updateCrosshairAndInspector();
+      this.updateCrosshairAndInspector(false);
     };
 
     overlay.addEventListener("pointermove", (e) => {
@@ -491,7 +528,7 @@ class BaselineTimeseriesChart extends HTMLElement {
         viewState.highlightedTargetId = null;
         notifyStateChange("chart-hover");
       }
-      this.updateCrosshairAndInspector();
+      this.updateCrosshairAndInspector(false);
     });
 
     overlay.addEventListener("click", () => {
@@ -510,11 +547,11 @@ class BaselineTimeseriesChart extends HTMLElement {
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         this.hoveredDateIdx = Math.max(0, (this.hoveredDateIdx ?? dayCount - 1) - 1);
-        this.updateCrosshairAndInspector();
+        this.updateCrosshairAndInspector(true);
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         this.hoveredDateIdx = Math.min(dayCount - 1, (this.hoveredDateIdx ?? dayCount - 1) + 1);
-        this.updateCrosshairAndInspector();
+        this.updateCrosshairAndInspector(true);
       }
     });
 
@@ -525,7 +562,8 @@ class BaselineTimeseriesChart extends HTMLElement {
     // 3. Date Details Breakdown Panel below the chart
     this.inspectorPanel = document.createElement("div");
     this.inspectorPanel.className = "chart-inspector-panel";
-    this.inspectorPanel.setAttribute("aria-live", "polite");
+    this.inspectorPanel.setAttribute("role", "region");
+    this.inspectorPanel.setAttribute("aria-label", "Daily availability snapshot");
     this.appendChild(this.inspectorPanel);
 
     this.drawLines();
@@ -607,10 +645,10 @@ class BaselineTimeseriesChart extends HTMLElement {
       }
     }
 
-    this.updateCrosshairAndInspector();
+    this.updateCrosshairAndInspector(false);
   }
 
-  updateCrosshairAndInspector() {
+  updateCrosshairAndInspector(announceToScreenReader = false) {
     if (!this.data || !this.crosshairLine || !this.dotsGroup) return;
     const { dates, targets } = this.data;
     const dayCount = dates.length;
@@ -661,6 +699,10 @@ class BaselineTimeseriesChart extends HTMLElement {
       this.tooltipPrimaryText.textContent = `${activeTarget.label}: ${formatPct(focusVal)}`;
       this.tooltipWidelyText.textContent = `Widely available: ${formatPct(widelyVal)}`;
       this.tooltipNewlyText.textContent = `Newly available: ${formatPct(newlyVal)}`;
+
+      if (announceToScreenReader && this.liveAnnouncer) {
+        this.liveAnnouncer.textContent = `${dateStr}: ${activeTarget.label} ${formatPct(focusVal)}, Widely available ${formatPct(widelyVal)}, Newly available ${formatPct(newlyVal)}.`;
+      }
     }
 
     // Update bottom inspector panel with all target values for the selected date
@@ -685,7 +727,7 @@ class BaselineTimeseriesChart extends HTMLElement {
 
       this.inspectorPanel.appendChild(header);
 
-      const grid = document.createElement("div");
+      const grid = document.createElement("dl");
       grid.className = "inspector-grid";
 
       for (const t of targets) {
@@ -695,16 +737,24 @@ class BaselineTimeseriesChart extends HTMLElement {
           item.setAttribute("data-active", "");
         }
 
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "inspector-chip-label";
-        nameSpan.textContent = t.kind === "year" ? String(t.year) : t.label;
+        const nameDt = document.createElement("dt");
+        nameDt.className = "inspector-chip-label";
+        if (t.kind === "year") {
+          const srPrefix = document.createElement("span");
+          srPrefix.className = "sr-only";
+          srPrefix.textContent = "Baseline ";
+          nameDt.appendChild(srPrefix);
+          nameDt.appendChild(document.createTextNode(String(t.year)));
+        } else {
+          nameDt.textContent = t.label;
+        }
 
-        const valSpan = document.createElement("span");
-        valSpan.className = "inspector-chip-value";
-        valSpan.textContent = formatPct(this.getValueForTarget(t, dateIdx));
+        const valDd = document.createElement("dd");
+        valDd.className = "inspector-chip-value";
+        valDd.textContent = formatPct(this.getValueForTarget(t, dateIdx));
 
-        item.appendChild(nameSpan);
-        item.appendChild(valSpan);
+        item.appendChild(nameDt);
+        item.appendChild(valDd);
         grid.appendChild(item);
       }
 
@@ -946,6 +996,12 @@ class BaselineBrowserBreakdown extends HTMLElement {
     return majorBlocks;
   }
 
+  announce(message) {
+    if (this.liveStatus) {
+      this.liveStatus.textContent = message;
+    }
+  }
+
   render() {
     this.replaceChildren();
     if (!this.data || !Array.isArray(this.data.browsers) || this.data.browsers.length === 0) {
@@ -955,6 +1011,13 @@ class BaselineBrowserBreakdown extends HTMLElement {
       this.appendChild(empty);
       return;
     }
+
+    // Polite screen-reader live region for target selection & table sorting announcements
+    this.liveStatus = document.createElement("div");
+    this.liveStatus.className = "sr-only";
+    this.liveStatus.setAttribute("aria-live", "polite");
+    this.liveStatus.setAttribute("aria-atomic", "true");
+    this.appendChild(this.liveStatus);
 
     // 1. Target Selector Buttons Row + Metric Mode Toggle
     const controlsWrap = document.createElement("div");
@@ -972,6 +1035,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
       btn.className = `legend-pill legend-pill-${t.kind}`;
       btn.setAttribute("data-target-id", t.id);
       btn.setAttribute("aria-pressed", t.id === this.selectedTargetId ? "true" : "false");
+      btn.setAttribute("aria-label", t.label);
 
       const swatch = document.createElement("span");
       swatch.className = `legend-swatch swatch-${t.kind}`;
@@ -990,7 +1054,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
       btn.addEventListener("click", () => {
         this.selectedTargetId = t.id;
         this.hoveredBlock = null;
-        this.updateView();
+        this.updateView(true);
       });
 
       this.targetButtons.set(t.id, btn);
@@ -1006,13 +1070,14 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     this.modeButtons = [];
     for (const modeDef of [
-      { mode: "pct", label: "% of Mapped" },
-      { mode: "pctTotal", label: "% of Total" },
+      { mode: "pct", label: "% of Mapped", ariaLabel: "Percentage of mapped browser traffic" },
+      { mode: "pctTotal", label: "% of Total", ariaLabel: "Percentage of total traffic" },
     ]) {
       const mBtn = document.createElement("button");
       mBtn.type = "button";
       mBtn.className = "metric-toggle-btn";
       mBtn.setAttribute("data-metric-mode", modeDef.mode);
+      mBtn.setAttribute("aria-label", modeDef.ariaLabel);
       mBtn.setAttribute(
         "aria-pressed",
         viewState.metricMode === modeDef.mode ? "true" : "false"
@@ -1046,10 +1111,11 @@ class BaselineBrowserBreakdown extends HTMLElement {
     tabsBar.setAttribute("aria-label", "Compatible and Incompatible browser tables");
 
     this.tabButtons = new Map();
-    for (const tabDef of [
+    const tabDefs = [
       { id: "compatible", label: "Compatible" },
       { id: "incompatible", label: "Incompatible" },
-    ]) {
+    ];
+    for (const tabDef of tabDefs) {
       const tabBtn = document.createElement("button");
       tabBtn.type = "button";
       tabBtn.className = `breakdown-tab-btn breakdown-tab-${tabDef.id}`;
@@ -1066,6 +1132,16 @@ class BaselineBrowserBreakdown extends HTMLElement {
       tabBtn.addEventListener("click", () => {
         this.activeMobileTab = tabDef.id;
         this.syncMobileTabs();
+      });
+
+      tabBtn.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          e.preventDefault();
+          const nextId = tabDef.id === "compatible" ? "incompatible" : "compatible";
+          this.activeMobileTab = nextId;
+          this.syncMobileTabs();
+          this.tabButtons.get(nextId)?.focus();
+        }
       });
 
       this.tabButtons.set(tabDef.id, tabBtn);
@@ -1085,15 +1161,16 @@ class BaselineBrowserBreakdown extends HTMLElement {
     this.tablesGrid.appendChild(this.incompatPanel.panel);
     this.appendChild(this.tablesGrid);
 
-    this.updateView();
+    this.updateView(false);
   }
 
   createTablePanel(side, headingText) {
+    const headingId = `breakdown-heading-${side}`;
     const panel = document.createElement("div");
     panel.className = `breakdown-table-panel breakdown-table-panel-${side}`;
     panel.id = `breakdown-panel-${side}`;
-    panel.setAttribute("role", "tabpanel");
-    panel.setAttribute("aria-labelledby", `breakdown-tab-${side}`);
+    panel.setAttribute("role", "region");
+    panel.setAttribute("aria-labelledby", headingId);
 
     const panelHeader = document.createElement("div");
     panelHeader.className = `breakdown-panel-header breakdown-panel-header-${side}`;
@@ -1108,6 +1185,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     const h3 = document.createElement("h3");
     h3.className = "breakdown-panel-title";
+    h3.id = headingId;
     h3.textContent = headingText;
     titleWrap.appendChild(h3);
 
@@ -1128,6 +1206,11 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     const table = document.createElement("table");
     table.className = "data-table breakdown-browser-table";
+
+    const caption = document.createElement("caption");
+    caption.className = "sr-only";
+    caption.textContent = headingText;
+    table.appendChild(caption);
 
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
@@ -1174,11 +1257,13 @@ class BaselineBrowserBreakdown extends HTMLElement {
           current.dir = "desc";
         }
         this.renderTableRows(side);
+        const dirWord = current.dir === "asc" ? "ascending" : "descending";
+        this.announce(`${headingText} sorted by ${col.label} ${dirWord}.`);
       });
 
       th.appendChild(sortBtn);
       headerRow.appendChild(th);
-      sortHeaders.set(col.key, { th, iconSpan });
+      sortHeaders.set(col.key, { th, sortBtn, iconSpan, label: col.label });
     }
 
     thead.appendChild(headerRow);
@@ -1191,6 +1276,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     return {
       panel,
+      caption,
       countBadge,
       totalShareBadge,
       sortHeaders,
@@ -1207,7 +1293,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
     }
   }
 
-  updateView() {
+  updateView(announceChange = false) {
     if (!this.data) return;
 
     // Update target button states
@@ -1243,6 +1329,49 @@ class BaselineBrowserBreakdown extends HTMLElement {
     this.renderHorizontalBar(partitioned);
     this.renderTableRows("compatible");
     this.renderTableRows("incompatible");
+
+    if (announceChange) {
+      const targetObj = (this.data.targets || []).find((t) => t.id === this.selectedTargetId);
+      const targetLabel = targetObj ? targetObj.label : `Baseline ${this.selectedTargetId}`;
+      this.announce(
+        `${targetLabel} selected: ${formatPct(partitioned.compatibleSum)} compatible (${partitioned.compatible.length} browser versions), ${formatPct(partitioned.incompatibleSum)} incompatible (${partitioned.incompatible.length} browser versions).`
+      );
+    }
+  }
+
+  buildBlockAccessibleDescription(block) {
+    const sideLabel = block.side === "compatible" ? "Compatible" : "Incompatible";
+    const denomLabel =
+      viewState.metricMode === "pctTotal" ? "of total traffic" : "of mapped traffic";
+
+    if (block.type === "single") {
+      const b = block.browser;
+      const parts = [`${sideLabel}: ${b.name} ${b.version}`, `${formatPct(block.share)} ${denomLabel}`];
+      if (b.isDownstream && b.engine) {
+        parts.push(`Engine: ${b.engine}${b.engineVersion ? ` ${b.engineVersion}` : ""}`);
+      }
+      if (b.releaseDate) {
+        parts.push(`Released ${b.releaseDate}`);
+      }
+      if (b.isDownstream && b.engineReleaseDate) {
+        parts.push(`Engine released ${b.engineReleaseDate}`);
+      }
+      return parts.join(", ");
+    }
+
+    const topPreview = block.items.slice(0, 3).map((b) => {
+      const engInfo =
+        b.isDownstream && b.engine
+          ? ` (${b.engine}${b.engineVersion ? ` ${b.engineVersion}` : ""})`
+          : "";
+      return `${b.name} ${b.version}${engInfo} ${formatPct(b.share)}`;
+    });
+    const remaining = block.items.length - topPreview.length;
+    const previewSuffix =
+      remaining > 0
+        ? `Top versions: ${topPreview.join(", ")}, plus ${remaining} more.`
+        : `Includes: ${topPreview.join(", ")}.`;
+    return `${sideLabel}: ${block.items.length} browser versions each under 0.5% of traffic, combined ${formatPct(block.share)} ${denomLabel}. ${previewSuffix}`;
   }
 
   renderHorizontalBar(partitioned) {
@@ -1296,15 +1425,15 @@ class BaselineBrowserBreakdown extends HTMLElement {
     const svg = createSvgEl("svg", {
       viewBox: `0 0 ${W} ${svgH}`,
       class: "breakdown-bar-svg",
-      role: "img",
-      "aria-label": `Horizontal browser compatibility bar for ${targetLabel} over the last ${this.data.windowDays} days`,
+      role: "group",
+      "aria-label": `Browser compatibility breakdown bar for ${targetLabel} over the last ${this.data.windowDays} days: ${formatPct(partitioned.compatibleSum)} compatible from left, ${formatPct(partitioned.incompatibleSum)} incompatible from right. Use Tab or Left and Right arrow keys to inspect browser segments.`,
     });
 
     const defs = createSvgEl("defs");
     svg.appendChild(defs);
 
     // Scale ticks at 0%, 25%, 50%, 75%, 100%
-    const scaleGroup = createSvgEl("g", { class: "bar-scale-group" });
+    const scaleGroup = createSvgEl("g", { class: "bar-scale-group", "aria-hidden": "true" });
     for (const pctTick of [0, 25, 50, 75, 100]) {
       const tx = (pctTick / 100) * W;
       const tickLabel = createSvgEl("text", {
@@ -1326,6 +1455,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
       height: barH,
       rx: 6,
       class: "breakdown-bar-track",
+      "aria-hidden": "true",
     });
     svg.appendChild(trackRect);
 
@@ -1336,6 +1466,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
     const tooltipGroup = createSvgEl("g", {
       class: "breakdown-svg-tooltip",
       "data-visible": "false",
+      "aria-hidden": "true",
     });
     const tooltipArrow = createSvgEl("polygon", {
       points: "0,0 -7,8 7,8",
@@ -1431,12 +1562,14 @@ class BaselineBrowserBreakdown extends HTMLElement {
     };
 
     let clipCounter = 0;
+    const segmentGroups = [];
     const renderSegment = (block, xStart, widthPx, idxWithinSide) => {
       if (widthPx <= 0) return;
       const g = createSvgEl("g", {
         class: `bar-segment-group bar-segment-${block.side}`,
         tabindex: "0",
         role: "button",
+        "aria-label": this.buildBlockAccessibleDescription(block),
       });
 
       const shadeIndex = block.type === "compressed" ? "compressed" : String(idxWithinSide % 4);
@@ -1467,6 +1600,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
         const labelGroup = createSvgEl("g", {
           "clip-path": `url(#${clipId})`,
           class: "bar-segment-label-group",
+          "aria-hidden": "true",
         });
 
         const primaryLabel = createSvgEl("text", {
@@ -1492,6 +1626,9 @@ class BaselineBrowserBreakdown extends HTMLElement {
       }
 
       const centerX = xStart + widthPx / 2;
+      const segIndex = segmentGroups.length;
+      segmentGroups.push(g);
+
       g.addEventListener("pointerenter", () => {
         g.setAttribute("data-hovered", "true");
         showBlockTooltip(block, centerX);
@@ -1507,6 +1644,23 @@ class BaselineBrowserBreakdown extends HTMLElement {
       g.addEventListener("blur", () => {
         g.removeAttribute("data-hovered");
         hideBlockTooltip();
+      });
+      g.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          const next = segmentGroups[Math.min(segmentGroups.length - 1, segIndex + 1)];
+          next?.focus();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          const prev = segmentGroups[Math.max(0, segIndex - 1)];
+          prev?.focus();
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          segmentGroups[0]?.focus();
+        } else if (e.key === "End") {
+          e.preventDefault();
+          segmentGroups[segmentGroups.length - 1]?.focus();
+        }
       });
 
       blocksGroup.appendChild(g);
@@ -1573,20 +1727,35 @@ class BaselineBrowserBreakdown extends HTMLElement {
         ? this.currentPartition.compatibleSum
         : this.currentPartition.incompatibleSum;
 
+    const targetObj = (this.data?.targets || []).find((t) => t.id === this.selectedTargetId);
+    const targetLabel = targetObj ? targetObj.label : `Baseline ${this.selectedTargetId}`;
+    const sideTitle = side === "compatible" ? "Compatible browsers" : "Incompatible browsers";
+
+    if (panelObj.caption) {
+      panelObj.caption.textContent = `${sideTitle} for ${targetLabel} (${rawItems.length} versions, ${formatPct(totalShare)} total share)`;
+    }
+
     panelObj.countBadge.textContent = `${rawItems.length} version${rawItems.length === 1 ? "" : "s"}`;
     panelObj.totalShareBadge.textContent = formatPct(totalShare);
 
     const sortCfg = this.sortState[side];
     for (const [colKey, headerObj] of panelObj.sortHeaders.entries()) {
       if (colKey === sortCfg.key) {
-        headerObj.th.setAttribute(
-          "aria-sort",
-          sortCfg.dir === "asc" ? "ascending" : "descending"
-        );
+        const dirWord = sortCfg.dir === "asc" ? "ascending" : "descending";
+        const nextDirWord = sortCfg.dir === "asc" ? "descending" : "ascending";
+        headerObj.th.setAttribute("aria-sort", dirWord);
         headerObj.iconSpan.textContent = sortCfg.dir === "asc" ? "↑" : "↓";
+        headerObj.sortBtn.setAttribute(
+          "aria-label",
+          `${headerObj.label}, sorted ${dirWord}. Activate to sort ${nextDirWord}.`
+        );
       } else {
         headerObj.th.setAttribute("aria-sort", "none");
         headerObj.iconSpan.textContent = "↕";
+        headerObj.sortBtn.setAttribute(
+          "aria-label",
+          `Sort by ${headerObj.label} descending`
+        );
       }
     }
 
@@ -1604,26 +1773,54 @@ class BaselineBrowserBreakdown extends HTMLElement {
       return;
     }
 
+    const createUnavailableDateContent = () => {
+      const wrap = document.createDocumentFragment();
+      const dash = document.createElement("span");
+      dash.setAttribute("aria-hidden", "true");
+      dash.textContent = "—";
+      const srText = document.createElement("span");
+      srText.className = "sr-only";
+      srText.textContent = "Not available";
+      wrap.appendChild(dash);
+      wrap.appendChild(srText);
+      return wrap;
+    };
+
     const fragment = document.createDocumentFragment();
     for (const item of sortedItems) {
       const tr = document.createElement("tr");
 
-      // 1. Browser name + version (+ downstream engine badge if relevant)
-      const nameTd = document.createElement("td");
-      nameTd.className = "browser-name-cell";
+      // 1. Browser name + version (+ downstream engine badge if relevant) as row header
+      const nameTh = document.createElement("th");
+      nameTh.scope = "row";
+      nameTh.className = "browser-name-cell";
 
       const mainName = document.createElement("span");
       mainName.className = "browser-title-text";
       mainName.textContent = `${item.name} ${item.version}`;
-      nameTd.appendChild(mainName);
+      nameTh.appendChild(mainName);
 
       if (item.isDownstream && item.engine) {
         const engineBadge = document.createElement("span");
         engineBadge.className = "downstream-engine-badge";
-        engineBadge.textContent = `${item.engine}${item.engineVersion ? ` ${item.engineVersion}` : ""}`;
-        nameTd.appendChild(engineBadge);
+
+        const srOpen = document.createElement("span");
+        srOpen.className = "sr-only";
+        srOpen.textContent = " (Engine: ";
+        engineBadge.appendChild(srOpen);
+
+        engineBadge.appendChild(
+          document.createTextNode(`${item.engine}${item.engineVersion ? ` ${item.engineVersion}` : ""}`)
+        );
+
+        const srClose = document.createElement("span");
+        srClose.className = "sr-only";
+        srClose.textContent = ")";
+        engineBadge.appendChild(srClose);
+
+        nameTh.appendChild(engineBadge);
       }
-      tr.appendChild(nameTd);
+      tr.appendChild(nameTh);
 
       // 2. Proportion in traffic
       const shareTd = document.createElement("td");
@@ -1638,7 +1835,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
         relTd.textContent = item.releaseDate;
       } else {
         relTd.classList.add("date-unavailable");
-        relTd.textContent = "—";
+        relTd.appendChild(createUnavailableDateContent());
       }
       tr.appendChild(relTd);
 
@@ -1649,7 +1846,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
         engRelTd.textContent = item.engineReleaseDate;
       } else {
         engRelTd.classList.add("date-unavailable");
-        engRelTd.textContent = "—";
+        engRelTd.appendChild(createUnavailableDateContent());
       }
       tr.appendChild(engRelTd);
 
