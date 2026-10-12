@@ -25,7 +25,7 @@ title: Baseline Availability
         <strong>Scope:</strong> <span data-meta-location-text>Worldwide (100.00% of traffic)</span>
       </span>
       <span class="meta-pill">
-        <strong>Mapped traffic:</strong> <span data-meta-mapped-pct>{{ baseline_summary.avgMappedPercentage | formatPct }}</span>
+        <strong>Mapped traffic:</strong> <span data-meta-mapped-pct>{{ baseline_summary.avgMappedPercentage | formatPct }}</span><a href="#footnote-mapped-traffic" id="footnote-ref-mapped-traffic" class="footnote-ref" aria-label="Footnote: Why some traffic is not mapped" title="Why some traffic is not mapped">*</a>
       </span>
     </div>
 
@@ -238,7 +238,6 @@ title: Baseline Availability
             <tr>
               <th scope="col">Baseline Target</th>
               <th scope="col" data-primary-metric-header>7-Day Average (% of Mapped)</th>
-              <th scope="col" class="num-col">% of Total</th>
               <th scope="col" class="num-col">7-Day Change</th>
               <th scope="col" class="num-col">Android WebView Share</th>
               <th scope="col" class="num-col">iOS WebView Share</th>
@@ -293,7 +292,6 @@ title: Baseline Availability
                     </svg>
                   </div>
                 </td>
-                <td class="num-col muted-num" data-cell-pct-total>{{ row.avgPercentageOfTotal | formatPct }}</td>
                 <td class="num-col">
                   <span class="delta-badge {% if row.delta7 > 0 %}delta-pos{% elif row.delta7 < 0 %}delta-neg{% else %}delta-neutral{% endif %}" data-cell-delta>
                     {{ row.delta7 | formatDelta }}
@@ -346,6 +344,31 @@ title: Baseline Availability
 
     <baseline-browser-breakdown id="baseline-browser-breakdown"></baseline-browser-breakdown>
   </section>
+
+  <aside class="footnote-card" id="footnote-mapped-traffic" aria-labelledby="footnote-mapped-traffic-heading">
+    <div class="footnote-header">
+      <h2 id="footnote-mapped-traffic-heading" class="footnote-title">
+        <span class="footnote-symbol" aria-hidden="true">*</span> Why some traffic is not mapped to Baseline targets
+      </h2>
+      <a href="#footnote-ref-mapped-traffic" class="footnote-backlink" aria-label="Back to Mapped traffic summary">
+        <span aria-hidden="true">&uarr;</span> Back to top
+      </a>
+    </div>
+    <p class="footnote-intro">
+      Roughly 9&ndash;11% of global RUM Archive beacons cannot be deterministically mapped to a specific browser release in <a href="https://github.com/web-platform-dx/baseline-browser-mapping" rel="noopener noreferrer" target="_blank"><code>baseline-browser-mapping</code><span class="sr-only"> (opens in a new tab)</span></a> because the underlying telemetry lacks a usable browser or operating system version. Rather than guessing feature support from incomplete metadata, unmapped beacons are excluded from the <strong>% of Mapped</strong> view (and can be included in the denominator using the <strong>% of Total</strong> toggle):
+    </p>
+    <ul class="footnote-list">
+      <li>
+        <strong>Unidentified user agents (~4.5% of global traffic):</strong> Beacons where the browser family, rendering engine, and operating system fields are all empty in RUM Archive (commonly caused by privacy-stripped User-Agent strings, custom native app requests, or unrecognized clients).
+      </li>
+      <li>
+        <strong>iOS and WebKit traffic without an OS version (~4.5% of global traffic):</strong> On iOS, web platform feature support is tied to the underlying iOS release rather than the host app version. However, several high-volume iOS User-Agent strings&mdash;including the Google Search App (<code>GSA</code>), in-app <code>WKWebView</code> instances (<code>Mobile Safari Webview</code>, Facebook, etc.), and generic WebKit requests&mdash;omit the iOS version in the aggregated dataset and only expose an app build number or frozen legacy WebKit tokens (<code>AppleWebKit/605.1.15</code>, frozen since 2018, or <code>AppleWebKit/537.36</code>, frozen since 2013). Because those tokens span many years of releases, their Baseline support cannot be inferred without an OS version.
+      </li>
+      <li>
+        <strong>Other unmapped clients (~0.1% of global traffic):</strong> Legacy browsers outside the Baseline core browser set (such as Internet Explorer) and beacons that report an operating system without a browser or rendering engine version.
+      </li>
+    </ul>
+  </aside>
 {% else %}
   <section class="status-card">
     <p class="empty-state">

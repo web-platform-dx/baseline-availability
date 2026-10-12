@@ -405,6 +405,32 @@ body {
   border-radius: 999px;
 }
 
+.footnote-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent-primary);
+  text-decoration: none;
+  margin-left: -0.15rem;
+  padding: 0.1rem 0.25rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.footnote-ref:hover {
+  background-color: var(--accent-surface);
+  text-decoration: underline;
+}
+
+.footnote-ref:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
 /* Location / Region / Country Filter Bar */
 baseline-location-filter {
   display: flex;
@@ -820,6 +846,7 @@ baseline-summary-table,
 baseline-timeseries-chart,
 baseline-browser-breakdown {
   display: block;
+  position: relative;
 }
 
 .status-header {
@@ -885,6 +912,7 @@ baseline-browser-breakdown {
 
 /* 7-Day Average Summary Table */
 .table-wrapper {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border-subtle);
   border-radius: 0.5rem;
@@ -1747,6 +1775,7 @@ baseline-browser-breakdown {
 }
 
 .breakdown-table-scroll {
+  position: relative;
   max-height: 480px;
   overflow-y: auto;
 }
@@ -1906,6 +1935,90 @@ code {
   background-color: var(--bg-subtle);
   padding: 0.15rem 0.35rem;
   border-radius: 0.25rem;
+}
+
+.footnote-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--card-shadow);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  scroll-margin-top: 1.5rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.footnote-card:target {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-surface), var(--card-shadow);
+}
+
+.footnote-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.footnote-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.footnote-symbol {
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+  margin-right: 0.2rem;
+}
+
+.footnote-backlink {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.footnote-backlink:hover {
+  text-decoration: underline;
+}
+
+.footnote-backlink:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+.footnote-intro {
+  margin: 0 0 0.75rem;
+}
+
+.footnote-intro a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footnote-intro a:hover {
+  text-decoration: none;
+}
+
+.footnote-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footnote-list strong {
+  color: var(--text-primary);
 }
 
 .site-footer {

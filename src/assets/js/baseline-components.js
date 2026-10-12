@@ -1060,11 +1060,6 @@ class BaselineSummaryTable extends HTMLElement {
           barFill.setAttribute("width", String(Math.max(0, Math.min(100, primaryVal))));
         }
 
-        const pctTotalCell = row.querySelector("[data-cell-pct-total]");
-        if (pctTotalCell) {
-          pctTotalCell.textContent = formatPct(target.avg7.pctTotal);
-        }
-
         const deltaBadge = row.querySelector("[data-cell-delta]");
         if (deltaBadge) {
           const d = Number(target.avg7.delta || 0);
