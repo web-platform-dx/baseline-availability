@@ -392,35 +392,195 @@ function getActiveBreakdownData() {
   return window.BASELINE_BROWSER_BREAKDOWN || null;
 }
 
+const COUNTRY_SEARCH_ALIASES = {
+  US: "usa america united states",
+  GB: "uk britain great britain england scotland wales northern ireland united kingdom",
+  AE: "uae emirates",
+  KR: "south korea rok",
+  KP: "north korea dprk",
+  NL: "holland netherlands",
+  CZ: "czechia czech republic",
+  TW: "taiwan roc",
+  VN: "vietnam",
+  RU: "russia",
+  IR: "iran",
+  SY: "syria",
+  BO: "bolivia",
+  VE: "venezuela",
+  TZ: "tanzania",
+  MD: "moldova",
+  CD: "drc congo kinshasa",
+  CG: "congo brazzaville",
+  CI: "ivory coast cote d'ivoire",
+  LA: "laos",
+  MM: "myanmar burma",
+  PS: "palestine",
+  VA: "vatican",
+  XK: "kosovo",
+};
+
 /**
  * <baseline-location-filter>:
- * Progressive-enhanced UN M49 region & country nested dropdown using CSS customizable <select>
- * (`appearance: base-select` + `<selectedcontent>`) with a full native `<select>` fallback.
+ * Accessible WAI-ARIA 1.2 searchable combobox and grouped listbox for filtering
+ * Baseline availability by Worldwide, Region / Sub-Region, or Country.
  */
 class BaselineLocationFilter extends HTMLElement {
   connectedCallback() {
-    this.selectEl = this.querySelector("#location-select");
+    this.wrapEl = this.querySelector("[data-combobox-wrap]");
+    this.inputEl = this.querySelector("#location-combobox-input");
+    this.clearSearchBtn = this.querySelector("[data-clear-search-btn]");
+    this.toggleBtn = this.querySelector("[data-toggle-listbox-btn]");
+    this.listboxEl = this.querySelector("#location-listbox");
+    this.emptyStateEl = this.querySelector("[data-location-empty]");
     this.resetBtn = this.querySelector("#location-reset-btn");
     this.breadcrumbEl = this.querySelector("[data-location-breadcrumb]");
     this.liveRegion = this.querySelector("[data-location-live-region]");
-    if (!this.selectEl) return;
 
-    this.enhanceCustomizableSelect();
+    if (!this.inputEl || !this.listboxEl) return;
 
-    this.onSelectChange = () => {
-      this.applySelectedOption(true);
+    this.groupEls = Array.from(this.listboxEl.querySelectorAll("[data-location-group]"));
+    this.optionEls = Array.from(this.listboxEl.querySelectorAll(".location-option"));
+    this.selectedOption =
+      this.optionEls.find((opt) => opt.dataset.value === "all") || this.optionEls[0] || null;
+    this.activeOption = this.selectedOption;
+    this.isOpen = false;
+    this.justFocused = false;
+
+    this.onInputFocus = () => {
+      this.justFocused = true;
+      this.openListbox(true);
+      this.inputEl.select();
     };
+
+    this.onInputMouseUp = (e) => {
+      if (this.justFocused) {
+        e.preventDefault();
+        this.justFocused = false;
+      }
+    };
+
+    this.onInputClick = () => {
+      if (!this.isOpen) {
+        this.openListbox(true);
+        this.inputEl.select();
+      }
+    };
+
+    this.onInput = () => {
+      const val = this.inputEl.value;
+      if (this.clearSearchBtn) {
+        this.clearSearchBtn.hidden = val.length === 0;
+      }
+      if (!this.isOpen) {
+        this.openListbox(false);
+      }
+      this.filterOptions(val);
+    };
+
+    this.onInputKeyDown = (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!this.isOpen) {
+          this.openListbox(true);
+        } else {
+          this.moveActive(1);
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!this.isOpen) {
+          this.openListbox(true);
+        } else {
+          this.moveActive(-1);
+        }
+      } else if (e.key === "PageDown" && this.isOpen) {
+        e.preventDefault();
+        this.moveActive(8);
+      } else if (e.key === "PageUp" && this.isOpen) {
+        e.preventDefault();
+        this.moveActive(-8);
+      } else if (e.key === "Enter") {
+        if (this.isOpen && this.activeOption && !this.activeOption.hidden) {
+          e.preventDefault();
+          this.selectOption(this.activeOption, true);
+          this.closeListbox(true);
+        }
+      } else if (e.key === "Escape") {
+        if (this.isOpen) {
+          e.preventDefault();
+          this.closeListbox(true);
+        } else {
+          this.syncInputToSelected();
+        }
+      } else if (e.key === "Tab") {
+        if (this.isOpen) {
+          this.closeListbox(true);
+        }
+      }
+    };
+
+    this.onClearMouseDown = (e) => {
+      e.preventDefault();
+      this.inputEl.value = "";
+      if (this.clearSearchBtn) {
+        this.clearSearchBtn.hidden = true;
+      }
+      if (!this.isOpen) {
+        this.openListbox(false);
+      }
+      this.filterOptions("");
+      this.inputEl.focus();
+    };
+
+    this.onToggleMouseDown = (e) => {
+      e.preventDefault();
+      if (this.isOpen) {
+        this.closeListbox(true);
+      } else {
+        this.inputEl.focus();
+        this.openListbox(true);
+        this.inputEl.select();
+      }
+    };
+
+    this.onListboxMouseDown = (e) => {
+      // Keep focus on input while interacting with the listbox
+      e.preventDefault();
+      const opt = e.target.closest(".location-option");
+      if (opt && !opt.hidden) {
+        this.selectOption(opt, true);
+        this.closeListbox(true);
+      }
+    };
+
+    this.onListboxMouseMove = (e) => {
+      const opt = e.target.closest(".location-option");
+      if (opt && !opt.hidden && opt !== this.activeOption) {
+        this.setActiveOption(opt, false);
+      }
+    };
+
+    this.onDocumentMouseDown = (e) => {
+      if (this.isOpen && !this.contains(e.target)) {
+        this.closeListbox(true);
+      }
+    };
+
     this.onResetClick = () => {
-      this.selectEl.value = "all";
-      this.applySelectedOption(true);
-      this.selectEl.focus();
+      const allOpt = this.optionEls.find((opt) => opt.dataset.value === "all");
+      if (allOpt) {
+        this.selectOption(allOpt, true);
+        this.closeListbox(true);
+        this.inputEl.focus();
+      }
     };
+
     this.onCountryDataReady = () => {
       if (viewState.locationValue !== "all") {
         regionInitialCache.clear();
         notifyStateChange("location-filter");
       }
     };
+
     this.onCountryBreakdownReady = () => {
       if (viewState.locationValue !== "all") {
         regionBreakdownCache.clear();
@@ -428,7 +588,20 @@ class BaselineLocationFilter extends HTMLElement {
       }
     };
 
-    this.selectEl.addEventListener("change", this.onSelectChange);
+    this.inputEl.addEventListener("focus", this.onInputFocus);
+    this.inputEl.addEventListener("mouseup", this.onInputMouseUp);
+    this.inputEl.addEventListener("click", this.onInputClick);
+    this.inputEl.addEventListener("input", this.onInput);
+    this.inputEl.addEventListener("keydown", this.onInputKeyDown);
+    if (this.clearSearchBtn) {
+      this.clearSearchBtn.addEventListener("mousedown", this.onClearMouseDown);
+    }
+    if (this.toggleBtn) {
+      this.toggleBtn.addEventListener("mousedown", this.onToggleMouseDown);
+    }
+    this.listboxEl.addEventListener("mousedown", this.onListboxMouseDown);
+    this.listboxEl.addEventListener("mousemove", this.onListboxMouseMove);
+    document.addEventListener("mousedown", this.onDocumentMouseDown);
     if (this.resetBtn) {
       this.resetBtn.addEventListener("click", this.onResetClick);
     }
@@ -437,9 +610,24 @@ class BaselineLocationFilter extends HTMLElement {
   }
 
   disconnectedCallback() {
-    if (this.selectEl && this.onSelectChange) {
-      this.selectEl.removeEventListener("change", this.onSelectChange);
+    if (this.inputEl) {
+      this.inputEl.removeEventListener("focus", this.onInputFocus);
+      this.inputEl.removeEventListener("mouseup", this.onInputMouseUp);
+      this.inputEl.removeEventListener("click", this.onInputClick);
+      this.inputEl.removeEventListener("input", this.onInput);
+      this.inputEl.removeEventListener("keydown", this.onInputKeyDown);
     }
+    if (this.clearSearchBtn && this.onClearMouseDown) {
+      this.clearSearchBtn.removeEventListener("mousedown", this.onClearMouseDown);
+    }
+    if (this.toggleBtn && this.onToggleMouseDown) {
+      this.toggleBtn.removeEventListener("mousedown", this.onToggleMouseDown);
+    }
+    if (this.listboxEl) {
+      this.listboxEl.removeEventListener("mousedown", this.onListboxMouseDown);
+      this.listboxEl.removeEventListener("mousemove", this.onListboxMouseMove);
+    }
+    document.removeEventListener("mousedown", this.onDocumentMouseDown);
     if (this.resetBtn && this.onResetClick) {
       this.resetBtn.removeEventListener("click", this.onResetClick);
     }
@@ -447,35 +635,173 @@ class BaselineLocationFilter extends HTMLElement {
     window.removeEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
   }
 
-  /**
-   * Injects `<button><selectedcontent></selectedcontent></button>` only when the browser
-   * supports `appearance: base-select`, ensuring legacy HTML parsers and fallback browsers
-   * retain a clean standard `<select>` structure.
-   */
-  enhanceCustomizableSelect() {
-    if (
-      typeof CSS !== "undefined" &&
-      typeof CSS.supports === "function" &&
-      CSS.supports("appearance", "base-select")
-    ) {
-      this.setAttribute("data-customizable-select", "true");
-      if (!this.selectEl.querySelector("button.location-select-button")) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "location-select-button";
-        const selectedContent = document.createElement("selectedcontent");
-        selectedContent.className = "location-selected-content";
-        btn.appendChild(selectedContent);
-        this.selectEl.insertBefore(btn, this.selectEl.firstChild);
+  getSelectedDisplayLabel() {
+    if (!this.selectedOption) return "Worldwide (All Regions & Countries)";
+    return (
+      this.selectedOption.dataset.displayLabel ||
+      this.selectedOption.dataset.name ||
+      "Worldwide"
+    );
+  }
+
+  syncInputToSelected() {
+    this.inputEl.value = this.getSelectedDisplayLabel();
+    if (this.clearSearchBtn) {
+      this.clearSearchBtn.hidden = true;
+    }
+  }
+
+  openListbox(resetFilter = false) {
+    this.isOpen = true;
+    this.listboxEl.hidden = false;
+    this.inputEl.setAttribute("aria-expanded", "true");
+    if (this.wrapEl) {
+      this.wrapEl.classList.add("is-open");
+    }
+    if (resetFilter) {
+      this.filterOptions("");
+      if (this.clearSearchBtn) {
+        this.clearSearchBtn.hidden = this.inputEl.value.length === 0;
       }
     }
   }
 
-  applySelectedOption(announce = false) {
-    const opt = this.selectEl.selectedOptions?.[0];
+  closeListbox(restoreInput = true) {
+    this.isOpen = false;
+    this.listboxEl.hidden = true;
+    this.inputEl.setAttribute("aria-expanded", "false");
+    this.inputEl.setAttribute("aria-activedescendant", "");
+    if (this.wrapEl) {
+      this.wrapEl.classList.remove("is-open");
+    }
+    if (restoreInput) {
+      this.syncInputToSelected();
+    }
+  }
+
+  setActiveOption(opt, scrollIntoView = true) {
+    if (this.activeOption) {
+      this.activeOption.classList.remove("is-active");
+    }
+    this.activeOption = opt || null;
+    if (this.activeOption) {
+      this.activeOption.classList.add("is-active");
+      this.inputEl.setAttribute("aria-activedescendant", this.activeOption.id || "");
+      if (scrollIntoView) {
+        this.activeOption.scrollIntoView({ block: "nearest" });
+      }
+    } else {
+      this.inputEl.setAttribute("aria-activedescendant", "");
+    }
+  }
+
+  getVisibleOptions() {
+    return this.optionEls.filter((opt) => !opt.hidden);
+  }
+
+  moveActive(delta) {
+    const visible = this.getVisibleOptions();
+    if (visible.length === 0) return;
+
+    const currentIdx = this.activeOption ? visible.indexOf(this.activeOption) : -1;
+    let nextIdx;
+    if (currentIdx === -1) {
+      nextIdx = delta > 0 ? 0 : visible.length - 1;
+    } else {
+      nextIdx = Math.max(0, Math.min(visible.length - 1, currentIdx + delta));
+    }
+    this.setActiveOption(visible[nextIdx], true);
+  }
+
+  scoreOptionMatch(opt, q) {
+    const kind = opt.dataset.kind || "global";
+    const name = (opt.dataset.name || "").toLowerCase();
+    const code = (opt.dataset.code || "").toLowerCase();
+    const breadcrumb = (opt.dataset.breadcrumb || "").toLowerCase();
+    const share = Number(opt.dataset.share || 0);
+    const aliases =
+      kind === "country"
+        ? COUNTRY_SEARCH_ALIASES[opt.dataset.code] || ""
+        : kind === "global"
+          ? "global world all worldwide"
+          : "";
+
+    if (kind === "country" && code === q) return 1000 + share;
+    if (name === q) return 950 + share;
+    if (aliases && aliases.split(" ").includes(q)) return 900 + share;
+    if (name.startsWith(q)) return 800 + share;
+
+    const words = name.split(/[\s,()-]+/);
+    if (words.some((w) => w.startsWith(q))) return 700 + share;
+    if (aliases && aliases.includes(q)) return 650 + share;
+    if (name.includes(q)) return 600 + share;
+    if (kind === "country" && code.includes(q)) return 550 + share;
+    if (q.length >= 2 && breadcrumb.includes(q)) return 400 + share;
+
+    return -1;
+  }
+
+  filterOptions(rawQuery) {
+    const q = (rawQuery || "").trim().toLowerCase();
+
+    if (!q) {
+      for (const opt of this.optionEls) {
+        opt.hidden = false;
+      }
+      for (const group of this.groupEls) {
+        group.hidden = false;
+      }
+      if (this.emptyStateEl) {
+        this.emptyStateEl.hidden = true;
+      }
+      this.setActiveOption(this.selectedOption || this.optionEls[0], true);
+      return;
+    }
+
+    let bestOpt = null;
+    let bestScore = -1;
+    let totalVisible = 0;
+
+    for (const opt of this.optionEls) {
+      const score = this.scoreOptionMatch(opt, q);
+      if (score >= 0) {
+        opt.hidden = false;
+        totalVisible += 1;
+        if (score > bestScore) {
+          bestScore = score;
+          bestOpt = opt;
+        }
+      } else {
+        opt.hidden = true;
+      }
+    }
+
+    for (const group of this.groupEls) {
+      const hasVisible = group.querySelector(".location-option:not([hidden])") !== null;
+      group.hidden = !hasVisible;
+    }
+
+    if (this.emptyStateEl) {
+      this.emptyStateEl.hidden = totalVisible > 0;
+    }
+
+    this.setActiveOption(bestOpt, true);
+  }
+
+  selectOption(opt, announce = false) {
     if (!opt) return;
 
-    const value = opt.value || "all";
+    if (this.selectedOption) {
+      this.selectedOption.classList.remove("is-selected");
+      this.selectedOption.setAttribute("aria-selected", "false");
+    }
+    this.selectedOption = opt;
+    this.selectedOption.classList.add("is-selected");
+    this.selectedOption.setAttribute("aria-selected", "true");
+    this.setActiveOption(opt, false);
+    this.syncInputToSelected();
+
+    const value = opt.dataset.value || "all";
     const kind = opt.dataset.kind || "global";
     const code = opt.dataset.code || "WW";
     const name = opt.dataset.name || "Worldwide";
