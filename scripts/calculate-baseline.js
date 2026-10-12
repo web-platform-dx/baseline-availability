@@ -104,6 +104,20 @@ function buildBbmLookups() {
     };
   }
 
+  /** @type {Record<string, string>} */
+  const maxVersionByBrowser = {};
+  for (const [b, verSet] of Object.entries(knownVersionsByBrowser)) {
+    let maxV = null;
+    for (const v of verSet) {
+      if (maxV === null || compareVersions(v, maxV) > 0) {
+        maxV = v;
+      }
+    }
+    if (maxV !== null) {
+      maxVersionByBrowser[b] = maxV;
+    }
+  }
+
   const safariMajorVersions = new Set();
   for (const b of ["safari", "safari_ios"]) {
     for (const ver of knownVersionsByBrowser[b] || []) {
@@ -118,6 +132,7 @@ function buildBbmLookups() {
 
   return {
     knownVersionsByBrowser,
+    maxVersionByBrowser,
     versionMetaByBrowser,
     safariMajorVersions,
     timelineEvents,
@@ -170,6 +185,39 @@ const BLINK_BROWSER_SHORTS = new Set([
 ]);
 
 /**
+ * Resolves a downstream browser version string (when `USERAGENTENGINEVERSION` is absent)
+ * against `baseline-browser-mapping` known versions or recent version rollouts.
+ * @param {string} ua
+ * @param {unknown} uav
+ * @param {ReturnType<typeof buildBbmLookups>} lookups
+ * @returns {{ browser: string, version: string } | null}
+ */
+function resolveDownstreamBrowserVersion(ua, uav, lookups) {
+  if (!Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua) || !isValidVersion(uav)) {
+    return null;
+  }
+  const bbmBrowser = DOWNSTREAM_SHORT_TO_BBM[ua];
+  const knownSet = lookups.knownVersionsByBrowser[bbmBrowser];
+  const uavStr = String(uav);
+  if (knownSet?.has(uavStr)) {
+    return { browser: bbmBrowser, version: uavStr };
+  }
+  if (knownSet?.has(`${uavStr}.0`)) {
+    return { browser: bbmBrowser, version: `${uavStr}.0` };
+  }
+  const maxVer = lookups.maxVersionByBrowser[bbmBrowser];
+  if (maxVer) {
+    const uavMaj = Number(getMajorVersion(uavStr));
+    const maxMaj = Number(getMajorVersion(maxVer));
+    if (compareVersions(uavStr, maxVer) > 0 && uavMaj <= maxMaj + 25) {
+      const normalizedVer = maxVer.endsWith(".0") && !uavStr.includes(".") ? `${uavStr}.0` : uavStr;
+      return { browser: bbmBrowser, version: normalizedVer };
+    }
+  }
+  return null;
+}
+
+/**
  * Identifies whether a row represents an Android WebView (`wva`) or iOS WebView (`siw`).
  * @param {unknown[]} row
  * @param {Record<string, number>} colIdx
@@ -187,18 +235,23 @@ function getWebviewType(row, colIdx) {
  *
  * Rules:
  * 1. iOS (`OS === "iOS"`):
- *    - If `USERAGENTFAMILY` is Mobile Safari (`"si"`), map to `safari_ios` using `USERAGENTVERSION`.
+ *    - If `USERAGENTFAMILY` is Mobile Safari (`"si"`), map to `safari_ios` using `USERAGENTVERSION`
+ *      (with fallback to `OSVERSION` if `USERAGENTVERSION` is missing or not a Safari version).
  *    - If `USERAGENTFAMILY` is not Mobile Safari, map to `safari_ios` using `OSVERSION`.
  *    - If the required version is unavailable or invalid, return `null` (recorded as unmapped).
  * 2. Android (`OS === "Android OS"`):
  *    - Chrome Mobile Webview (`"wva"`) maps to `webview_android` and all other Blink browsers map to
- *      `chrome_android` using their engine version (`USERAGENTENGINEVERSION`, or `USERAGENTVERSION`
- *      for Chromium-versioned families).
+ *      `chrome_android` using their engine version (`USERAGENTENGINEVERSION`), or via downstream
+ *      browser version (`DOWNSTREAM_SHORT_TO_BBM`) when `USERAGENTENGINEVERSION` is absent, or
+ *      `USERAGENTVERSION` for Chromium-versioned families.
  *    - Gecko browsers map to `firefox_android` using their engine version (`USERAGENTENGINEVERSION`
  *      or `USERAGENTVERSION`).
  * 3. Other OSes (Desktop / etc.):
- *    - WebKit / Safari rows map to `safari` using `USERAGENTVERSION` (or `OSVERSION` >= 26 on macOS).
- *    - Blink rows map to `edge` (`"e"`), `chrome_android` (`"ca"`), `webview_android` (`"wva"`), or `chrome`.
+ *    - WebKit / Safari rows map to `safari` using `USERAGENTVERSION` (or `OSVERSION` >= 26 on macOS,
+ *      or valid iOS `OSVERSION` when `OS` is empty and `USERAGENTENGINEVERSION` >= 600).
+ *      If a row has a Blink/Gecko `USERAGENTFAMILY` with `WebKit` engine, it falls through.
+ *    - Blink rows map to `edge` (`"e"`), `chrome_android` (`"ca"`), `webview_android` (`"wva"`),
+ *      downstream browser (`DOWNSTREAM_SHORT_TO_BBM`), or `chrome`.
  *    - Gecko rows map to `firefox` (or `firefox_android` for `"fa"`).
  *
  * @param {unknown[]} row
@@ -214,15 +267,18 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
   const os = String(row[colIdx.OS] ?? "");
   const osv = row[colIdx.OSVERSION];
 
-  // 1. All iOS rows map to safari_ios: Mobile Safari via UAVERSION, all others via OSVERSION
+  // 1. All iOS rows map to safari_ios: Mobile Safari via UAVERSION (with OSVERSION fallback), all others via OSVERSION
   if (os === "iOS") {
     const isMobileSafari = ua === "si" || ua === "Mobile Safari";
-    const candidateVersion = isMobileSafari ? uav : osv;
     if (
-      isValidVersion(candidateVersion) &&
-      lookups.safariMajorVersions.has(getMajorVersion(candidateVersion))
+      isMobileSafari &&
+      isValidVersion(uav) &&
+      lookups.safariMajorVersions.has(getMajorVersion(uav))
     ) {
-      return { browser: "safari_ios", version: String(candidateVersion) };
+      return { browser: "safari_ios", version: String(uav) };
+    }
+    if (isValidVersion(osv) && lookups.safariMajorVersions.has(getMajorVersion(osv))) {
+      return { browser: "safari_ios", version: String(osv) };
     }
     return null;
   }
@@ -231,7 +287,7 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
   const isGecko = eng === "Gecko";
   const isWebKit = eng === "WebKit" || eng === "Web Kit";
 
-  // 2. Android OS rows: map Blink to chrome_android (or webview_android for wva) and Gecko to firefox_android
+  // 2. Android OS rows: map Blink to chrome_android (or webview_android for wva, or downstream BBM browser when ENGV is null) and Gecko to firefox_android
   if (os === "Android OS") {
     if (isBlink || BLINK_BROWSER_SHORTS.has(ua)) {
       const targetBrowser = ANDROID_WEBVIEW_FAMILIES.has(ua) ? "webview_android" : "chrome_android";
@@ -239,7 +295,11 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
         return { browser: targetBrowser, version: String(engv) };
       }
 
-      if (!Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua) && isValidVersion(uav)) {
+      if (Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua)) {
+        return resolveDownstreamBrowserVersion(ua, uav, lookups);
+      }
+
+      if (isValidVersion(uav)) {
         return { browser: targetBrowser, version: String(uav) };
       }
 
@@ -247,11 +307,12 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
     }
 
     if (isGecko || ua === "f" || ua === "fa") {
-      const geckoVersion = isValidVersion(engv)
-        ? String(engv)
-        : isValidVersion(uav)
-          ? String(uav)
-          : null;
+      const geckoVersion =
+        isGecko && isValidVersion(engv)
+          ? String(engv)
+          : isValidVersion(uav)
+            ? String(uav)
+            : null;
 
       if (geckoVersion) {
         return { browser: "firefox_android", version: geckoVersion };
@@ -261,45 +322,49 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
     return null;
   }
 
-  // 3. Non-iOS WebKit / Safari rows (e.g. macOS Safari)
+  // 3. Non-iOS WebKit / Safari rows (e.g. macOS Safari, or empty-OS AppleWebKit/600+)
   if (isWebKit || ua === "s" || ua === "si" || ua === "siw") {
-    const targetBrowser = os === "Mac OS X" || ua === "s" ? "safari" : "safari_ios";
+    const isMacSafari = os === "Mac OS X" || ua === "s";
+    const targetBrowser = isMacSafari ? "safari" : "safari_ios";
 
     if (isValidVersion(uav) && lookups.safariMajorVersions.has(getMajorVersion(uav))) {
       return { browser: targetBrowser, version: String(uav) };
     }
 
     if (isValidVersion(osv) && lookups.safariMajorVersions.has(getMajorVersion(osv))) {
-      if (Number(getMajorVersion(osv)) >= 26) {
-        return { browser: targetBrowser, version: String(osv) };
+      const osvMajor = Number(getMajorVersion(osv));
+      if (isMacSafari && osvMajor >= 26) {
+        return { browser: "safari", version: String(osv) };
+      }
+      if (
+        !isMacSafari &&
+        !os &&
+        isValidVersion(engv) &&
+        Number(getMajorVersion(engv)) >= 600 &&
+        osvMajor >= 10
+      ) {
+        return { browser: "safari_ios", version: String(osv) };
       }
     }
 
-    return null;
+    // Fall through if the row has a known Blink or Gecko family/engine (e.g. UA="c" with ENG="WebKit")
+    if (!isBlink && !BLINK_BROWSER_SHORTS.has(ua) && !isGecko && ua !== "f" && ua !== "fa") {
+      return null;
+    }
   }
 
   // 4. Non-Android Blink rows
   if (isBlink || BLINK_BROWSER_SHORTS.has(ua)) {
-    if (!isValidVersion(engv) && Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua)) {
-      if (isValidVersion(uav)) {
-        const bbmBrowser = DOWNSTREAM_SHORT_TO_BBM[ua];
-        const knownSet = lookups.knownVersionsByBrowser[bbmBrowser];
-        const uavStr = String(uav);
-        if (knownSet?.has(uavStr)) {
-          return { browser: bbmBrowser, version: uavStr };
-        }
-        if (knownSet?.has(`${uavStr}.0`)) {
-          return { browser: bbmBrowser, version: `${uavStr}.0` };
-        }
-      }
-      return null;
+    if (!(isBlink && isValidVersion(engv)) && Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua)) {
+      return resolveDownstreamBrowserVersion(ua, uav, lookups);
     }
 
-    const blinkVersion = isValidVersion(engv)
-      ? String(engv)
-      : isValidVersion(uav)
-        ? String(uav)
-        : null;
+    const blinkVersion =
+      isBlink && isValidVersion(engv)
+        ? String(engv)
+        : isValidVersion(uav)
+          ? String(uav)
+          : null;
 
     if (blinkVersion) {
       if (ua === "e") return { browser: "edge", version: blinkVersion };
@@ -313,11 +378,12 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
 
   // 5. Non-Android Gecko rows
   if (isGecko || ua === "f" || ua === "fa") {
-    const geckoVersion = isValidVersion(engv)
-      ? String(engv)
-      : isValidVersion(uav)
-        ? String(uav)
-        : null;
+    const geckoVersion =
+      isGecko && isValidVersion(engv)
+        ? String(engv)
+        : isValidVersion(uav)
+          ? String(uav)
+          : null;
 
     if (geckoVersion) {
       return {

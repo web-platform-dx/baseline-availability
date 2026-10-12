@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-12T15:32:59.965Z",
+  "generatedAt": "2026-10-12T16:01:36.726Z",
   "windowDays": 7,
   "startDate": "2026-10-04",
   "endDate": "2026-10-10",
   "totalPageLoads": 143688486200,
-  "mappedPageLoads": 128357013100,
-  "unmappedPageLoads": 15331473100,
-  "mappedPercentage": 89.33,
-  "browserVersionCount": 1069,
+  "mappedPageLoads": 128485982200,
+  "unmappedPageLoads": 15202504000,
+  "mappedPercentage": 89.42,
+  "browserVersionCount": 1125,
   "targets": [
     {
       "id": "newly",
@@ -371,7 +371,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 29491528500,
-      "pct": 22.9762,
+      "pct": 22.9531,
       "pctTotal": 20.5246
     },
     {
@@ -383,9 +383,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 14458495800,
-      "pct": 11.2643,
-      "pctTotal": 10.0624
+      "pageLoads": 14458865300,
+      "pct": 11.2533,
+      "pctTotal": 10.0626
     },
     {
       "browser": "safari_ios",
@@ -396,8 +396,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 7957701500,
-      "pct": 6.1997,
+      "pageLoads": 7957699100,
+      "pct": 6.1934,
       "pctTotal": 5.5382
     },
     {
@@ -410,7 +410,7 @@
       "engineVersion": "153",
       "engineReleaseDate": "2026-09-08",
       "pageLoads": 5693914900,
-      "pct": 4.436,
+      "pct": 4.4315,
       "pctTotal": 3.9627
     },
     {
@@ -422,9 +422,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 3970322100,
-      "pct": 3.0932,
-      "pctTotal": 2.7631
+      "pageLoads": 3970360600,
+      "pct": 3.0901,
+      "pctTotal": 2.7632
     },
     {
       "browser": "chrome_android",
@@ -436,7 +436,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 3500023700,
-      "pct": 2.7268,
+      "pct": 2.7241,
       "pctTotal": 2.4358
     },
     {
@@ -449,7 +449,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2874142000,
-      "pct": 2.2392,
+      "pct": 2.2369,
       "pctTotal": 2.0003
     },
     {
@@ -462,7 +462,7 @@
       "engineVersion": "154",
       "engineReleaseDate": "2026-09-22",
       "pageLoads": 2599691800,
-      "pct": 2.0254,
+      "pct": 2.0233,
       "pctTotal": 1.8093
     },
     {
@@ -475,7 +475,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2469688800,
-      "pct": 1.9241,
+      "pct": 1.9221,
       "pctTotal": 1.7188
     },
     {
@@ -488,7 +488,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2451343300,
-      "pct": 1.9098,
+      "pct": 1.9079,
       "pctTotal": 1.706
     },
     {
@@ -500,9 +500,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 2114777300,
-      "pct": 1.6476,
-      "pctTotal": 1.4718
+      "pageLoads": 2119480700,
+      "pct": 1.6496,
+      "pctTotal": 1.4751
     },
     {
       "browser": "chrome",
@@ -513,8 +513,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 2028956300,
-      "pct": 1.5807,
+      "pageLoads": 2028982000,
+      "pct": 1.5791,
       "pctTotal": 1.4121
     },
     {
@@ -526,8 +526,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1979155100,
-      "pct": 1.5419,
+      "pageLoads": 1979189000,
+      "pct": 1.5404,
       "pctTotal": 1.3774
     },
     {
@@ -540,7 +540,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 1813570100,
-      "pct": 1.4129,
+      "pct": 1.4115,
       "pctTotal": 1.2622
     },
     {
@@ -552,8 +552,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1575508200,
-      "pct": 1.2274,
+      "pageLoads": 1575505300,
+      "pct": 1.2262,
       "pctTotal": 1.0965
     },
     {
@@ -565,8 +565,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1496303700,
-      "pct": 1.1657,
+      "pageLoads": 1496315300,
+      "pct": 1.1646,
       "pctTotal": 1.0414
     },
     {
@@ -578,9 +578,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1445460300,
-      "pct": 1.1261,
-      "pctTotal": 1.006
+      "pageLoads": 1446314700,
+      "pct": 1.1257,
+      "pctTotal": 1.0066
     },
     {
       "browser": "chrome",
@@ -591,8 +591,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1423085000,
-      "pct": 1.1087,
+      "pageLoads": 1423122800,
+      "pct": 1.1076,
       "pctTotal": 0.9904
     },
     {
@@ -604,8 +604,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1328592300,
-      "pct": 1.0351,
+      "pageLoads": 1328588200,
+      "pct": 1.034,
       "pctTotal": 0.9246
     },
     {
@@ -617,8 +617,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1258264100,
-      "pct": 0.9803,
+      "pageLoads": 1258265300,
+      "pct": 0.9793,
       "pctTotal": 0.8757
     },
     {
@@ -631,7 +631,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 1178661200,
-      "pct": 0.9183,
+      "pct": 0.9173,
       "pctTotal": 0.8203
     },
     {
@@ -643,9 +643,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1067988600,
-      "pct": 0.832,
-      "pctTotal": 0.7433
+      "pageLoads": 1074424600,
+      "pct": 0.8362,
+      "pctTotal": 0.7477
     },
     {
       "browser": "chrome",
@@ -656,9 +656,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1047182100,
-      "pct": 0.8158,
-      "pctTotal": 0.7288
+      "pageLoads": 1051891400,
+      "pct": 0.8187,
+      "pctTotal": 0.7321
     },
     {
       "browser": "firefox",
@@ -669,8 +669,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 974816900,
-      "pct": 0.7595,
+      "pageLoads": 974817100,
+      "pct": 0.7587,
       "pctTotal": 0.6784
     },
     {
@@ -682,9 +682,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 970471200,
-      "pct": 0.7561,
-      "pctTotal": 0.6754
+      "pageLoads": 970556900,
+      "pct": 0.7554,
+      "pctTotal": 0.6755
     },
     {
       "browser": "chrome_android",
@@ -696,7 +696,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 963711000,
-      "pct": 0.7508,
+      "pct": 0.7501,
       "pctTotal": 0.6707
     },
     {
@@ -709,7 +709,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 939681900,
-      "pct": 0.7321,
+      "pct": 0.7313,
       "pctTotal": 0.654
     },
     {
@@ -722,7 +722,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 891812200,
-      "pct": 0.6948,
+      "pct": 0.6941,
       "pctTotal": 0.6207
     },
     {
@@ -734,8 +734,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 838113700,
-      "pct": 0.653,
+      "pageLoads": 838122400,
+      "pct": 0.6523,
       "pctTotal": 0.5833
     },
     {
@@ -747,8 +747,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 676590000,
-      "pct": 0.5271,
+      "pageLoads": 676576700,
+      "pct": 0.5266,
       "pctTotal": 0.4709
     },
     {
@@ -760,8 +760,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 664747600,
-      "pct": 0.5179,
+      "pageLoads": 664751500,
+      "pct": 0.5174,
       "pctTotal": 0.4626
     },
     {
@@ -773,8 +773,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 601305200,
-      "pct": 0.4685,
+      "pageLoads": 601305700,
+      "pct": 0.468,
       "pctTotal": 0.4185
     },
     {
@@ -787,7 +787,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 574276800,
-      "pct": 0.4474,
+      "pct": 0.447,
       "pctTotal": 0.3997
     },
     {
@@ -800,7 +800,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 528981100,
-      "pct": 0.4121,
+      "pct": 0.4117,
       "pctTotal": 0.3681
     },
     {
@@ -812,9 +812,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 513426600,
-      "pct": 0.4,
-      "pctTotal": 0.3573
+      "pageLoads": 513782000,
+      "pct": 0.3999,
+      "pctTotal": 0.3576
     },
     {
       "browser": "chrome",
@@ -825,9 +825,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 487052400,
-      "pct": 0.3795,
-      "pctTotal": 0.339
+      "pageLoads": 491759600,
+      "pct": 0.3827,
+      "pctTotal": 0.3422
     },
     {
       "browser": "webview_android",
@@ -839,7 +839,7 @@
       "engineVersion": "97",
       "engineReleaseDate": "2022-01-04",
       "pageLoads": 434479800,
-      "pct": 0.3385,
+      "pct": 0.3382,
       "pctTotal": 0.3024
     },
     {
@@ -851,9 +851,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 423232800,
-      "pct": 0.3297,
-      "pctTotal": 0.2945
+      "pageLoads": 423317800,
+      "pct": 0.3295,
+      "pctTotal": 0.2946
     },
     {
       "browser": "chrome_android",
@@ -865,7 +865,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 411991000,
-      "pct": 0.321,
+      "pct": 0.3207,
       "pctTotal": 0.2867
     },
     {
@@ -877,8 +877,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 408379300,
-      "pct": 0.3182,
+      "pageLoads": 408381900,
+      "pct": 0.3178,
       "pctTotal": 0.2842
     },
     {
@@ -890,9 +890,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 343722400,
-      "pct": 0.2678,
-      "pctTotal": 0.2392
+      "pageLoads": 348448500,
+      "pct": 0.2712,
+      "pctTotal": 0.2425
     },
     {
       "browser": "chrome",
@@ -903,9 +903,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 330161600,
-      "pct": 0.2572,
-      "pctTotal": 0.2298
+      "pageLoads": 330339200,
+      "pct": 0.2571,
+      "pctTotal": 0.2299
     },
     {
       "browser": "safari_ios",
@@ -916,9 +916,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 328442500,
+      "pageLoads": 328854800,
       "pct": 0.2559,
-      "pctTotal": 0.2286
+      "pctTotal": 0.2289
     },
     {
       "browser": "chrome",
@@ -929,9 +929,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 319232500,
-      "pct": 0.2487,
-      "pctTotal": 0.2222
+      "pageLoads": 323928200,
+      "pct": 0.2521,
+      "pctTotal": 0.2254
     },
     {
       "browser": "safari_ios",
@@ -942,8 +942,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 319028200,
-      "pct": 0.2485,
+      "pageLoads": 319022100,
+      "pct": 0.2483,
       "pctTotal": 0.222
     },
     {
@@ -955,8 +955,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 316781200,
-      "pct": 0.2468,
+      "pageLoads": 316782300,
+      "pct": 0.2466,
       "pctTotal": 0.2205
     },
     {
@@ -969,7 +969,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 316008600,
-      "pct": 0.2462,
+      "pct": 0.2459,
       "pctTotal": 0.2199
     },
     {
@@ -981,8 +981,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 306882800,
-      "pct": 0.2391,
+      "pageLoads": 306885600,
+      "pct": 0.2388,
       "pctTotal": 0.2136
     },
     {
@@ -994,8 +994,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 304985200,
-      "pct": 0.2376,
+      "pageLoads": 304987200,
+      "pct": 0.2374,
       "pctTotal": 0.2123
     },
     {
@@ -1008,7 +1008,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 297807300,
-      "pct": 0.232,
+      "pct": 0.2318,
       "pctTotal": 0.2073
     },
     {
@@ -1021,8 +1021,21 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 288361900,
-      "pct": 0.2247,
+      "pct": 0.2244,
       "pctTotal": 0.2007
+    },
+    {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "18.5",
+      "isDownstream": false,
+      "releaseDate": "2025-05-12",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 277882700,
+      "pct": 0.2163,
+      "pctTotal": 0.1934
     },
     {
       "browser": "webview_android",
@@ -1034,21 +1047,8 @@
       "engineVersion": "138",
       "engineReleaseDate": "2025-06-24",
       "pageLoads": 277779900,
-      "pct": 0.2164,
+      "pct": 0.2162,
       "pctTotal": 0.1933
-    },
-    {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "18.5",
-      "isDownstream": false,
-      "releaseDate": "2025-05-12",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 277190300,
-      "pct": 0.216,
-      "pctTotal": 0.1929
     },
     {
       "browser": "safari_ios",
@@ -1059,8 +1059,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 276548300,
-      "pct": 0.2155,
+      "pageLoads": 276549000,
+      "pct": 0.2152,
       "pctTotal": 0.1925
     },
     {
@@ -1072,8 +1072,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 274017200,
-      "pct": 0.2135,
+      "pageLoads": 274017800,
+      "pct": 0.2133,
       "pctTotal": 0.1907
     },
     {
@@ -1085,9 +1085,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 270853700,
-      "pct": 0.211,
-      "pctTotal": 0.1885
+      "pageLoads": 270929900,
+      "pct": 0.2109,
+      "pctTotal": 0.1886
     },
     {
       "browser": "chrome",
@@ -1098,8 +1098,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 266202500,
-      "pct": 0.2074,
+      "pageLoads": 266294800,
+      "pct": 0.2073,
       "pctTotal": 0.1853
     },
     {
@@ -1111,8 +1111,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 259043900,
-      "pct": 0.2018,
+      "pageLoads": 259044900,
+      "pct": 0.2016,
       "pctTotal": 0.1803
     },
     {
@@ -1124,8 +1124,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 256436600,
-      "pct": 0.1998,
+      "pageLoads": 256438000,
+      "pct": 0.1996,
       "pctTotal": 0.1785
     },
     {
@@ -1138,7 +1138,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 249652000,
-      "pct": 0.1945,
+      "pct": 0.1943,
       "pctTotal": 0.1737
     },
     {
@@ -1151,7 +1151,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 248203500,
-      "pct": 0.1934,
+      "pct": 0.1932,
       "pctTotal": 0.1727
     },
     {
@@ -1163,8 +1163,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 247946900,
-      "pct": 0.1932,
+      "pageLoads": 247949900,
+      "pct": 0.193,
       "pctTotal": 0.1726
     },
     {
@@ -1177,7 +1177,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 245192200,
-      "pct": 0.191,
+      "pct": 0.1908,
       "pctTotal": 0.1706
     },
     {
@@ -1189,8 +1189,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 242717600,
-      "pct": 0.1891,
+      "pageLoads": 242721200,
+      "pct": 0.1889,
       "pctTotal": 0.1689
     },
     {
@@ -1202,8 +1202,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 240580200,
-      "pct": 0.1874,
+      "pageLoads": 240581600,
+      "pct": 0.1872,
       "pctTotal": 0.1674
     },
     {
@@ -1216,7 +1216,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 239374600,
-      "pct": 0.1865,
+      "pct": 0.1863,
       "pctTotal": 0.1666
     },
     {
@@ -1229,7 +1229,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 236343100,
-      "pct": 0.1841,
+      "pct": 0.1839,
       "pctTotal": 0.1645
     },
     {
@@ -1241,22 +1241,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 233152000,
-      "pct": 0.1816,
+      "pageLoads": 233153100,
+      "pct": 0.1815,
       "pctTotal": 0.1623
-    },
-    {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "16.6",
-      "isDownstream": false,
-      "releaseDate": "2023-07-24",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 227181600,
-      "pct": 0.177,
-      "pctTotal": 0.1581
     },
     {
       "browser": "safari_ios",
@@ -1267,9 +1254,22 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 226953000,
+      "pageLoads": 227379700,
+      "pct": 0.177,
+      "pctTotal": 0.1582
+    },
+    {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "16.6",
+      "isDownstream": false,
+      "releaseDate": "2023-07-24",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 227183700,
       "pct": 0.1768,
-      "pctTotal": 0.1579
+      "pctTotal": 0.1581
     },
     {
       "browser": "chrome",
@@ -1281,7 +1281,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 226443500,
-      "pct": 0.1764,
+      "pct": 0.1762,
       "pctTotal": 0.1576
     },
     {
@@ -1293,8 +1293,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 221926300,
-      "pct": 0.1729,
+      "pageLoads": 221919800,
+      "pct": 0.1727,
       "pctTotal": 0.1544
     },
     {
@@ -1306,8 +1306,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 219980100,
-      "pct": 0.1714,
+      "pageLoads": 219978100,
+      "pct": 0.1712,
       "pctTotal": 0.1531
     },
     {
@@ -1319,8 +1319,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 217805500,
-      "pct": 0.1697,
+      "pageLoads": 217806700,
+      "pct": 0.1695,
       "pctTotal": 0.1516
     },
     {
@@ -1332,9 +1332,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 216678700,
-      "pct": 0.1688,
-      "pctTotal": 0.1508
+      "pageLoads": 216762600,
+      "pct": 0.1687,
+      "pctTotal": 0.1509
     },
     {
       "browser": "chrome",
@@ -1346,7 +1346,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 214621500,
-      "pct": 0.1672,
+      "pct": 0.167,
       "pctTotal": 0.1494
     },
     {
@@ -1359,7 +1359,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 213669800,
-      "pct": 0.1665,
+      "pct": 0.1663,
       "pctTotal": 0.1487
     },
     {
@@ -1372,7 +1372,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 213505600,
-      "pct": 0.1663,
+      "pct": 0.1662,
       "pctTotal": 0.1486
     },
     {
@@ -1384,8 +1384,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 208206400,
-      "pct": 0.1622,
+      "pageLoads": 208240000,
+      "pct": 0.1621,
       "pctTotal": 0.1449
     },
     {
@@ -1398,7 +1398,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 206568700,
-      "pct": 0.1609,
+      "pct": 0.1608,
       "pctTotal": 0.1438
     },
     {
@@ -1411,7 +1411,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 204323400,
-      "pct": 0.1592,
+      "pct": 0.159,
       "pctTotal": 0.1422
     },
     {
@@ -1424,7 +1424,7 @@
       "engineVersion": "155",
       "engineReleaseDate": "2026-10-06",
       "pageLoads": 203046300,
-      "pct": 0.1582,
+      "pct": 0.158,
       "pctTotal": 0.1413
     },
     {
@@ -1437,7 +1437,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 199000100,
-      "pct": 0.155,
+      "pct": 0.1549,
       "pctTotal": 0.1385
     },
     {
@@ -1449,9 +1449,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 194470000,
-      "pct": 0.1515,
-      "pctTotal": 0.1353
+      "pageLoads": 194550200,
+      "pct": 0.1514,
+      "pctTotal": 0.1354
     },
     {
       "browser": "chrome_android",
@@ -1463,7 +1463,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 191941100,
-      "pct": 0.1495,
+      "pct": 0.1494,
       "pctTotal": 0.1336
     },
     {
@@ -1476,7 +1476,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 189662400,
-      "pct": 0.1478,
+      "pct": 0.1476,
       "pctTotal": 0.132
     },
     {
@@ -1489,7 +1489,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 185820500,
-      "pct": 0.1448,
+      "pct": 0.1446,
       "pctTotal": 0.1293
     },
     {
@@ -1501,22 +1501,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 174183200,
-      "pct": 0.1357,
+      "pageLoads": 174191300,
+      "pct": 0.1356,
       "pctTotal": 0.1212
-    },
-    {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "15.6",
-      "isDownstream": false,
-      "releaseDate": "2022-07-20",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 159978900,
-      "pct": 0.1246,
-      "pctTotal": 0.1113
     },
     {
       "browser": "chrome",
@@ -1527,8 +1514,21 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 159893900,
-      "pct": 0.1246,
+      "pageLoads": 160177100,
+      "pct": 0.1247,
+      "pctTotal": 0.1115
+    },
+    {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "15.6",
+      "isDownstream": false,
+      "releaseDate": "2022-07-20",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 159985100,
+      "pct": 0.1245,
       "pctTotal": 0.1113
     },
     {
@@ -1541,7 +1541,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 152955400,
-      "pct": 0.1192,
+      "pct": 0.119,
       "pctTotal": 0.1064
     },
     {
@@ -1554,7 +1554,7 @@
       "engineVersion": "101",
       "engineReleaseDate": "2022-04-26",
       "pageLoads": 150313600,
-      "pct": 0.1171,
+      "pct": 0.117,
       "pctTotal": 0.1046
     },
     {
@@ -1566,7 +1566,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 142216100,
+      "pageLoads": 142299400,
       "pct": 0.1108,
       "pctTotal": 0.099
     },
@@ -1579,8 +1579,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 140811400,
-      "pct": 0.1097,
+      "pageLoads": 140813700,
+      "pct": 0.1096,
       "pctTotal": 0.098
     },
     {
@@ -1593,7 +1593,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 139518700,
-      "pct": 0.1087,
+      "pct": 0.1086,
       "pctTotal": 0.0971
     },
     {
@@ -1605,9 +1605,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 133028000,
-      "pct": 0.1036,
-      "pctTotal": 0.0926
+      "pageLoads": 133430700,
+      "pct": 0.1038,
+      "pctTotal": 0.0929
     },
     {
       "browser": "chrome_android",
@@ -1619,7 +1619,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 132547300,
-      "pct": 0.1033,
+      "pct": 0.1032,
       "pctTotal": 0.0922
     },
     {
@@ -1632,7 +1632,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 131931500,
-      "pct": 0.1028,
+      "pct": 0.1027,
       "pctTotal": 0.0918
     },
     {
@@ -1644,9 +1644,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 124674600,
-      "pct": 0.0971,
-      "pctTotal": 0.0868
+      "pageLoads": 125030400,
+      "pct": 0.0973,
+      "pctTotal": 0.087
     },
     {
       "browser": "safari_ios",
@@ -1657,9 +1657,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 123183400,
-      "pct": 0.096,
-      "pctTotal": 0.0857
+      "pageLoads": 123585700,
+      "pct": 0.0962,
+      "pctTotal": 0.086
     },
     {
       "browser": "firefox",
@@ -1671,7 +1671,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 120617400,
-      "pct": 0.094,
+      "pct": 0.0939,
       "pctTotal": 0.0839
     },
     {
@@ -1684,7 +1684,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 119612900,
-      "pct": 0.0932,
+      "pct": 0.0931,
       "pctTotal": 0.0832
     },
     {
@@ -1696,7 +1696,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 118097300,
+      "pageLoads": 118151300,
       "pct": 0.092,
       "pctTotal": 0.0822
     },
@@ -1710,7 +1710,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 116830800,
-      "pct": 0.091,
+      "pct": 0.0909,
       "pctTotal": 0.0813
     },
     {
@@ -1723,7 +1723,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 113594800,
-      "pct": 0.0885,
+      "pct": 0.0884,
       "pctTotal": 0.0791
     },
     {
@@ -1736,7 +1736,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 109525300,
-      "pct": 0.0853,
+      "pct": 0.0852,
       "pctTotal": 0.0762
     },
     {
@@ -1749,7 +1749,7 @@
       "engineVersion": "115",
       "engineReleaseDate": "2023-07-18",
       "pageLoads": 107587100,
-      "pct": 0.0838,
+      "pct": 0.0837,
       "pctTotal": 0.0749
     },
     {
@@ -1762,7 +1762,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 107442100,
-      "pct": 0.0837,
+      "pct": 0.0836,
       "pctTotal": 0.0748
     },
     {
@@ -1788,7 +1788,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 105349300,
-      "pct": 0.0821,
+      "pct": 0.082,
       "pctTotal": 0.0733
     },
     {
@@ -1813,9 +1813,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 103671900,
-      "pct": 0.0808,
-      "pctTotal": 0.0722
+      "pageLoads": 103670900,
+      "pct": 0.0807,
+      "pctTotal": 0.0721
     },
     {
       "browser": "chrome",
@@ -1826,9 +1826,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 102013800,
+      "pageLoads": 102111900,
       "pct": 0.0795,
-      "pctTotal": 0.071
+      "pctTotal": 0.0711
     },
     {
       "browser": "safari_ios",
@@ -1839,9 +1839,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 97890800,
-      "pct": 0.0763,
-      "pctTotal": 0.0681
+      "pageLoads": 98279500,
+      "pct": 0.0765,
+      "pctTotal": 0.0684
     },
     {
       "browser": "edge",
@@ -1853,7 +1853,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 96773800,
-      "pct": 0.0754,
+      "pct": 0.0753,
       "pctTotal": 0.0673
     },
     {
@@ -1866,7 +1866,7 @@
       "engineVersion": "151",
       "engineReleaseDate": "2026-07-28",
       "pageLoads": 94701600,
-      "pct": 0.0738,
+      "pct": 0.0737,
       "pctTotal": 0.0659
     },
     {
@@ -1878,8 +1878,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 93932000,
-      "pct": 0.0732,
+      "pageLoads": 93937600,
+      "pct": 0.0731,
       "pctTotal": 0.0654
     },
     {
@@ -1892,7 +1892,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 92956400,
-      "pct": 0.0724,
+      "pct": 0.0723,
       "pctTotal": 0.0647
     },
     {
@@ -1904,9 +1904,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 92840400,
+      "pageLoads": 92922100,
       "pct": 0.0723,
-      "pctTotal": 0.0646
+      "pctTotal": 0.0647
     },
     {
       "browser": "chrome_android",
@@ -1918,7 +1918,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 91126500,
-      "pct": 0.071,
+      "pct": 0.0709,
       "pctTotal": 0.0634
     },
     {
@@ -1944,7 +1944,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 88031500,
-      "pct": 0.0686,
+      "pct": 0.0685,
       "pctTotal": 0.0613
     },
     {
@@ -1957,7 +1957,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 86147900,
-      "pct": 0.0671,
+      "pct": 0.067,
       "pctTotal": 0.06
     },
     {
@@ -1969,7 +1969,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 85269300,
+      "pageLoads": 85275900,
       "pct": 0.0664,
       "pctTotal": 0.0593
     },
@@ -1982,8 +1982,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 84859000,
-      "pct": 0.0661,
+      "pageLoads": 84860000,
+      "pct": 0.066,
       "pctTotal": 0.0591
     },
     {
@@ -1996,7 +1996,7 @@
       "engineVersion": "113",
       "engineReleaseDate": "2023-05-02",
       "pageLoads": 79402800,
-      "pct": 0.0619,
+      "pct": 0.0618,
       "pctTotal": 0.0553
     },
     {
@@ -2009,7 +2009,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 78264900,
-      "pct": 0.061,
+      "pct": 0.0609,
       "pctTotal": 0.0545
     },
     {
@@ -2021,9 +2021,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 76312500,
+      "pageLoads": 76396500,
       "pct": 0.0595,
-      "pctTotal": 0.0531
+      "pctTotal": 0.0532
     },
     {
       "browser": "chrome_android",
@@ -2035,7 +2035,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 75723800,
-      "pct": 0.059,
+      "pct": 0.0589,
       "pctTotal": 0.0527
     },
     {
@@ -2061,7 +2061,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 73932200,
-      "pct": 0.0576,
+      "pct": 0.0575,
       "pctTotal": 0.0515
     },
     {
@@ -2087,7 +2087,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 73124600,
-      "pct": 0.057,
+      "pct": 0.0569,
       "pctTotal": 0.0509
     },
     {
@@ -2100,7 +2100,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 70847900,
-      "pct": 0.0552,
+      "pct": 0.0551,
       "pctTotal": 0.0493
     },
     {
@@ -2113,7 +2113,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 69538200,
-      "pct": 0.0542,
+      "pct": 0.0541,
       "pctTotal": 0.0484
     },
     {
@@ -2125,7 +2125,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 68409000,
+      "pageLoads": 68433100,
       "pct": 0.0533,
       "pctTotal": 0.0476
     },
@@ -2178,7 +2178,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 58500400,
-      "pct": 0.0456,
+      "pct": 0.0455,
       "pctTotal": 0.0407
     },
     {
@@ -2190,8 +2190,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 58222600,
-      "pct": 0.0454,
+      "pageLoads": 58231600,
+      "pct": 0.0453,
       "pctTotal": 0.0405
     },
     {
@@ -2216,7 +2216,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 57854900,
+      "pageLoads": 57903800,
       "pct": 0.0451,
       "pctTotal": 0.0403
     },
@@ -2282,7 +2282,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 52184800,
-      "pct": 0.0407,
+      "pct": 0.0406,
       "pctTotal": 0.0363
     },
     {
@@ -2334,7 +2334,7 @@
       "engineVersion": "100",
       "engineReleaseDate": "2022-03-29",
       "pageLoads": 47307800,
-      "pct": 0.0369,
+      "pct": 0.0368,
       "pctTotal": 0.0329
     },
     {
@@ -2346,7 +2346,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 46956400,
+      "pageLoads": 47017400,
       "pct": 0.0366,
       "pctTotal": 0.0327
     },
@@ -2360,8 +2360,21 @@
       "engineVersion": "148",
       "engineReleaseDate": "2026-05-05",
       "pageLoads": 46556300,
-      "pct": 0.0363,
+      "pct": 0.0362,
       "pctTotal": 0.0324
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "30.0",
+      "isDownstream": true,
+      "releaseDate": "2026-05-11",
+      "engine": "Blink",
+      "engineVersion": "143",
+      "engineReleaseDate": "2025-12-02",
+      "pageLoads": 46409800,
+      "pct": 0.0361,
+      "pctTotal": 0.0323
     },
     {
       "browser": "edge",
@@ -2373,7 +2386,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 46305600,
-      "pct": 0.0361,
+      "pct": 0.036,
       "pctTotal": 0.0322
     },
     {
@@ -2385,9 +2398,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 45311800,
+      "pageLoads": 45414400,
       "pct": 0.0353,
-      "pctTotal": 0.0315
+      "pctTotal": 0.0316
     },
     {
       "browser": "chrome_android",
@@ -2412,7 +2425,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 44902200,
-      "pct": 0.035,
+      "pct": 0.0349,
       "pctTotal": 0.0312
     },
     {
@@ -2424,7 +2437,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 44551100,
+      "pageLoads": 44562000,
       "pct": 0.0347,
       "pctTotal": 0.031
     },
@@ -2450,7 +2463,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 43672200,
+      "pageLoads": 43699400,
       "pct": 0.034,
       "pctTotal": 0.0304
     },
@@ -2477,7 +2490,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 42295800,
-      "pct": 0.033,
+      "pct": 0.0329,
       "pctTotal": 0.0294
     },
     {
@@ -2541,7 +2554,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 38476200,
+      "pageLoads": 38543800,
       "pct": 0.03,
       "pctTotal": 0.0268
     },
@@ -2594,7 +2607,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 35113400,
-      "pct": 0.0274,
+      "pct": 0.0273,
       "pctTotal": 0.0244
     },
     {
@@ -2633,7 +2646,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 34231500,
-      "pct": 0.0267,
+      "pct": 0.0266,
       "pctTotal": 0.0238
     },
     {
@@ -2715,6 +2728,19 @@
       "pctTotal": 0.0213
     },
     {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "16.1",
+      "isDownstream": false,
+      "releaseDate": "2022-10-24",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 30571100,
+      "pct": 0.0238,
+      "pctTotal": 0.0213
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "140",
@@ -2724,21 +2750,8 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 30510500,
-      "pct": 0.0238,
+      "pct": 0.0237,
       "pctTotal": 0.0212
-    },
-    {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "16.1",
-      "isDownstream": false,
-      "releaseDate": "2022-10-24",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 29902600,
-      "pct": 0.0233,
-      "pctTotal": 0.0208
     },
     {
       "browser": "chrome",
@@ -2749,8 +2762,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 29850600,
-      "pct": 0.0233,
+      "pageLoads": 29852000,
+      "pct": 0.0232,
       "pctTotal": 0.0208
     },
     {
@@ -2775,9 +2788,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 28505100,
+      "pageLoads": 28545400,
       "pct": 0.0222,
-      "pctTotal": 0.0198
+      "pctTotal": 0.0199
     },
     {
       "browser": "chrome_android",
@@ -2832,6 +2845,19 @@
       "pctTotal": 0.0187
     },
     {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "16",
+      "isDownstream": false,
+      "releaseDate": "2022-09-12",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 26538000,
+      "pct": 0.0207,
+      "pctTotal": 0.0185
+    },
+    {
       "browser": "safari",
       "name": "Safari",
       "version": "18.5",
@@ -2858,19 +2884,6 @@
       "pctTotal": 0.0183
     },
     {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "16",
-      "isDownstream": false,
-      "releaseDate": "2022-09-12",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 26011800,
-      "pct": 0.0203,
-      "pctTotal": 0.0181
-    },
-    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "128",
@@ -2880,7 +2893,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 25880600,
-      "pct": 0.0202,
+      "pct": 0.0201,
       "pctTotal": 0.018
     },
     {
@@ -2893,7 +2906,7 @@
       "engineVersion": "149",
       "engineReleaseDate": "2026-06-02",
       "pageLoads": 25756200,
-      "pct": 0.0201,
+      "pct": 0.02,
       "pctTotal": 0.0179
     },
     {
@@ -2910,6 +2923,19 @@
       "pctTotal": 0.0178
     },
     {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "17.3",
+      "isDownstream": false,
+      "releaseDate": "2024-01-22",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 25463900,
+      "pct": 0.0198,
+      "pctTotal": 0.0177
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "80",
@@ -2919,19 +2945,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 25383800,
-      "pct": 0.0198,
-      "pctTotal": 0.0177
-    },
-    {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "17.3",
-      "isDownstream": false,
-      "releaseDate": "2024-01-22",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 25377200,
       "pct": 0.0198,
       "pctTotal": 0.0177
     },
@@ -2958,7 +2971,7 @@
       "engineVersion": "83",
       "engineReleaseDate": "2020-05-19",
       "pageLoads": 25112400,
-      "pct": 0.0196,
+      "pct": 0.0195,
       "pctTotal": 0.0175
     },
     {
@@ -2984,7 +2997,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 24344700,
-      "pct": 0.019,
+      "pct": 0.0189,
       "pctTotal": 0.0169
     },
     {
@@ -2997,7 +3010,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 24217800,
-      "pct": 0.0189,
+      "pct": 0.0188,
       "pctTotal": 0.0169
     },
     {
@@ -3010,7 +3023,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 23939700,
-      "pct": 0.0187,
+      "pct": 0.0186,
       "pctTotal": 0.0167
     },
     {
@@ -3036,7 +3049,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 23566100,
-      "pct": 0.0184,
+      "pct": 0.0183,
       "pctTotal": 0.0164
     },
     {
@@ -3048,7 +3061,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 22903400,
+      "pageLoads": 22903800,
       "pct": 0.0178,
       "pctTotal": 0.0159
     },
@@ -3075,7 +3088,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 22409200,
-      "pct": 0.0175,
+      "pct": 0.0174,
       "pctTotal": 0.0156
     },
     {
@@ -3087,7 +3100,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 22063200,
+      "pageLoads": 22066100,
       "pct": 0.0172,
       "pctTotal": 0.0154
     },
@@ -3127,7 +3140,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 21511600,
-      "pct": 0.0168,
+      "pct": 0.0167,
       "pctTotal": 0.015
     },
     {
@@ -3152,7 +3165,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 20919200,
+      "pageLoads": 20940500,
       "pct": 0.0163,
       "pctTotal": 0.0146
     },
@@ -3243,9 +3256,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 19089400,
+      "pageLoads": 19186800,
       "pct": 0.0149,
-      "pctTotal": 0.0133
+      "pctTotal": 0.0134
     },
     {
       "browser": "webview_android",
@@ -3269,9 +3282,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 18743300,
+      "pageLoads": 18784200,
       "pct": 0.0146,
-      "pctTotal": 0.013
+      "pctTotal": 0.0131
     },
     {
       "browser": "chrome_android",
@@ -3283,7 +3296,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 18304900,
-      "pct": 0.0143,
+      "pct": 0.0142,
       "pctTotal": 0.0127
     },
     {
@@ -3296,7 +3309,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 18302800,
-      "pct": 0.0143,
+      "pct": 0.0142,
       "pctTotal": 0.0127
     },
     {
@@ -3361,7 +3374,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 17403500,
-      "pct": 0.0136,
+      "pct": 0.0135,
       "pctTotal": 0.0121
     },
     {
@@ -3477,9 +3490,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 15405700,
-      "pct": 0.012,
-      "pctTotal": 0.0107
+      "pageLoads": 15553900,
+      "pct": 0.0121,
+      "pctTotal": 0.0108
     },
     {
       "browser": "webview_android",
@@ -3560,6 +3573,19 @@
       "pctTotal": 0.0102
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "52",
+      "isDownstream": false,
+      "releaseDate": "2016-07-20",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 14542900,
+      "pct": 0.0113,
+      "pctTotal": 0.0101
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "157",
@@ -3571,19 +3597,6 @@
       "pageLoads": 14117600,
       "pct": 0.011,
       "pctTotal": 0.0098
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "52",
-      "isDownstream": false,
-      "releaseDate": "2016-07-20",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 13836600,
-      "pct": 0.0108,
-      "pctTotal": 0.0096
     },
     {
       "browser": "webview_android",
@@ -3633,9 +3646,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 13280500,
-      "pct": 0.0103,
-      "pctTotal": 0.0092
+      "pageLoads": 13329100,
+      "pct": 0.0104,
+      "pctTotal": 0.0093
     },
     {
       "browser": "edge",
@@ -3677,6 +3690,19 @@
       "pctTotal": 0.0092
     },
     {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "14",
+      "isDownstream": false,
+      "releaseDate": "2020-09-16",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 12880800,
+      "pct": 0.01,
+      "pctTotal": 0.009
+    },
+    {
       "browser": "safari",
       "name": "Safari",
       "version": "17.4",
@@ -3699,19 +3725,6 @@
       "engineVersion": "99",
       "engineReleaseDate": "2022-03-01",
       "pageLoads": 12750000,
-      "pct": 0.0099,
-      "pctTotal": 0.0089
-    },
-    {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "14",
-      "isDownstream": false,
-      "releaseDate": "2020-09-16",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 12748400,
       "pct": 0.0099,
       "pctTotal": 0.0089
     },
@@ -3792,6 +3805,19 @@
       "pageLoads": 11575900,
       "pct": 0.009,
       "pctTotal": 0.0081
+    },
+    {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "10.3",
+      "isDownstream": false,
+      "releaseDate": "2017-03-27",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 11551200,
+      "pct": 0.009,
+      "pctTotal": 0.008
     },
     {
       "browser": "webview_android",
@@ -3971,7 +3997,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 9204400,
+      "pageLoads": 9231400,
       "pct": 0.0072,
       "pctTotal": 0.0064
     },
@@ -4023,7 +4049,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 8611000,
+      "pageLoads": 8614200,
       "pct": 0.0067,
       "pctTotal": 0.006
     },
@@ -4075,7 +4101,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 8397900,
+      "pageLoads": 8399200,
       "pct": 0.0065,
       "pctTotal": 0.0058
     },
@@ -4140,7 +4166,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 7977600,
+      "pageLoads": 7978300,
       "pct": 0.0062,
       "pctTotal": 0.0056
     },
@@ -4212,13 +4238,26 @@
     {
       "browser": "chrome",
       "name": "Chrome",
+      "version": "59",
+      "isDownstream": false,
+      "releaseDate": "2017-06-05",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 7695200,
+      "pct": 0.006,
+      "pctTotal": 0.0054
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
       "version": "113",
       "isDownstream": false,
       "releaseDate": "2023-05-02",
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 7625700,
+      "pageLoads": 7631600,
       "pct": 0.0059,
       "pctTotal": 0.0053
     },
@@ -4231,7 +4270,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 7569700,
+      "pageLoads": 7570800,
       "pct": 0.0059,
       "pctTotal": 0.0053
     },
@@ -4262,6 +4301,19 @@
       "pctTotal": 0.0052
     },
     {
+      "browser": "edge",
+      "name": "Edge",
+      "version": "131",
+      "isDownstream": false,
+      "releaseDate": "2024-11-14",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 7412500,
+      "pct": 0.0058,
+      "pctTotal": 0.0052
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "155",
@@ -4273,19 +4325,6 @@
       "pageLoads": 7411200,
       "pct": 0.0058,
       "pctTotal": 0.0052
-    },
-    {
-      "browser": "edge",
-      "name": "Edge",
-      "version": "131",
-      "isDownstream": false,
-      "releaseDate": "2024-11-14",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 7398300,
-      "pct": 0.0058,
-      "pctTotal": 0.0051
     },
     {
       "browser": "webview_android",
@@ -4309,8 +4348,8 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 7381100,
-      "pct": 0.0058,
+      "pageLoads": 7382400,
+      "pct": 0.0057,
       "pctTotal": 0.0051
     },
     {
@@ -4362,7 +4401,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 7128500,
-      "pct": 0.0056,
+      "pct": 0.0055,
       "pctTotal": 0.005
     },
     {
@@ -4375,7 +4414,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 7125000,
-      "pct": 0.0056,
+      "pct": 0.0055,
       "pctTotal": 0.005
     },
     {
@@ -4400,7 +4439,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 6954800,
+      "pageLoads": 6958800,
       "pct": 0.0054,
       "pctTotal": 0.0048
     },
@@ -4428,19 +4467,6 @@
       "engineReleaseDate": null,
       "pageLoads": 6886000,
       "pct": 0.0054,
-      "pctTotal": 0.0048
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "59",
-      "isDownstream": false,
-      "releaseDate": "2017-06-05",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 6855800,
-      "pct": 0.0053,
       "pctTotal": 0.0048
     },
     {
@@ -4504,9 +4530,9 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 6644700,
+      "pageLoads": 6694800,
       "pct": 0.0052,
-      "pctTotal": 0.0046
+      "pctTotal": 0.0047
     },
     {
       "browser": "edge",
@@ -4609,7 +4635,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 6231300,
-      "pct": 0.0049,
+      "pct": 0.0048,
       "pctTotal": 0.0043
     },
     {
@@ -4751,7 +4777,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 5113100,
+      "pageLoads": 5115800,
       "pct": 0.004,
       "pctTotal": 0.0036
     },
@@ -4766,6 +4792,19 @@
       "engineReleaseDate": null,
       "pageLoads": 5092200,
       "pct": 0.004,
+      "pctTotal": 0.0035
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "53",
+      "isDownstream": false,
+      "releaseDate": "2016-08-31",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 4980600,
+      "pct": 0.0039,
       "pctTotal": 0.0035
     },
     {
@@ -4912,6 +4951,19 @@
       "pctTotal": 0.0033
     },
     {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "11",
+      "isDownstream": false,
+      "releaseDate": "2017-09-19",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 4741100,
+      "pct": 0.0037,
+      "pctTotal": 0.0033
+    },
+    {
       "browser": "edge",
       "name": "Edge",
       "version": "122",
@@ -5012,19 +5064,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 4515100,
-      "pct": 0.0035,
-      "pctTotal": 0.0031
-    },
-    {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "11",
-      "isDownstream": false,
-      "releaseDate": "2017-09-19",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 4492400,
       "pct": 0.0035,
       "pctTotal": 0.0031
     },
@@ -5276,19 +5315,6 @@
       "pctTotal": 0.0029
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "53",
-      "isDownstream": false,
-      "releaseDate": "2016-08-31",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 4152600,
-      "pct": 0.0032,
-      "pctTotal": 0.0029
-    },
-    {
       "browser": "safari",
       "name": "Safari",
       "version": "14",
@@ -5315,6 +5341,19 @@
       "pctTotal": 0.0028
     },
     {
+      "browser": "firefox",
+      "name": "Firefox",
+      "version": "125",
+      "isDownstream": false,
+      "releaseDate": "2024-04-16",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 4050100,
+      "pct": 0.0032,
+      "pctTotal": 0.0028
+    },
+    {
       "browser": "chrome",
       "name": "Chrome",
       "version": "84",
@@ -5324,19 +5363,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 4041900,
-      "pct": 0.0031,
-      "pctTotal": 0.0028
-    },
-    {
-      "browser": "firefox",
-      "name": "Firefox",
-      "version": "125",
-      "isDownstream": false,
-      "releaseDate": "2024-04-16",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 3967500,
       "pct": 0.0031,
       "pctTotal": 0.0028
     },
@@ -5389,7 +5415,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 3787700,
-      "pct": 0.003,
+      "pct": 0.0029,
       "pctTotal": 0.0026
     },
     {
@@ -5414,7 +5440,20 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 3748900,
+      "pageLoads": 3759700,
+      "pct": 0.0029,
+      "pctTotal": 0.0026
+    },
+    {
+      "browser": "edge",
+      "name": "Edge",
+      "version": "137",
+      "isDownstream": false,
+      "releaseDate": "2025-05-29",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 3751700,
       "pct": 0.0029,
       "pctTotal": 0.0026
     },
@@ -5441,19 +5480,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 3710100,
-      "pct": 0.0029,
-      "pctTotal": 0.0026
-    },
-    {
-      "browser": "edge",
-      "name": "Edge",
-      "version": "137",
-      "isDownstream": false,
-      "releaseDate": "2025-05-29",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 3690800,
       "pct": 0.0029,
       "pctTotal": 0.0026
     },
@@ -5506,7 +5532,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 3530300,
-      "pct": 0.0028,
+      "pct": 0.0027,
       "pctTotal": 0.0025
     },
     {
@@ -5603,6 +5629,19 @@
     {
       "browser": "chrome",
       "name": "Chrome",
+      "version": "51",
+      "isDownstream": false,
+      "releaseDate": "2016-05-25",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 3436700,
+      "pct": 0.0027,
+      "pctTotal": 0.0024
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
       "version": "63",
       "isDownstream": false,
       "releaseDate": "2017-12-06",
@@ -5622,7 +5661,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 3394700,
+      "pageLoads": 3399000,
       "pct": 0.0026,
       "pctTotal": 0.0024
     },
@@ -5676,6 +5715,32 @@
       "engineReleaseDate": "2024-07-23",
       "pageLoads": 3277100,
       "pct": 0.0026,
+      "pctTotal": 0.0023
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "56",
+      "isDownstream": false,
+      "releaseDate": "2017-01-25",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 3271100,
+      "pct": 0.0025,
+      "pctTotal": 0.0023
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "40",
+      "isDownstream": false,
+      "releaseDate": "2015-01-21",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 3269900,
+      "pct": 0.0025,
       "pctTotal": 0.0023
     },
     {
@@ -5744,6 +5809,19 @@
       "pctTotal": 0.0021
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "58",
+      "isDownstream": false,
+      "releaseDate": "2017-04-19",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 3054700,
+      "pct": 0.0024,
+      "pctTotal": 0.0021
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "137",
@@ -5767,6 +5845,32 @@
       "engineReleaseDate": null,
       "pageLoads": 3033000,
       "pct": 0.0024,
+      "pctTotal": 0.0021
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "57",
+      "isDownstream": false,
+      "releaseDate": "2017-03-09",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 3022500,
+      "pct": 0.0024,
+      "pctTotal": 0.0021
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "41",
+      "isDownstream": false,
+      "releaseDate": "2015-03-03",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2988800,
+      "pct": 0.0023,
       "pctTotal": 0.0021
     },
     {
@@ -5822,6 +5926,19 @@
       "pctTotal": 0.002
     },
     {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "10",
+      "isDownstream": false,
+      "releaseDate": "2016-09-13",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2837300,
+      "pct": 0.0022,
+      "pctTotal": 0.002
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "145",
@@ -5861,6 +5978,19 @@
       "pctTotal": 0.0019
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "60",
+      "isDownstream": false,
+      "releaseDate": "2017-07-25",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2787100,
+      "pct": 0.0022,
+      "pctTotal": 0.0019
+    },
+    {
       "browser": "webview_android",
       "name": "WebView Android",
       "version": "108",
@@ -5870,6 +6000,19 @@
       "engineVersion": "108",
       "engineReleaseDate": "2022-11-29",
       "pageLoads": 2730800,
+      "pct": 0.0021,
+      "pctTotal": 0.0019
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "46",
+      "isDownstream": false,
+      "releaseDate": "2015-10-13",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2722200,
       "pct": 0.0021,
       "pctTotal": 0.0019
     },
@@ -5896,6 +6039,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2709500,
+      "pct": 0.0021,
+      "pctTotal": 0.0019
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "449",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2690100,
       "pct": 0.0021,
       "pctTotal": 0.0019
     },
@@ -5952,28 +6108,41 @@
       "pctTotal": 0.0018
     },
     {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "10",
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "47",
       "isDownstream": false,
-      "releaseDate": "2016-09-13",
+      "releaseDate": "2015-12-01",
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 2622300,
+      "pageLoads": 2589800,
       "pct": 0.002,
       "pctTotal": 0.0018
     },
     {
       "browser": "chrome",
       "name": "Chrome",
-      "version": "51",
+      "version": "49",
       "isDownstream": false,
-      "releaseDate": "2016-05-25",
+      "releaseDate": "2016-03-02",
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 2608600,
+      "pageLoads": 2576400,
+      "pct": 0.002,
+      "pctTotal": 0.0018
+    },
+    {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "12",
+      "isDownstream": false,
+      "releaseDate": "2018-09-17",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2570200,
       "pct": 0.002,
       "pctTotal": 0.0018
     },
@@ -5991,17 +6160,30 @@
       "pctTotal": 0.0018
     },
     {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "12",
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "48",
       "isDownstream": false,
-      "releaseDate": "2018-09-17",
+      "releaseDate": "2016-01-20",
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 2543900,
+      "pageLoads": 2505900,
       "pct": 0.002,
-      "pctTotal": 0.0018
+      "pctTotal": 0.0017
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "43",
+      "isDownstream": false,
+      "releaseDate": "2015-05-19",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2487400,
+      "pct": 0.0019,
+      "pctTotal": 0.0017
     },
     {
       "browser": "edge",
@@ -6038,7 +6220,20 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 2455200,
+      "pageLoads": 2456000,
+      "pct": 0.0019,
+      "pctTotal": 0.0017
+    },
+    {
+      "browser": "firefox",
+      "name": "Firefox",
+      "version": "127",
+      "isDownstream": false,
+      "releaseDate": "2024-06-11",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2452300,
       "pct": 0.0019,
       "pctTotal": 0.0017
     },
@@ -6056,45 +6251,6 @@
       "pctTotal": 0.0017
     },
     {
-      "browser": "firefox",
-      "name": "Firefox",
-      "version": "127",
-      "isDownstream": false,
-      "releaseDate": "2024-06-11",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 2451800,
-      "pct": 0.0019,
-      "pctTotal": 0.0017
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "56",
-      "isDownstream": false,
-      "releaseDate": "2017-01-25",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 2443700,
-      "pct": 0.0019,
-      "pctTotal": 0.0017
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "40",
-      "isDownstream": false,
-      "releaseDate": "2015-01-21",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 2442900,
-      "pct": 0.0019,
-      "pctTotal": 0.0017
-    },
-    {
       "browser": "chrome",
       "name": "Chrome",
       "version": "95",
@@ -6104,6 +6260,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2442600,
+      "pct": 0.0019,
+      "pctTotal": 0.0017
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "55",
+      "isDownstream": false,
+      "releaseDate": "2016-12-01",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2437200,
       "pct": 0.0019,
       "pctTotal": 0.0017
     },
@@ -6121,6 +6290,19 @@
       "pctTotal": 0.0017
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "54",
+      "isDownstream": false,
+      "releaseDate": "2016-10-12",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2427400,
+      "pct": 0.0019,
+      "pctTotal": 0.0017
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "68",
@@ -6130,6 +6312,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2422100,
+      "pct": 0.0019,
+      "pctTotal": 0.0017
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "29.0",
+      "isDownstream": true,
+      "releaseDate": "2025-10-25",
+      "engine": "Blink",
+      "engineVersion": "136",
+      "engineReleaseDate": "2025-04-29",
+      "pageLoads": 2416700,
       "pct": 0.0019,
       "pctTotal": 0.0017
     },
@@ -6173,6 +6368,32 @@
       "pctTotal": 0.0017
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "45",
+      "isDownstream": false,
+      "releaseDate": "2015-09-01",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2363700,
+      "pct": 0.0018,
+      "pctTotal": 0.0016
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "450",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2344600,
+      "pct": 0.0018,
+      "pctTotal": 0.0016
+    },
+    {
       "browser": "webview_android",
       "name": "WebView Android",
       "version": "96",
@@ -6182,6 +6403,32 @@
       "engineVersion": "96",
       "engineReleaseDate": "2021-11-15",
       "pageLoads": 2338800,
+      "pct": 0.0018,
+      "pctTotal": 0.0016
+    },
+    {
+      "browser": "uc_android",
+      "name": "UC Browser Mobile",
+      "version": "19.0",
+      "isDownstream": true,
+      "releaseDate": "2026-08-24",
+      "engine": "Blink",
+      "engineVersion": "123",
+      "engineReleaseDate": "2024-03-19",
+      "pageLoads": 2334000,
+      "pct": 0.0018,
+      "pctTotal": 0.0016
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "50",
+      "isDownstream": false,
+      "releaseDate": "2016-04-13",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2322600,
       "pct": 0.0018,
       "pctTotal": 0.0016
     },
@@ -6212,6 +6459,19 @@
       "pctTotal": 0.0016
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "44",
+      "isDownstream": false,
+      "releaseDate": "2015-07-21",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2293800,
+      "pct": 0.0018,
+      "pctTotal": 0.0016
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "85",
@@ -6221,6 +6481,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2291200,
+      "pct": 0.0018,
+      "pctTotal": 0.0016
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "42",
+      "isDownstream": false,
+      "releaseDate": "2015-04-14",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2290700,
       "pct": 0.0018,
       "pctTotal": 0.0016
     },
@@ -6277,6 +6550,19 @@
       "pctTotal": 0.0016
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "39",
+      "isDownstream": false,
+      "releaseDate": "2014-11-18",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 2230800,
+      "pct": 0.0017,
+      "pctTotal": 0.0016
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "134",
@@ -6303,45 +6589,6 @@
       "pctTotal": 0.0015
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "58",
-      "isDownstream": false,
-      "releaseDate": "2017-04-19",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 2197400,
-      "pct": 0.0017,
-      "pctTotal": 0.0015
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "57",
-      "isDownstream": false,
-      "releaseDate": "2017-03-09",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 2195900,
-      "pct": 0.0017,
-      "pctTotal": 0.0015
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "41",
-      "isDownstream": false,
-      "releaseDate": "2015-03-03",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 2179200,
-      "pct": 0.0017,
-      "pctTotal": 0.0015
-    },
-    {
       "browser": "edge",
       "name": "Edge",
       "version": "128",
@@ -6351,7 +6598,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 2119000,
-      "pct": 0.0017,
+      "pct": 0.0016,
       "pctTotal": 0.0015
     },
     {
@@ -6407,19 +6654,6 @@
       "pctTotal": 0.0014
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "60",
-      "isDownstream": false,
-      "releaseDate": "2017-07-25",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1961200,
-      "pct": 0.0015,
-      "pctTotal": 0.0014
-    },
-    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "102",
@@ -6454,20 +6688,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1915200,
-      "pct": 0.0015,
-      "pctTotal": 0.0013
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "46",
-      "isDownstream": false,
-      "releaseDate": "2015-10-13",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1901200,
+      "pageLoads": 1915700,
       "pct": 0.0015,
       "pctTotal": 0.0013
     },
@@ -6511,32 +6732,6 @@
       "pctTotal": 0.0012
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "49",
-      "isDownstream": false,
-      "releaseDate": "2016-03-02",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1750500,
-      "pct": 0.0014,
-      "pctTotal": 0.0012
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "47",
-      "isDownstream": false,
-      "releaseDate": "2015-12-01",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1737200,
-      "pct": 0.0014,
-      "pctTotal": 0.0012
-    },
-    {
       "browser": "webview_android",
       "name": "WebView Android",
       "version": "122",
@@ -6563,19 +6758,6 @@
       "pctTotal": 0.0012
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "48",
-      "isDownstream": false,
-      "releaseDate": "2016-01-20",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1696900,
-      "pct": 0.0013,
-      "pctTotal": 0.0012
-    },
-    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "151",
@@ -6598,19 +6780,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 1682000,
-      "pct": 0.0013,
-      "pctTotal": 0.0012
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "43",
-      "isDownstream": false,
-      "releaseDate": "2015-05-19",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1677000,
       "pct": 0.0013,
       "pctTotal": 0.0012
     },
@@ -6654,28 +6823,15 @@
       "pctTotal": 0.0012
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "55",
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "13.2",
       "isDownstream": false,
-      "releaseDate": "2016-12-01",
+      "releaseDate": null,
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1613100,
-      "pct": 0.0013,
-      "pctTotal": 0.0011
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "54",
-      "isDownstream": false,
-      "releaseDate": "2016-10-12",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1610600,
+      "pageLoads": 1624900,
       "pct": 0.0013,
       "pctTotal": 0.0011
     },
@@ -6719,32 +6875,6 @@
       "pctTotal": 0.0011
     },
     {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "13.2",
-      "isDownstream": false,
-      "releaseDate": null,
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1560800,
-      "pct": 0.0012,
-      "pctTotal": 0.0011
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "45",
-      "isDownstream": false,
-      "releaseDate": "2015-09-01",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1555200,
-      "pct": 0.0012,
-      "pctTotal": 0.0011
-    },
-    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "139",
@@ -6784,19 +6914,6 @@
       "pctTotal": 0.001
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "50",
-      "isDownstream": false,
-      "releaseDate": "2016-04-13",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1485200,
-      "pct": 0.0012,
-      "pctTotal": 0.001
-    },
-    {
       "browser": "edge",
       "name": "Edge",
       "version": "113",
@@ -6819,32 +6936,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 1477200,
-      "pct": 0.0012,
-      "pctTotal": 0.001
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "42",
-      "isDownstream": false,
-      "releaseDate": "2015-04-14",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1472800,
-      "pct": 0.0011,
-      "pctTotal": 0.001
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "44",
-      "isDownstream": false,
-      "releaseDate": "2015-07-21",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1469600,
       "pct": 0.0011,
       "pctTotal": 0.001
     },
@@ -6883,7 +6974,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1446600,
+      "pageLoads": 1447100,
       "pct": 0.0011,
       "pctTotal": 0.001
     },
@@ -6910,19 +7001,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 1421800,
-      "pct": 0.0011,
-      "pctTotal": 0.001
-    },
-    {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "39",
-      "isDownstream": false,
-      "releaseDate": "2014-11-18",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1413200,
       "pct": 0.0011,
       "pctTotal": 0.001
     },
@@ -6976,19 +7054,6 @@
       "engineReleaseDate": null,
       "pageLoads": 1355100,
       "pct": 0.0011,
-      "pctTotal": 0.0009
-    },
-    {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "30.0",
-      "isDownstream": true,
-      "releaseDate": "2026-05-11",
-      "engine": "Blink",
-      "engineVersion": "143",
-      "engineReleaseDate": "2025-12-02",
-      "pageLoads": 1323300,
-      "pct": 0.001,
       "pctTotal": 0.0009
     },
     {
@@ -7078,7 +7143,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 1229300,
+      "pageLoads": 1230600,
       "pct": 0.001,
       "pctTotal": 0.0009
     },
@@ -7122,6 +7187,19 @@
       "pctTotal": 0.0008
     },
     {
+      "browser": "firefox",
+      "name": "Firefox",
+      "version": "124",
+      "isDownstream": false,
+      "releaseDate": "2024-03-19",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 1185200,
+      "pct": 0.0009,
+      "pctTotal": 0.0008
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "136",
@@ -7148,19 +7226,6 @@
       "pctTotal": 0.0008
     },
     {
-      "browser": "firefox",
-      "name": "Firefox",
-      "version": "124",
-      "isDownstream": false,
-      "releaseDate": "2024-03-19",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1102700,
-      "pct": 0.0009,
-      "pctTotal": 0.0008
-    },
-    {
       "browser": "safari_ios",
       "name": "Safari on iOS",
       "version": "12.3",
@@ -7171,6 +7236,19 @@
       "engineReleaseDate": null,
       "pageLoads": 1093900,
       "pct": 0.0009,
+      "pctTotal": 0.0008
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "28.0",
+      "isDownstream": true,
+      "releaseDate": "2025-04-02",
+      "engine": "Blink",
+      "engineVersion": "130",
+      "engineReleaseDate": "2024-10-15",
+      "pageLoads": 1091400,
+      "pct": 0.0008,
       "pctTotal": 0.0008
     },
     {
@@ -7261,6 +7339,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 1003500,
+      "pct": 0.0008,
+      "pctTotal": 0.0007
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "102",
+      "isDownstream": true,
+      "releaseDate": "2026-09-23",
+      "engine": "Blink",
+      "engineVersion": "152",
+      "engineReleaseDate": "2026-08-25",
+      "pageLoads": 989600,
       "pct": 0.0008,
       "pctTotal": 0.0007
     },
@@ -7551,6 +7642,19 @@
       "pctTotal": 0.0005
     },
     {
+      "browser": "uc_android",
+      "name": "UC Browser Mobile",
+      "version": "15.0",
+      "isDownstream": true,
+      "releaseDate": "2022-08-24",
+      "engine": "Blink",
+      "engineVersion": "78",
+      "engineReleaseDate": "2019-10-22",
+      "pageLoads": 759800,
+      "pct": 0.0006,
+      "pctTotal": 0.0005
+    },
+    {
       "browser": "safari_ios",
       "name": "Safari on iOS",
       "version": "13.3",
@@ -7598,7 +7702,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 740700,
+      "pageLoads": 741300,
       "pct": 0.0006,
       "pctTotal": 0.0005
     },
@@ -7898,7 +8002,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 577700,
-      "pct": 0.0005,
+      "pct": 0.0004,
       "pctTotal": 0.0004
     },
     {
@@ -7989,6 +8093,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 497000,
+      "pct": 0.0004,
+      "pctTotal": 0.0003
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "99",
+      "isDownstream": true,
+      "releaseDate": "2026-06-10",
+      "engine": "Blink",
+      "engineVersion": "148",
+      "engineReleaseDate": "2026-05-05",
+      "pageLoads": 488200,
       "pct": 0.0004,
       "pctTotal": 0.0003
     },
@@ -8123,6 +8240,19 @@
       "pctTotal": 0.0003
     },
     {
+      "browser": "uc_android",
+      "name": "UC Browser Mobile",
+      "version": "18.0",
+      "isDownstream": true,
+      "releaseDate": "2025-08-17",
+      "engine": "Blink",
+      "engineVersion": "123",
+      "engineReleaseDate": "2024-03-19",
+      "pageLoads": 425600,
+      "pct": 0.0003,
+      "pctTotal": 0.0003
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "76",
@@ -8188,6 +8318,19 @@
       "pctTotal": 0.0003
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "26.0",
+      "isDownstream": true,
+      "releaseDate": "2024-06-07",
+      "engine": "Blink",
+      "engineVersion": "122",
+      "engineReleaseDate": "2024-02-20",
+      "pageLoads": 408600,
+      "pct": 0.0003,
+      "pctTotal": 0.0003
+    },
+    {
       "browser": "webview_android",
       "name": "WebView Android",
       "version": "107",
@@ -8214,15 +8357,15 @@
       "pctTotal": 0.0003
     },
     {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "10.3",
-      "isDownstream": false,
-      "releaseDate": "2017-03-27",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 392100,
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "27.0",
+      "isDownstream": true,
+      "releaseDate": "2024-11-06",
+      "engine": "Blink",
+      "engineVersion": "125",
+      "engineReleaseDate": "2024-05-14",
+      "pageLoads": 392700,
       "pct": 0.0003,
       "pctTotal": 0.0003
     },
@@ -8418,7 +8561,7 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 321200,
-      "pct": 0.0003,
+      "pct": 0.0002,
       "pctTotal": 0.0002
     },
     {
@@ -8573,7 +8716,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 279800,
+      "pageLoads": 280200,
       "pct": 0.0002,
       "pctTotal": 0.0002
     },
@@ -9553,6 +9696,19 @@
       "pctTotal": 0.0001
     },
     {
+      "browser": "uc_android",
+      "name": "UC Browser Mobile",
+      "version": "17.0",
+      "isDownstream": true,
+      "releaseDate": "2024-08-24",
+      "engine": "Blink",
+      "engineVersion": "100",
+      "engineReleaseDate": "2022-03-29",
+      "pageLoads": 128700,
+      "pct": 0.0001,
+      "pctTotal": 0.0001
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "2",
@@ -9562,6 +9718,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 128000,
+      "pct": 0.0001,
+      "pctTotal": 0.0001
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "448",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 127500,
       "pct": 0.0001,
       "pctTotal": 0.0001
     },
@@ -9748,6 +9917,19 @@
       "pctTotal": 0.0001
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "25.0",
+      "isDownstream": true,
+      "releaseDate": "2024-04-24",
+      "engine": "Blink",
+      "engineVersion": "121",
+      "engineReleaseDate": "2024-01-23",
+      "pageLoads": 108700,
+      "pct": 0.0001,
+      "pctTotal": 0.0001
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "26",
@@ -9847,7 +10029,7 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 102800,
+      "pageLoads": 102400,
       "pct": 0.0001,
       "pctTotal": 0.0001
     },
@@ -9943,6 +10125,32 @@
       "pctTotal": 0.0001
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "24.0",
+      "isDownstream": true,
+      "releaseDate": "2024-01-25",
+      "engine": "Blink",
+      "engineVersion": "117",
+      "engineReleaseDate": "2023-09-12",
+      "pageLoads": 93600,
+      "pct": 0.0001,
+      "pctTotal": 0.0001
+    },
+    {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "3",
+      "isDownstream": false,
+      "releaseDate": "2009-06-17",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 91400,
+      "pct": 0.0001,
+      "pctTotal": 0.0001
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "88",
@@ -10021,19 +10229,6 @@
       "pctTotal": 0.0001
     },
     {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "3",
-      "isDownstream": false,
-      "releaseDate": "2009-06-17",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 86700,
-      "pct": 0.0001,
-      "pctTotal": 0.0001
-    },
-    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "120",
@@ -10108,6 +10303,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 79400,
+      "pct": 0.0001,
+      "pctTotal": 0.0001
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "23.0",
+      "isDownstream": true,
+      "releaseDate": "2023-10-18",
+      "engine": "Blink",
+      "engineVersion": "115",
+      "engineReleaseDate": "2023-07-18",
+      "pageLoads": 79000,
       "pct": 0.0001,
       "pctTotal": 0.0001
     },
@@ -10294,6 +10502,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "35",
+      "isDownstream": true,
+      "releaseDate": "2016-02-04",
+      "engine": "Blink",
+      "engineVersion": "48",
+      "engineReleaseDate": "2016-01-20",
+      "pageLoads": 61100,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "67",
@@ -10322,6 +10543,19 @@
     {
       "browser": "chrome",
       "name": "Chrome",
+      "version": "3",
+      "isDownstream": false,
+      "releaseDate": "2009-09-15",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 60600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "chrome",
+      "name": "Chrome",
       "version": "13",
       "isDownstream": false,
       "releaseDate": "2011-08-02",
@@ -10329,19 +10563,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 60500,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "26.0",
-      "isDownstream": true,
-      "releaseDate": "2024-06-07",
-      "engine": "Blink",
-      "engineVersion": "122",
-      "engineReleaseDate": "2024-02-20",
-      "pageLoads": 57800,
       "pct": 0,
       "pctTotal": 0
     },
@@ -10372,19 +10593,6 @@
       "pctTotal": 0
     },
     {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "29.0",
-      "isDownstream": true,
-      "releaseDate": "2025-10-25",
-      "engine": "Blink",
-      "engineVersion": "136",
-      "engineReleaseDate": "2025-04-29",
-      "pageLoads": 56500,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
       "browser": "chrome",
       "name": "Chrome",
       "version": "19",
@@ -10394,6 +10602,32 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 56500,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "uc_android",
+      "name": "UC Browser Mobile",
+      "version": "16.0",
+      "isDownstream": true,
+      "releaseDate": "2023-08-24",
+      "engine": "Blink",
+      "engineVersion": "100",
+      "engineReleaseDate": "2022-03-29",
+      "pageLoads": 56100,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "101",
+      "isDownstream": true,
+      "releaseDate": "2026-08-26",
+      "engine": "Blink",
+      "engineVersion": "151",
+      "engineReleaseDate": "2026-07-28",
+      "pageLoads": 55400,
       "pct": 0,
       "pctTotal": 0
     },
@@ -10437,19 +10671,6 @@
       "pctTotal": 0
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "3",
-      "isDownstream": false,
-      "releaseDate": "2009-09-15",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 53000,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
       "browser": "edge",
       "name": "Edge",
       "version": "95",
@@ -10472,6 +10693,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 51700,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "447",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 50400,
       "pct": 0,
       "pctTotal": 0
     },
@@ -10567,19 +10801,6 @@
       "pctTotal": 0
     },
     {
-      "browser": "chrome",
-      "name": "Chrome",
-      "version": "1",
-      "isDownstream": false,
-      "releaseDate": "2008-12-11",
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 46900,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
       "browser": "edge",
       "name": "Edge",
       "version": "98",
@@ -10671,6 +10892,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "446",
+      "isDownstream": true,
+      "releaseDate": "2026-09-12",
+      "engine": "Blink",
+      "engineVersion": "153",
+      "engineReleaseDate": "2026-09-08",
+      "pageLoads": 42300,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "chrome",
       "name": "Chrome",
       "version": "7",
@@ -10723,6 +10957,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "chrome",
+      "name": "Chrome",
+      "version": "1",
+      "isDownstream": false,
+      "releaseDate": "2008-12-11",
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 39300,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "95",
@@ -10745,19 +10992,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 38200,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
-      "browser": "edge",
-      "name": "Edge",
-      "version": "52",
-      "isDownstream": false,
-      "releaseDate": null,
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 38000,
       "pct": 0,
       "pctTotal": 0
     },
@@ -10840,6 +11074,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "7.0",
+      "isDownstream": true,
+      "releaseDate": "2018-03-16",
+      "engine": "Blink",
+      "engineVersion": "59",
+      "engineReleaseDate": "2017-06-05",
+      "pageLoads": 36100,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "safari",
       "name": "Safari",
       "version": "7",
@@ -10905,6 +11152,32 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "34",
+      "isDownstream": true,
+      "releaseDate": "2015-12-16",
+      "engine": "Blink",
+      "engineVersion": "47",
+      "engineReleaseDate": "2015-12-01",
+      "pageLoads": 32200,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "22.0",
+      "isDownstream": true,
+      "releaseDate": "2023-07-14",
+      "engine": "Blink",
+      "engineVersion": "111",
+      "engineReleaseDate": "2023-03-07",
+      "pageLoads": 32200,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "chrome",
       "name": "Chrome",
       "version": "14",
@@ -10944,6 +11217,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "edge",
+      "name": "Edge",
+      "version": "52",
+      "isDownstream": false,
+      "releaseDate": null,
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 31000,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "100",
@@ -10953,6 +11239,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 30600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera",
+      "name": "Opera",
+      "version": "34",
+      "isDownstream": true,
+      "releaseDate": "2015-12-08",
+      "engine": "Blink",
+      "engineVersion": "47",
+      "engineReleaseDate": "2015-12-01",
+      "pageLoads": 30300,
       "pct": 0,
       "pctTotal": 0
     },
@@ -11061,6 +11360,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
+      "version": "10.15",
+      "isDownstream": false,
+      "releaseDate": null,
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 27000,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "110",
@@ -11148,6 +11460,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 25300,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera",
+      "name": "Opera",
+      "version": "102",
+      "isDownstream": true,
+      "releaseDate": "2023-08-23",
+      "engine": "Blink",
+      "engineVersion": "116",
+      "engineReleaseDate": "2023-08-15",
+      "pageLoads": 25200,
       "pct": 0,
       "pctTotal": 0
     },
@@ -11321,6 +11646,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "100",
+      "isDownstream": true,
+      "releaseDate": "2026-07-01",
+      "engine": "Blink",
+      "engineVersion": "149",
+      "engineReleaseDate": "2026-06-02",
+      "pageLoads": 22700,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "98",
@@ -11334,6 +11672,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "16.0",
+      "isDownstream": true,
+      "releaseDate": "2021-11-25",
+      "engine": "Blink",
+      "engineVersion": "92",
+      "engineReleaseDate": "2021-07-20",
+      "pageLoads": 22000,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "90",
@@ -11343,6 +11694,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 21300,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "21.0",
+      "isDownstream": true,
+      "releaseDate": "2023-05-19",
+      "engine": "Blink",
+      "engineVersion": "110",
+      "engineReleaseDate": "2023-02-07",
+      "pageLoads": 21200,
       "pct": 0,
       "pctTotal": 0
     },
@@ -11408,6 +11772,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 18600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "444",
+      "isDownstream": true,
+      "releaseDate": "2026-08-27",
+      "engine": "Blink",
+      "engineVersion": "151",
+      "engineReleaseDate": "2026-07-28",
+      "pageLoads": 18400,
       "pct": 0,
       "pctTotal": 0
     },
@@ -11486,6 +11863,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 16700,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "443",
+      "isDownstream": true,
+      "releaseDate": "2026-08-21",
+      "engine": "Blink",
+      "engineVersion": "151",
+      "engineReleaseDate": "2026-07-28",
+      "pageLoads": 16500,
       "pct": 0,
       "pctTotal": 0
     },
@@ -11577,6 +11967,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 15400,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "18.0",
+      "isDownstream": true,
+      "releaseDate": "2022-08-08",
+      "engine": "Blink",
+      "engineVersion": "99",
+      "engineReleaseDate": "2022-03-01",
+      "pageLoads": 15200,
       "pct": 0,
       "pctTotal": 0
     },
@@ -11737,6 +12140,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "uc_android",
+      "name": "UC Browser Mobile",
+      "version": "13.0",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": "57",
+      "engineReleaseDate": "2017-03-09",
+      "pageLoads": 13300,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "57",
@@ -11837,6 +12253,19 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 12000,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "uc_android",
+      "name": "UC Browser Mobile",
+      "version": "12.0",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": "57",
+      "engineReleaseDate": "2017-03-09",
+      "pageLoads": 11100,
       "pct": 0,
       "pctTotal": 0
     },
@@ -11945,6 +12374,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "42",
+      "isDownstream": true,
+      "releaseDate": "2017-01-21",
+      "engine": "Blink",
+      "engineVersion": "55",
+      "engineReleaseDate": "2016-12-01",
+      "pageLoads": 9000,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "27",
@@ -11993,19 +12435,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 8200,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "28.0",
-      "isDownstream": true,
-      "releaseDate": "2025-04-02",
-      "engine": "Blink",
-      "engineVersion": "130",
-      "engineReleaseDate": "2024-10-15",
-      "pageLoads": 7900,
       "pct": 0,
       "pctTotal": 0
     },
@@ -12140,6 +12569,32 @@
       "pctTotal": 0
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "20.0",
+      "isDownstream": true,
+      "releaseDate": "2023-02-10",
+      "engine": "Blink",
+      "engineVersion": "106",
+      "engineReleaseDate": "2022-09-27",
+      "pageLoads": 6600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "97",
+      "isDownstream": true,
+      "releaseDate": "2026-04-16",
+      "engine": "Blink",
+      "engineVersion": "146",
+      "engineReleaseDate": "2026-03-10",
+      "pageLoads": 6400,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "webview_android",
       "name": "WebView Android",
       "version": "46",
@@ -12192,6 +12647,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "94",
+      "isDownstream": true,
+      "releaseDate": "2026-01-13",
+      "engine": "Blink",
+      "engineVersion": "143",
+      "engineReleaseDate": "2025-12-02",
+      "pageLoads": 5500,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "chrome_android",
       "name": "Chrome for Android",
       "version": "33",
@@ -12214,19 +12682,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 5200,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "24.0",
-      "isDownstream": true,
-      "releaseDate": "2024-01-25",
-      "engine": "Blink",
-      "engineVersion": "117",
-      "engineReleaseDate": "2023-09-12",
-      "pageLoads": 5100,
       "pct": 0,
       "pctTotal": 0
     },
@@ -12266,19 +12721,6 @@
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 5000,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "20.0",
-      "isDownstream": true,
-      "releaseDate": "2023-02-10",
-      "engine": "Blink",
-      "engineVersion": "106",
-      "engineReleaseDate": "2022-09-27",
-      "pageLoads": 4900,
       "pct": 0,
       "pctTotal": 0
     },
@@ -12354,6 +12796,19 @@
       "isDownstream": false,
       "releaseDate": null,
       "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 4600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "451",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
       "engineVersion": null,
       "engineReleaseDate": null,
       "pageLoads": 4600,
@@ -12486,6 +12941,19 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 3800,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "90",
+      "isDownstream": true,
+      "releaseDate": "2025-06-18",
+      "engine": "Blink",
+      "engineVersion": "137",
+      "engineReleaseDate": "2025-05-27",
       "pageLoads": 3800,
       "pct": 0,
       "pctTotal": 0
@@ -12649,6 +13117,19 @@
     {
       "browser": "safari_ios",
       "name": "Safari on iOS",
+      "version": "12.7",
+      "isDownstream": false,
+      "releaseDate": null,
+      "engine": null,
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 3200,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "safari_ios",
+      "name": "Safari on iOS",
       "version": "4.3",
       "isDownstream": false,
       "releaseDate": null,
@@ -12668,6 +13149,19 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 3000,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "438",
+      "isDownstream": true,
+      "releaseDate": "2026-07-22",
+      "engine": "Blink",
+      "engineVersion": "150",
+      "engineReleaseDate": "2026-06-30",
       "pageLoads": 3000,
       "pct": 0,
       "pctTotal": 0
@@ -12707,19 +13201,6 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 2900,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "27.0",
-      "isDownstream": true,
-      "releaseDate": "2024-11-06",
-      "engine": "Blink",
-      "engineVersion": "125",
-      "engineReleaseDate": "2024-05-14",
       "pageLoads": 2900,
       "pct": 0,
       "pctTotal": 0
@@ -12838,6 +13319,19 @@
       "engineVersion": "37",
       "engineReleaseDate": "2014-08-26",
       "pageLoads": 2700,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "19.0",
+      "isDownstream": true,
+      "releaseDate": "2022-11-01",
+      "engine": "Blink",
+      "engineVersion": "102",
+      "engineReleaseDate": "2022-05-24",
+      "pageLoads": 2600,
       "pct": 0,
       "pctTotal": 0
     },
@@ -12985,6 +13479,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "31.0",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 1900,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "223",
@@ -13063,15 +13570,15 @@
       "pctTotal": 0
     },
     {
-      "browser": "safari_ios",
-      "name": "Safari on iOS",
-      "version": "12.7",
-      "isDownstream": false,
-      "releaseDate": null,
-      "engine": null,
-      "engineVersion": null,
-      "engineReleaseDate": null,
-      "pageLoads": 1700,
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "14.0",
+      "isDownstream": true,
+      "releaseDate": "2021-04-17",
+      "engine": "Blink",
+      "engineVersion": "87",
+      "engineReleaseDate": "2020-11-17",
+      "pageLoads": 1800,
       "pct": 0,
       "pctTotal": 0
     },
@@ -13123,6 +13630,32 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 1600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "62",
+      "isDownstream": true,
+      "releaseDate": "2021-02-16",
+      "engine": "Blink",
+      "engineVersion": "87",
+      "engineReleaseDate": "2020-11-17",
+      "pageLoads": 1600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "96",
+      "isDownstream": true,
+      "releaseDate": "2026-03-10",
+      "engine": "Blink",
+      "engineVersion": "145",
+      "engineReleaseDate": "2026-02-10",
       "pageLoads": 1600,
       "pct": 0,
       "pctTotal": 0
@@ -13245,6 +13778,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "85",
+      "isDownstream": true,
+      "releaseDate": "2024-10-29",
+      "engine": "Blink",
+      "engineVersion": "128",
+      "engineReleaseDate": "2024-08-20",
+      "pageLoads": 1200,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "163",
@@ -13310,6 +13856,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "13.0",
+      "isDownstream": true,
+      "releaseDate": "2020-12-02",
+      "engine": "Blink",
+      "engineVersion": "83",
+      "engineReleaseDate": "2020-05-19",
+      "pageLoads": 1100,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "edge",
       "name": "Edge",
       "version": "73",
@@ -13318,6 +13877,19 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 1100,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "76",
+      "isDownstream": true,
+      "releaseDate": "2023-06-26",
+      "engine": "Blink",
+      "engineVersion": "114",
+      "engineReleaseDate": "2023-05-30",
       "pageLoads": 1100,
       "pct": 0,
       "pctTotal": 0
@@ -13401,6 +13973,32 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "103",
+      "isDownstream": true,
+      "releaseDate": null,
+      "engine": "Blink",
+      "engineVersion": null,
+      "engineReleaseDate": null,
+      "pageLoads": 900,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera",
+      "name": "Opera",
+      "version": "99",
+      "isDownstream": true,
+      "releaseDate": "2023-05-16",
+      "engine": "Blink",
+      "engineVersion": "113",
+      "engineReleaseDate": "2023-05-02",
+      "pageLoads": 900,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "115",
@@ -13453,6 +14051,32 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "73",
+      "isDownstream": true,
+      "releaseDate": "2023-01-17",
+      "engine": "Blink",
+      "engineVersion": "108",
+      "engineReleaseDate": "2022-11-29",
+      "pageLoads": 700,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "4.0",
+      "isDownstream": true,
+      "releaseDate": "2016-03-11",
+      "engine": "Blink",
+      "engineVersion": "44",
+      "engineReleaseDate": "2015-07-21",
+      "pageLoads": 700,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "253",
@@ -13500,6 +14124,19 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "17.0",
+      "isDownstream": true,
+      "releaseDate": "2022-05-04",
+      "engine": "Blink",
+      "engineVersion": "96",
+      "engineReleaseDate": "2021-11-15",
       "pageLoads": 600,
       "pct": 0,
       "pctTotal": 0
@@ -13635,19 +14272,6 @@
       "pctTotal": 0
     },
     {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "21.0",
-      "isDownstream": true,
-      "releaseDate": "2023-05-19",
-      "engine": "Blink",
-      "engineVersion": "110",
-      "engineReleaseDate": "2023-02-07",
-      "pageLoads": 600,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "66",
@@ -13695,6 +14319,19 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 600,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "11.0",
+      "isDownstream": true,
+      "releaseDate": "2019-12-05",
+      "engine": "Blink",
+      "engineVersion": "75",
+      "engineReleaseDate": "2019-06-04",
       "pageLoads": 600,
       "pct": 0,
       "pctTotal": 0
@@ -13804,6 +14441,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "66",
+      "isDownstream": true,
+      "releaseDate": "2021-12-15",
+      "engine": "Blink",
+      "engineVersion": "94",
+      "engineReleaseDate": "2021-09-21",
+      "pageLoads": 500,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox",
       "name": "Firefox",
       "version": "184",
@@ -13908,6 +14558,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "79",
+      "isDownstream": true,
+      "releaseDate": "2023-12-06",
+      "engine": "Blink",
+      "engineVersion": "119",
+      "engineReleaseDate": "2023-10-31",
+      "pageLoads": 500,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "chrome",
       "name": "Chrome",
       "version": "964",
@@ -13934,6 +14597,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "74",
+      "isDownstream": true,
+      "releaseDate": "2023-03-13",
+      "engine": "Blink",
+      "engineVersion": "110",
+      "engineReleaseDate": "2023-02-07",
+      "pageLoads": 500,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "webview_android",
       "name": "WebView Android",
       "version": "34",
@@ -13942,6 +14618,32 @@
       "engine": "Blink",
       "engineVersion": "34",
       "engineReleaseDate": "2014-04-08",
+      "pageLoads": 500,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "samsunginternet_android",
+      "name": "Samsung Internet",
+      "version": "3.0",
+      "isDownstream": true,
+      "releaseDate": "2015-04-10",
+      "engine": "Blink",
+      "engineVersion": "38",
+      "engineReleaseDate": "2014-10-07",
+      "pageLoads": 500,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "430",
+      "isDownstream": true,
+      "releaseDate": "2026-05-30",
+      "engine": "Blink",
+      "engineVersion": "148",
+      "engineReleaseDate": "2026-05-05",
       "pageLoads": 500,
       "pct": 0,
       "pctTotal": 0
@@ -14077,6 +14779,19 @@
       "pctTotal": 0
     },
     {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "98",
+      "isDownstream": true,
+      "releaseDate": "2026-05-05",
+      "engine": "Blink",
+      "engineVersion": "147",
+      "engineReleaseDate": "2026-04-07",
+      "pageLoads": 300,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
       "browser": "firefox_android",
       "name": "Firefox for Android",
       "version": "61",
@@ -14085,6 +14800,19 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 300,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "opera_android",
+      "name": "Opera Android",
+      "version": "69",
+      "isDownstream": true,
+      "releaseDate": "2022-05-09",
+      "engine": "Blink",
+      "engineVersion": "100",
+      "engineReleaseDate": "2022-03-29",
       "pageLoads": 300,
       "pct": 0,
       "pctTotal": 0
@@ -14137,6 +14865,19 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
+      "pageLoads": 100,
+      "pct": 0,
+      "pctTotal": 0
+    },
+    {
+      "browser": "instagram_android",
+      "name": "Instagram for Android",
+      "version": "423",
+      "isDownstream": true,
+      "releaseDate": "2026-04-05",
+      "engine": "Blink",
+      "engineVersion": "146",
+      "engineReleaseDate": "2026-03-10",
       "pageLoads": 100,
       "pct": 0,
       "pctTotal": 0
@@ -14215,19 +14956,6 @@
       "engine": null,
       "engineVersion": null,
       "engineReleaseDate": null,
-      "pageLoads": 100,
-      "pct": 0,
-      "pctTotal": 0
-    },
-    {
-      "browser": "samsunginternet_android",
-      "name": "Samsung Internet",
-      "version": "25.0",
-      "isDownstream": true,
-      "releaseDate": "2024-04-24",
-      "engine": "Blink",
-      "engineVersion": "121",
-      "engineReleaseDate": "2024-01-23",
       "pageLoads": 100,
       "pct": 0,
       "pctTotal": 0
