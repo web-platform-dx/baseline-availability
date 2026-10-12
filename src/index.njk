@@ -22,12 +22,109 @@ title: Baseline Availability
         <code>{{ baseline_summary.recentStartDate }}</code> <span aria-hidden="true">&rarr;</span><span class="sr-only">to</span> <code>{{ baseline_summary.recentEndDate }}</code>
       </span>
       <span class="meta-pill">
-        <strong>Mapped traffic:</strong> {{ baseline_summary.avgMappedPercentage | formatPct }}
+        <strong>Scope:</strong> <span data-meta-location-text>Worldwide (100.00% of traffic)</span>
+      </span>
+      <span class="meta-pill">
+        <strong>Mapped traffic:</strong> <span data-meta-mapped-pct>{{ baseline_summary.avgMappedPercentage | formatPct }}</span>
       </span>
       <span class="meta-pill">
         <strong>Initial payload:</strong> <code>{{ baseline_summary.bundleSizeBytes | formatNumber }} B</code>
       </span>
     </div>
+
+    {% set locationHierarchy = baseline_region_summary | buildLocationHierarchy(baseline_country_summary) %}
+    <baseline-location-filter id="baseline-location-filter" class="location-filter-bar" role="region" aria-labelledby="location-filter-label">
+      <div class="location-filter-controls">
+        <label for="location-select" id="location-filter-label" class="location-filter-label">
+          <svg class="location-filter-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span>Region or Country</span>
+        </label>
+
+        <div class="location-select-wrap">
+          <select
+            id="location-select"
+            class="location-select"
+            aria-describedby="location-filter-meta"
+          >
+            <option
+              value="all"
+              data-kind="global"
+              data-depth="0"
+              data-name="Worldwide"
+              data-code="WW"
+              data-breadcrumb="Worldwide"
+              data-share="100"
+              data-mapped-pct="{{ baseline_summary.avgMappedPercentage }}"
+              selected
+            >
+              <span class="opt-main"><span class="opt-badge opt-badge-global">Global</span><span class="opt-sep-space"> </span><span class="opt-name">Worldwide (All Regions &amp; Countries)</span></span><span class="opt-sep"> &mdash; </span><span class="opt-meta">100.00%</span>
+            </option>
+
+            {% if locationHierarchy.regionTree.length > 0 %}
+              <hr>
+              <optgroup label="Regions &amp; Sub-Regions">
+                {% for reg in locationHierarchy.regionTree %}
+                  <option
+                    value="{{ reg.value }}"
+                    data-kind="region"
+                    data-region-kind="{{ reg.kind }}"
+                    data-depth="{{ reg.depth }}"
+                    data-code="{{ reg.code }}"
+                    data-name="{{ reg.name }}"
+                    data-breadcrumb="{{ reg.breadcrumb }}"
+                    data-country-count="{{ reg.activeCountryCount }}"
+                    data-member-countries="{{ reg.memberCountries }}"
+                    data-share="{{ reg.shareOfGlobalTraffic }}"
+                    data-mapped-pct="{{ reg.avgMappedPercentage }}"
+                  >
+                    <span class="opt-fallback-indent">{% if reg.depth == 1 %}&nbsp;&nbsp;&nbsp;{% elif reg.depth == 2 %}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{% endif %}</span><span class="opt-main"><span class="opt-name">{{ reg.name }}</span><span class="opt-subcount"> ({{ reg.activeCountryCount }} {% if reg.activeCountryCount == 1 %}country{% else %}countries{% endif %})</span></span><span class="opt-sep"> &mdash; </span><span class="opt-meta">{{ reg.shareOfGlobalTraffic | formatTrafficShare }}</span>
+                  </option>
+                {% endfor %}
+              </optgroup>
+            {% endif %}
+
+            {% for group in locationHierarchy.countryGroups %}
+              <hr>
+              <optgroup label="{{ group.label }}">
+                {% for country in group.countries %}
+                  <option
+                    value="country:{{ country.code }}"
+                    data-kind="country"
+                    data-depth="1"
+                    data-code="{{ country.code }}"
+                    data-name="{{ country.name }}"
+                    data-breadcrumb="{{ group.breadcrumb }} › {{ country.name }}"
+                    data-share="{{ country.shareOfGlobalTraffic }}"
+                    data-mapped-pct="{{ country.avgMappedPercentage }}"
+                  >
+                    <span class="opt-main"><span class="opt-badge opt-badge-country">{{ country.code }}</span><span class="opt-sep-space"> </span><span class="opt-name">{{ country.name }}</span></span><span class="opt-sep"> &mdash; </span><span class="opt-meta">{{ country.shareOfGlobalTraffic | formatTrafficShare }}</span>
+                  </option>
+                {% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button
+          type="button"
+          class="location-reset-btn"
+          id="location-reset-btn"
+          hidden
+          aria-label="Reset location filter to Worldwide"
+        >
+          Reset to Worldwide
+        </button>
+      </div>
+
+      <div class="location-filter-meta" id="location-filter-meta">
+        <span class="location-breadcrumb-pill" data-location-breadcrumb>Showing Worldwide traffic (100.00% of global page loads)</span>
+      </div>
+
+      <div class="sr-only" aria-live="polite" aria-atomic="true" data-location-live-region></div>
+    </baseline-location-filter>
   {% endif %}
 </section>
 
@@ -36,8 +133,11 @@ title: Baseline Availability
     <baseline-summary-table id="baseline-summary-table">
       <div class="status-header">
         <div>
-          <h2 id="avg-table-heading">Last {{ baseline_summary.recentWindowDays }} Days Average Availability</h2>
-          <p class="section-subtitle">
+          <h2 id="avg-table-heading">
+            <span>Last {{ baseline_summary.recentWindowDays }} Days Average Availability</span>
+            <span class="scope-heading-badge" data-scope-badge hidden></span>
+          </h2>
+          <p class="section-subtitle" data-summary-subtitle>
             Average global browser compatibility across RUM Archive page loads (activate any target to pin and highlight on the charts below).
           </p>
         </div>
@@ -53,7 +153,7 @@ title: Baseline Availability
 
       <div class="table-wrapper">
         <table class="data-table baseline-avg-table" id="baseline-7day-table">
-          <caption class="sr-only">Last {{ baseline_summary.recentWindowDays }} days average Baseline availability by target</caption>
+          <caption class="sr-only" data-summary-caption>Last {{ baseline_summary.recentWindowDays }} days average Baseline availability by target</caption>
           <thead>
             <tr>
               <th scope="col">Baseline Target</th>
@@ -113,14 +213,14 @@ title: Baseline Availability
                     </svg>
                   </div>
                 </td>
-                <td class="num-col muted-num">{{ row.avgPercentageOfTotal | formatPct }}</td>
+                <td class="num-col muted-num" data-cell-pct-total>{{ row.avgPercentageOfTotal | formatPct }}</td>
                 <td class="num-col">
-                  <span class="delta-badge {% if row.delta7 > 0 %}delta-pos{% elif row.delta7 < 0 %}delta-neg{% else %}delta-neutral{% endif %}">
+                  <span class="delta-badge {% if row.delta7 > 0 %}delta-pos{% elif row.delta7 < 0 %}delta-neg{% else %}delta-neutral{% endif %}" data-cell-delta>
                     {{ row.delta7 | formatDelta }}
                   </span>
                 </td>
-                <td class="num-col muted-num">{{ row.avgAndroidWebviewPercentage | formatPct }}</td>
-                <td class="num-col muted-num">{{ row.avgIosWebviewPercentage | formatPct }}</td>
+                <td class="num-col muted-num" data-cell-android-wv>{{ row.avgAndroidWebviewPercentage | formatPct }}</td>
+                <td class="num-col muted-num" data-cell-ios-wv>{{ row.avgIosWebviewPercentage | formatPct }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -132,8 +232,11 @@ title: Baseline Availability
   <section class="status-card chart-card" aria-labelledby="timeseries-heading">
     <div class="status-header">
       <div>
-        <h2 id="timeseries-heading">Baseline Availability Over Time</h2>
-        <p class="section-subtitle">
+        <h2 id="timeseries-heading">
+          <span>Baseline Availability Over Time</span>
+          <span class="scope-heading-badge" data-scope-badge hidden></span>
+        </h2>
+        <p class="section-subtitle" data-timeseries-subtitle data-day-count="{{ baseline_summary.dayCount }}">
           Showing {{ baseline_summary.dayCount }} day{% if baseline_summary.dayCount != 1 %}s{% endif %} of global daily availability (up to 3 months). Hover over any date or line to inspect target compatibility.
         </p>
       </div>
@@ -148,8 +251,11 @@ title: Baseline Availability
   <section class="status-card breakdown-card" aria-labelledby="breakdown-heading">
     <div class="status-header">
       <div>
-        <h2 id="breakdown-heading">Browser Compatibility Breakdown</h2>
-        <p class="section-subtitle">
+        <h2 id="breakdown-heading">
+          <span>Browser Compatibility Breakdown</span>
+          <span class="scope-heading-badge" data-scope-badge hidden></span>
+        </h2>
+        <p class="section-subtitle" data-breakdown-subtitle data-window-days="{{ baseline_summary.recentWindowDays }}" data-start-date="{{ baseline_summary.recentStartDate }}" data-end-date="{{ baseline_summary.recentEndDate }}">
           Based on the last {{ baseline_summary.recentWindowDays }} days of available data (<code>{{ baseline_summary.recentStartDate }}</code> &ndash; <code>{{ baseline_summary.recentEndDate }}</code>). Select a Baseline target below to inspect compatible and incompatible browser versions.
         </p>
       </div>

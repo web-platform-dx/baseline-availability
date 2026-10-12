@@ -91,6 +91,146 @@ export default function (eleventyConfig) {
     return `${num > 0 ? "+" : ""}${num.toFixed(2)}%`;
   });
 
+  eleventyConfig.addFilter("formatTrafficShare", (value) => {
+    const num = Number(value);
+    if (Number.isNaN(num) || num <= 0) return "<0.01%";
+    if (num < 0.01) return "<0.01%";
+    return `${num.toFixed(2)}%`;
+  });
+
+  // Builds the structured UN M49 region tree + country groups for the location filter dropdown
+  eleventyConfig.addFilter("buildLocationHierarchy", (regionSummary, countrySummary) => {
+    if (!regionSummary || !countrySummary) {
+      return { regionTree: [], countryGroups: [] };
+    }
+
+    const macroList = Array.isArray(regionSummary.unM49MacroRegions)
+      ? regionSummary.unM49MacroRegions
+      : [];
+    const subList = Array.isArray(regionSummary.unM49Subregions)
+      ? regionSummary.unM49Subregions
+      : [];
+    const leafList = Array.isArray(regionSummary.unM49LeafRegions)
+      ? regionSummary.unM49LeafRegions
+      : [];
+    const countries = Array.isArray(countrySummary.countries) ? countrySummary.countries : [];
+
+    const regionTree = [];
+    const countryGroups = [];
+
+    for (const macro of macroList) {
+      regionTree.push({
+        value: `region:${macro.code}`,
+        code: macro.code,
+        name: macro.name,
+        depth: 0,
+        kind: "macro",
+        parentLabel: "Macro-region",
+        breadcrumb: macro.name,
+        activeCountryCount: macro.activeCountryCount,
+        memberCountries: (macro.memberCountries || []).join(","),
+        shareOfGlobalTraffic: macro.shareOfGlobalTraffic,
+        avgMappedPercentage: macro.avgMappedPercentage,
+      });
+
+      const subs = subList.filter(
+        (s) => s.macroRegion === macro.code && s.code !== macro.code
+      );
+
+      for (const sub of subs) {
+        regionTree.push({
+          value: `region:${sub.code}`,
+          code: sub.code,
+          name: sub.name,
+          depth: 1,
+          kind: "subregion",
+          parentLabel: macro.name,
+          breadcrumb: `${macro.name} › ${sub.name}`,
+          activeCountryCount: sub.activeCountryCount,
+          memberCountries: (sub.memberCountries || []).join(","),
+          shareOfGlobalTraffic: sub.shareOfGlobalTraffic,
+          avgMappedPercentage: sub.avgMappedPercentage,
+        });
+
+        const leaves = leafList.filter(
+          (l) => l.subregion === sub.code && l.code !== sub.code
+        );
+
+        if (leaves.length > 0) {
+          for (const leaf of leaves) {
+            const leafBreadcrumb = `${macro.name} › ${sub.name} › ${leaf.name}`;
+            regionTree.push({
+              value: `region:${leaf.code}`,
+              code: leaf.code,
+              name: leaf.name,
+              depth: 2,
+              kind: "leaf",
+              parentLabel: `${sub.name}, ${macro.name}`,
+              breadcrumb: leafBreadcrumb,
+              activeCountryCount: leaf.activeCountryCount,
+              memberCountries: (leaf.memberCountries || []).join(","),
+              shareOfGlobalTraffic: leaf.shareOfGlobalTraffic,
+              avgMappedPercentage: leaf.avgMappedPercentage,
+            });
+
+            const memberCountries = countries.filter(
+              (c) => c.regions?.leafRegion === leaf.code
+            );
+            if (memberCountries.length > 0) {
+              countryGroups.push({
+                regionCode: leaf.code,
+                label: `${leafBreadcrumb} — Countries`,
+                breadcrumb: leafBreadcrumb,
+                countries: memberCountries,
+              });
+            }
+          }
+        } else {
+          const subBreadcrumb = `${macro.name} › ${sub.name}`;
+          const memberCountries = countries.filter(
+            (c) => c.regions?.subregion === sub.code
+          );
+          if (memberCountries.length > 0) {
+            countryGroups.push({
+              regionCode: sub.code,
+              label: `${subBreadcrumb} — Countries`,
+              breadcrumb: subBreadcrumb,
+              countries: memberCountries,
+            });
+          }
+        }
+      }
+
+      // Handle macro-regions whose subregion code equals macro code (e.g. 010 Antarctica)
+      if (subs.length === 0) {
+        const memberCountries = countries.filter(
+          (c) => c.regions?.macroRegion === macro.code
+        );
+        if (memberCountries.length > 0) {
+          countryGroups.push({
+            regionCode: macro.code,
+            label: `${macro.name} — Countries & Territories`,
+            breadcrumb: macro.name,
+            countries: memberCountries,
+          });
+        }
+      }
+    }
+
+    // Include any unmapped / unknown country entries (e.g. XX) at the end
+    const unmappedCountries = countries.filter((c) => !c.regions?.macroRegion);
+    if (unmappedCountries.length > 0) {
+      countryGroups.push({
+        regionCode: "XX",
+        label: "Other / Unspecified GeoIP",
+        breadcrumb: "Unspecified GeoIP",
+        countries: unmappedCountries,
+      });
+    }
+
+    return { regionTree, countryGroups };
+  });
+
   // Unpacks per-day files in src/_data/bigquery/global_daily_aggregates/<YYYY-MM-DD>.json
   // using each file's `schema` array to map compact row arrays into objects for display.
   eleventyConfig.addFilter("summarizeDailyAggregates", (dailyMap, limit = 25) => {

@@ -59,13 +59,36 @@ function createSvgEl(tag, attrs = {}) {
 }
 
 /**
- * Shared state bus between <baseline-summary-table> and <baseline-timeseries-chart>.
+ * Formats a traffic share percentage for display in location pills and selectors.
+ * @param {number} value
+ * @returns {string}
+ */
+function formatTrafficShare(value) {
+  const num = Number(value || 0);
+  if (Number.isNaN(num) || num <= 0 || num < 0.01) return "<0.01%";
+  return `${num.toFixed(2)}%`;
+}
+
+/**
+ * Shared state bus between <baseline-location-filter>, <baseline-summary-table>,
+ * <baseline-timeseries-chart>, and <baseline-browser-breakdown>.
  */
 const viewState = {
   metricMode: "pct", // "pct" (% of mapped) | "pctTotal" (% of total)
   highlightedTargetId: null,
   pinnedTargetId: null,
   selectedDateIndex: null,
+  locationValue: "all", // "all" | "region:<M49_CODE>" | "country:<ISO_CODE>"
+  locationMeta: {
+    kind: "global",
+    code: "WW",
+    name: "Worldwide",
+    breadcrumb: "Worldwide",
+    share: 100,
+    mappedPct: null,
+    countryCount: null,
+    memberCountries: [],
+  },
 };
 
 function notifyStateChange(source) {
@@ -76,18 +99,512 @@ function notifyStateChange(source) {
   );
 }
 
+const regionInitialCache = new Map();
+const regionBreakdownCache = new Map();
+
+function round2(val) {
+  return Math.round(val * 100) / 100;
+}
+
+function round4(val) {
+  return Math.round(val * 10000) / 10000;
+}
+
+function meanRound2(arr) {
+  if (!arr || arr.length === 0) return 0;
+  return round2(arr.reduce((a, b) => a + b, 0) / arr.length);
+}
+
+/**
+ * Computes the daily time-series & 7-day summary for a UN M49 region from its member countries.
+ * @param {string} regionCode
+ * @param {typeof viewState.locationMeta} meta
+ */
+function computeRegionInitialData(regionCode, meta) {
+  if (regionInitialCache.has(regionCode)) {
+    return regionInitialCache.get(regionCode);
+  }
+  const cData = window.BASELINE_COUNTRY_DATA;
+  if (!cData || typeof cData.getCountry !== "function") {
+    return window.BASELINE_INITIAL_DATA || null;
+  }
+
+  const memberCodes = Array.isArray(meta.memberCountries) ? meta.memberCountries : [];
+  const memberObjs = memberCodes.map((cc) => cData.getCountry(cc)).filter(Boolean);
+  if (memberObjs.length === 0) {
+    return window.BASELINE_INITIAL_DATA || null;
+  }
+
+  const sample = memberObjs[0];
+  const { dates, startDate, endDate, dayCount, recentWindowDays } = sample;
+  const rawShareSum = memberObjs.reduce((acc, c) => acc + Number(c.share || 0), 0);
+  const getWeight = (c) => (rawShareSum > 0 ? Number(c.share || 0) : 1);
+
+  const mappedPct = [];
+  const dayTotalWeights = [];
+  const dayMappedWeights = [];
+
+  for (let d = 0; d < dayCount; d++) {
+    let totalW = 0;
+    let mappedW = 0;
+    for (const c of memberObjs) {
+      const m = Number(c.mappedPct?.[d] || 0);
+      if (m > 0) {
+        const w = getWeight(c);
+        totalW += w;
+        mappedW += w * (m / 100);
+      }
+    }
+    dayTotalWeights.push(totalW);
+    dayMappedWeights.push(mappedW);
+    mappedPct.push(totalW > 0 ? round2((mappedW / totalW) * 100) : 0);
+  }
+
+  const recentMapped = mappedPct.slice(-recentWindowDays);
+  const activeRecentIdx = [];
+  for (let i = 0; i < recentMapped.length; i++) {
+    if (recentMapped[i] > 0) activeRecentIdx.push(i);
+  }
+  const pickActive = (arr) =>
+    activeRecentIdx.length > 0 ? activeRecentIdx.map((i) => arr[i]) : arr;
+
+  const targets = sample.targets.map((sampleTarget, tIdx) => {
+    const pct = [];
+    const pctTotal = [];
+    const androidWv = [];
+    const iosWv = [];
+
+    for (let d = 0; d < dayCount; d++) {
+      const totalW = dayTotalWeights[d];
+      const mappedW = dayMappedWeights[d];
+      let compatW = 0;
+      let compatTotalW = 0;
+      let androidWvW = 0;
+      let iosWvW = 0;
+
+      for (const c of memberObjs) {
+        const m = Number(c.mappedPct?.[d] || 0);
+        if (m <= 0) continue;
+        const w = getWeight(c);
+        const mW = w * (m / 100);
+        const t = c.targets?.[tIdx];
+        if (!t) continue;
+        const p = Number(t.series.pct?.[d] || 0);
+        const pt = Number(t.series.pctTotal?.[d] || 0);
+        const awv = Number(t.series.androidWv?.[d] || 0);
+        const iwv = Number(t.series.iosWv?.[d] || 0);
+        const cW = mW * (p / 100);
+
+        compatW += cW;
+        compatTotalW += w * (pt / 100);
+        androidWvW += cW * (awv / 100);
+        iosWvW += cW * (iwv / 100);
+      }
+
+      pct.push(mappedW > 0 ? round2((compatW / mappedW) * 100) : 0);
+      pctTotal.push(totalW > 0 ? round2((compatTotalW / totalW) * 100) : 0);
+      androidWv.push(compatW > 0 ? round2((androidWvW / compatW) * 100) : 0);
+      iosWv.push(compatW > 0 ? round2((iosWvW / compatW) * 100) : 0);
+    }
+
+    const rp = pickActive(pct.slice(-recentWindowDays));
+    const rt = pickActive(pctTotal.slice(-recentWindowDays));
+    const ra = pickActive(androidWv.slice(-recentWindowDays));
+    const ri = pickActive(iosWv.slice(-recentWindowDays));
+
+    return {
+      id: sampleTarget.id,
+      key: sampleTarget.key,
+      label: sampleTarget.label,
+      kind: sampleTarget.kind,
+      year: sampleTarget.year,
+      avg7: {
+        pct: meanRound2(rp),
+        pctTotal: meanRound2(rt),
+        androidWv: meanRound2(ra),
+        iosWv: meanRound2(ri),
+        delta: rp.length > 1 ? round2(rp[rp.length - 1] - rp[0]) : 0,
+      },
+      series: { pct, pctTotal, androidWv, iosWv },
+    };
+  });
+
+  const result = {
+    code: regionCode,
+    name: meta.name,
+    share: meta.share,
+    dates,
+    startDate,
+    endDate,
+    dayCount,
+    recentWindowDays,
+    mappedPct,
+    targets,
+  };
+  regionInitialCache.set(regionCode, result);
+  return result;
+}
+
+/**
+ * Computes the 7-day browser compatibility breakdown for a UN M49 region from its member countries.
+ * @param {string} regionCode
+ * @param {typeof viewState.locationMeta} meta
+ */
+function computeRegionBreakdownData(regionCode, meta) {
+  if (regionBreakdownCache.has(regionCode)) {
+    return regionBreakdownCache.get(regionCode);
+  }
+  const bData = window.BASELINE_COUNTRY_BREAKDOWN;
+  const cData = window.BASELINE_COUNTRY_DATA;
+  if (!bData || typeof bData.getCountry !== "function") {
+    return window.BASELINE_BROWSER_BREAKDOWN || null;
+  }
+
+  const shareByCountry = new Map();
+  if (cData && Array.isArray(cData.countries)) {
+    for (const c of cData.countries) {
+      shareByCountry.set(c.code, Number(c.share || 0));
+    }
+  }
+
+  const memberCodes = Array.isArray(meta.memberCountries) ? meta.memberCountries : [];
+  const entries = [];
+  for (const cc of memberCodes) {
+    const breakdown = bData.getCountry(cc);
+    if (breakdown) {
+      entries.push({
+        cc,
+        breakdown,
+        share: shareByCountry.get(cc) ?? 0,
+      });
+    }
+  }
+
+  if (entries.length === 0) {
+    return window.BASELINE_BROWSER_BREAKDOWN || null;
+  }
+
+  const rawShareSum = entries.reduce((acc, e) => acc + e.share, 0);
+  const getWeight = (e) => (rawShareSum > 0 ? e.share : 1);
+
+  let totalWeight = 0;
+  let mappedWeight = 0;
+  const byBrowserVer = new Map();
+
+  for (const entry of entries) {
+    const w = getWeight(entry);
+    if (w <= 0) continue;
+    totalWeight += w;
+    const mW = w * (Number(entry.breakdown.mappedPercentage || 0) / 100);
+    mappedWeight += mW;
+
+    for (const b of entry.breakdown.browsers || []) {
+      const bvKey = `${b.browser}|${b.version}`;
+      const bWeight = w * (Number(b.pctTotal || 0) / 100);
+      const existing = byBrowserVer.get(bvKey);
+      if (existing) {
+        existing.weight += bWeight;
+      } else {
+        byBrowserVer.set(bvKey, {
+          browser: b.browser,
+          name: b.name,
+          version: b.version,
+          releaseDate: b.releaseDate,
+          engine: b.engine,
+          engineVersion: b.engineVersion,
+          engineReleaseDate: b.engineReleaseDate,
+          isDownstream: b.isDownstream,
+          weight: bWeight,
+        });
+      }
+    }
+  }
+
+  const browsers = [...byBrowserVer.values()]
+    .sort((a, b) => b.weight - a.weight)
+    .map((item) => ({
+      browser: item.browser,
+      name: item.name,
+      version: item.version,
+      releaseDate: item.releaseDate,
+      engine: item.engine,
+      engineVersion: item.engineVersion,
+      engineReleaseDate: item.engineReleaseDate,
+      isDownstream: item.isDownstream,
+      pct: mappedWeight > 0 ? round4((item.weight / mappedWeight) * 100) : 0,
+      pctTotal: totalWeight > 0 ? round4((item.weight / totalWeight) * 100) : 0,
+    }));
+
+  const result = {
+    code: regionCode,
+    name: meta.name,
+    windowDays: bData.windowDays,
+    startDate: bData.startDate,
+    endDate: bData.endDate,
+    mappedPercentage: totalWeight > 0 ? round2((mappedWeight / totalWeight) * 100) : 0,
+    targets: bData.targets,
+    targetMinMaps: bData.targetMinMaps,
+    browsers,
+  };
+  regionBreakdownCache.set(regionCode, result);
+  return result;
+}
+
+/**
+ * Resolves the active 7-day summary & time-series payload for the current location selection.
+ */
+function getActiveInitialData() {
+  const val = viewState.locationValue;
+  if (!val || val === "all") {
+    return window.BASELINE_INITIAL_DATA || null;
+  }
+  if (val.startsWith("country:")) {
+    const code = val.slice(8);
+    return window.BASELINE_COUNTRY_DATA?.getCountry(code) || window.BASELINE_INITIAL_DATA || null;
+  }
+  if (val.startsWith("region:")) {
+    const code = val.slice(7);
+    return computeRegionInitialData(code, viewState.locationMeta);
+  }
+  return window.BASELINE_INITIAL_DATA || null;
+}
+
+/**
+ * Resolves the active 7-day browser compatibility breakdown payload for the current location selection.
+ */
+function getActiveBreakdownData() {
+  const val = viewState.locationValue;
+  if (!val || val === "all") {
+    return window.BASELINE_BROWSER_BREAKDOWN || null;
+  }
+  if (val.startsWith("country:")) {
+    const code = val.slice(8);
+    return (
+      window.BASELINE_COUNTRY_BREAKDOWN?.getCountry(code) ||
+      window.BASELINE_BROWSER_BREAKDOWN ||
+      null
+    );
+  }
+  if (val.startsWith("region:")) {
+    const code = val.slice(7);
+    return computeRegionBreakdownData(code, viewState.locationMeta);
+  }
+  return window.BASELINE_BROWSER_BREAKDOWN || null;
+}
+
+/**
+ * <baseline-location-filter>:
+ * Progressive-enhanced UN M49 region & country nested dropdown using CSS customizable <select>
+ * (`appearance: base-select` + `<selectedcontent>`) with a full native `<select>` fallback.
+ */
+class BaselineLocationFilter extends HTMLElement {
+  connectedCallback() {
+    this.selectEl = this.querySelector("#location-select");
+    this.resetBtn = this.querySelector("#location-reset-btn");
+    this.breadcrumbEl = this.querySelector("[data-location-breadcrumb]");
+    this.liveRegion = this.querySelector("[data-location-live-region]");
+    if (!this.selectEl) return;
+
+    this.enhanceCustomizableSelect();
+
+    this.onSelectChange = () => {
+      this.applySelectedOption(true);
+    };
+    this.onResetClick = () => {
+      this.selectEl.value = "all";
+      this.applySelectedOption(true);
+      this.selectEl.focus();
+    };
+    this.onCountryDataReady = () => {
+      if (viewState.locationValue !== "all") {
+        regionInitialCache.clear();
+        notifyStateChange("location-filter");
+      }
+    };
+    this.onCountryBreakdownReady = () => {
+      if (viewState.locationValue !== "all") {
+        regionBreakdownCache.clear();
+        notifyStateChange("location-filter");
+      }
+    };
+
+    this.selectEl.addEventListener("change", this.onSelectChange);
+    if (this.resetBtn) {
+      this.resetBtn.addEventListener("click", this.onResetClick);
+    }
+    window.addEventListener("baseline-country-data-ready", this.onCountryDataReady);
+    window.addEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
+  }
+
+  disconnectedCallback() {
+    if (this.selectEl && this.onSelectChange) {
+      this.selectEl.removeEventListener("change", this.onSelectChange);
+    }
+    if (this.resetBtn && this.onResetClick) {
+      this.resetBtn.removeEventListener("click", this.onResetClick);
+    }
+    window.removeEventListener("baseline-country-data-ready", this.onCountryDataReady);
+    window.removeEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
+  }
+
+  /**
+   * Injects `<button><selectedcontent></selectedcontent></button>` only when the browser
+   * supports `appearance: base-select`, ensuring legacy HTML parsers and fallback browsers
+   * retain a clean standard `<select>` structure.
+   */
+  enhanceCustomizableSelect() {
+    if (
+      typeof CSS !== "undefined" &&
+      typeof CSS.supports === "function" &&
+      CSS.supports("appearance", "base-select")
+    ) {
+      this.setAttribute("data-customizable-select", "true");
+      if (!this.selectEl.querySelector("button.location-select-button")) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "location-select-button";
+        const selectedContent = document.createElement("selectedcontent");
+        selectedContent.className = "location-selected-content";
+        btn.appendChild(selectedContent);
+        this.selectEl.insertBefore(btn, this.selectEl.firstChild);
+      }
+    }
+  }
+
+  applySelectedOption(announce = false) {
+    const opt = this.selectEl.selectedOptions?.[0];
+    if (!opt) return;
+
+    const value = opt.value || "all";
+    const kind = opt.dataset.kind || "global";
+    const code = opt.dataset.code || "WW";
+    const name = opt.dataset.name || "Worldwide";
+    const breadcrumb = opt.dataset.breadcrumb || name;
+    const share = Number(opt.dataset.share || 0);
+    const mappedPct = Number(opt.dataset.mappedPct || 0);
+    const countryCount = opt.dataset.countryCount ? Number(opt.dataset.countryCount) : null;
+    const memberCountries = opt.dataset.memberCountries
+      ? opt.dataset.memberCountries.split(",").filter(Boolean)
+      : [];
+
+    viewState.locationValue = value;
+    viewState.locationMeta = {
+      kind,
+      code,
+      name,
+      breadcrumb,
+      share,
+      mappedPct,
+      countryCount,
+      memberCountries,
+    };
+
+    if (this.resetBtn) {
+      this.resetBtn.hidden = value === "all";
+    }
+
+    const shareLabel = value === "all" ? "100.00%" : formatTrafficShare(share);
+
+    // Update top hero meta pills
+    const metaLocationText = document.querySelector("[data-meta-location-text]");
+    if (metaLocationText) {
+      metaLocationText.textContent =
+        value === "all"
+          ? "Worldwide (100.00% of traffic)"
+          : `${name} (${shareLabel} of global traffic)`;
+    }
+
+    const metaMappedPct = document.querySelector("[data-meta-mapped-pct]");
+    if (metaMappedPct && !Number.isNaN(mappedPct)) {
+      metaMappedPct.textContent = formatPct(mappedPct);
+    }
+
+    // Update breadcrumb summary pill under the dropdown
+    if (this.breadcrumbEl) {
+      if (value === "all") {
+        this.breadcrumbEl.textContent =
+          "Showing Worldwide traffic (100.00% of global page loads)";
+      } else if (kind === "region") {
+        const countWord = countryCount === 1 ? "1 country" : `${countryCount} countries`;
+        this.breadcrumbEl.textContent = `Region: ${breadcrumb} • ${countWord} • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
+      } else {
+        this.breadcrumbEl.textContent = `Country: ${breadcrumb} (${code}) • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
+      }
+    }
+
+    // Update section heading badges and subtitles across all three cards
+    const scopeBadges = document.querySelectorAll("[data-scope-badge]");
+    scopeBadges.forEach((badge) => {
+      if (value === "all") {
+        badge.hidden = true;
+        badge.textContent = "";
+      } else {
+        badge.hidden = false;
+        badge.textContent = kind === "country" ? `${name} (${code})` : name;
+      }
+    });
+
+    const summarySubtitle = document.querySelector("[data-summary-subtitle]");
+    if (summarySubtitle) {
+      summarySubtitle.textContent =
+        value === "all"
+          ? "Average global browser compatibility across RUM Archive page loads (activate any target to pin and highlight on the charts below)."
+          : `Average browser compatibility in ${name} across RUM Archive page loads (activate any target to pin and highlight on the charts below).`;
+    }
+
+    const summaryCaption = document.querySelector("[data-summary-caption]");
+    if (summaryCaption) {
+      summaryCaption.textContent =
+        value === "all"
+          ? "Last 7 days average Baseline availability by target (Worldwide)"
+          : `Last 7 days average Baseline availability by target for ${name}`;
+    }
+
+    const timeseriesSubtitle = document.querySelector("[data-timeseries-subtitle]");
+    if (timeseriesSubtitle) {
+      const dayCount = Number(timeseriesSubtitle.getAttribute("data-day-count") || 7);
+      const dayWord = dayCount === 1 ? "day" : "days";
+      timeseriesSubtitle.textContent =
+        value === "all"
+          ? `Showing ${dayCount} ${dayWord} of global daily availability (up to 3 months). Hover over any date or line to inspect target compatibility.`
+          : `Showing ${dayCount} ${dayWord} of daily availability for ${name}. Hover over any date or line to inspect target compatibility.`;
+    }
+
+    notifyStateChange("location-filter");
+
+    if (announce && this.liveRegion) {
+      const activeData = getActiveInitialData();
+      const widelyTarget = activeData?.targets?.find((t) => t.id === "widely");
+      const newlyTarget = activeData?.targets?.find((t) => t.id === "newly");
+      const widelyStr = widelyTarget ? `, Widely available ${formatPct(widelyTarget.avg7.pct)}` : "";
+      const newlyStr = newlyTarget ? `, Newly available ${formatPct(newlyTarget.avg7.pct)}` : "";
+      this.liveRegion.textContent = `Showing Baseline availability for ${name} (${shareLabel} of global traffic${widelyStr}${newlyStr}).`;
+    }
+  }
+}
+
 class BaselineSummaryTable extends HTMLElement {
   connectedCallback() {
-    this.data = window.BASELINE_INITIAL_DATA || null;
-    this.onDataReady = (e) => {
-      this.data = e.detail;
+    this.data = getActiveInitialData();
+    this.onDataReady = () => {
+      this.data = getActiveInitialData();
       this.setupInteractivity();
     };
-    this.onViewState = () => {
+    this.onCountryDataReady = () => {
+      if (viewState.locationValue !== "all") {
+        this.data = getActiveInitialData();
+        this.syncHighlightAndMetric();
+      }
+    };
+    this.onViewState = (e) => {
+      if (e.detail?.source === "location-filter") {
+        this.data = getActiveInitialData();
+      }
       this.syncHighlightAndMetric();
     };
 
     window.addEventListener("baseline-data-ready", this.onDataReady);
+    window.addEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.addEventListener("baseline-view-state", this.onViewState);
 
     if (this.data) {
@@ -97,10 +614,17 @@ class BaselineSummaryTable extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener("baseline-data-ready", this.onDataReady);
+    window.removeEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.removeEventListener("baseline-view-state", this.onViewState);
   }
 
   setupInteractivity() {
+    if (this._interactivityBound) {
+      this.syncHighlightAndMetric();
+      return;
+    }
+    this._interactivityBound = true;
+
     const rows = this.querySelectorAll("tbody tr[data-target-id]");
     rows.forEach((row) => {
       const targetId = row.getAttribute("data-target-id");
@@ -209,6 +733,28 @@ class BaselineSummaryTable extends HTMLElement {
         if (barFill) {
           barFill.setAttribute("width", String(Math.max(0, Math.min(100, primaryVal))));
         }
+
+        const pctTotalCell = row.querySelector("[data-cell-pct-total]");
+        if (pctTotalCell) {
+          pctTotalCell.textContent = formatPct(target.avg7.pctTotal);
+        }
+
+        const deltaBadge = row.querySelector("[data-cell-delta]");
+        if (deltaBadge) {
+          const d = Number(target.avg7.delta || 0);
+          deltaBadge.textContent = formatDelta(d);
+          deltaBadge.className = `delta-badge ${d > 0 ? "delta-pos" : d < 0 ? "delta-neg" : "delta-neutral"}`;
+        }
+
+        const androidWvCell = row.querySelector("[data-cell-android-wv]");
+        if (androidWvCell) {
+          androidWvCell.textContent = formatPct(target.avg7.androidWv);
+        }
+
+        const iosWvCell = row.querySelector("[data-cell-ios-wv]");
+        if (iosWvCell) {
+          iosWvCell.textContent = formatPct(target.avg7.iosWv);
+        }
       }
     });
 
@@ -222,19 +768,37 @@ class BaselineSummaryTable extends HTMLElement {
 
 class BaselineTimeseriesChart extends HTMLElement {
   connectedCallback() {
-    this.data = window.BASELINE_INITIAL_DATA || null;
+    this.data = getActiveInitialData();
     this.hoveredDateIdx = null;
     this.hoveredTargetId = null;
 
-    this.onDataReady = (e) => {
-      this.data = e.detail;
+    this.onDataReady = () => {
+      this.data = getActiveInitialData();
       this.render();
     };
-    this.onViewState = () => {
+    this.onCountryDataReady = () => {
+      if (viewState.locationValue !== "all") {
+        this.data = getActiveInitialData();
+        this.updateActiveStates();
+      }
+    };
+    this.onViewState = (e) => {
+      if (e.detail?.source === "location-filter") {
+        this.data = getActiveInitialData();
+        if (this.svgEl && this.data?.dates?.length) {
+          const dates = this.data.dates;
+          const locName = viewState.locationMeta?.name || "Worldwide";
+          this.svgEl.setAttribute(
+            "aria-label",
+            `Interactive Baseline availability time series chart for ${locName} from ${dates[0]} to ${dates[dates.length - 1]}. Use Left and Right arrow keys to step through dates.`
+          );
+        }
+      }
       this.updateActiveStates();
     };
 
     window.addEventListener("baseline-data-ready", this.onDataReady);
+    window.addEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.addEventListener("baseline-view-state", this.onViewState);
 
     if (this.data) {
@@ -244,6 +808,7 @@ class BaselineTimeseriesChart extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener("baseline-data-ready", this.onDataReady);
+    window.removeEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.removeEventListener("baseline-view-state", this.onViewState);
   }
 
@@ -874,7 +1439,7 @@ function formatSharePct(value) {
 
 class BaselineBrowserBreakdown extends HTMLElement {
   connectedCallback() {
-    this.data = window.BASELINE_BROWSER_BREAKDOWN || null;
+    this.data = getActiveBreakdownData();
     this.selectedTargetId = "widely";
     this.activeMobileTab = "compatible";
     this.hoveredBlock = null;
@@ -883,13 +1448,27 @@ class BaselineBrowserBreakdown extends HTMLElement {
       incompatible: { key: "proportion", dir: "desc" },
     };
 
-    this.onBreakdownReady = (e) => {
-      this.data = e.detail;
+    this.onBreakdownReady = () => {
+      this.data = getActiveBreakdownData();
       this.render();
+    };
+
+    this.onCountryBreakdownReady = () => {
+      if (viewState.locationValue !== "all") {
+        this.data = getActiveBreakdownData();
+        this.render();
+      }
     };
 
     this.onViewState = (e) => {
       const detail = e.detail || {};
+      if (detail.source === "location-filter") {
+        this.data = getActiveBreakdownData();
+        if (!this.barContainer && this.data) {
+          this.render();
+          return;
+        }
+      }
       if (
         detail.source !== "breakdown" &&
         detail.pinnedTargetId &&
@@ -901,6 +1480,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
     };
 
     window.addEventListener("baseline-breakdown-ready", this.onBreakdownReady);
+    window.addEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
     window.addEventListener("baseline-view-state", this.onViewState);
 
     if (this.data) {
@@ -910,6 +1490,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener("baseline-breakdown-ready", this.onBreakdownReady);
+    window.removeEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
     window.removeEventListener("baseline-view-state", this.onViewState);
   }
 
@@ -1296,6 +1877,15 @@ class BaselineBrowserBreakdown extends HTMLElement {
   updateView(announceChange = false) {
     if (!this.data) return;
 
+    const subtitleEl = document.querySelector("[data-breakdown-subtitle]");
+    if (subtitleEl) {
+      const locSuffix =
+        viewState.locationValue === "all"
+          ? ""
+          : ` for ${viewState.locationMeta.name}`;
+      subtitleEl.textContent = `Based on the last ${this.data.windowDays} days of available data (${this.data.startDate} to ${this.data.endDate})${locSuffix}. Select a Baseline target below to inspect compatible and incompatible browser versions.`;
+    }
+
     // Update target button states
     if (this.targetButtons) {
       for (const [id, btn] of this.targetButtons.entries()) {
@@ -1334,7 +1924,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
       const targetObj = (this.data.targets || []).find((t) => t.id === this.selectedTargetId);
       const targetLabel = targetObj ? targetObj.label : `Baseline ${this.selectedTargetId}`;
       this.announce(
-        `${targetLabel} selected: ${formatPct(partitioned.compatibleSum)} compatible (${partitioned.compatible.length} browser versions), ${formatPct(partitioned.incompatibleSum)} incompatible (${partitioned.incompatible.length} browser versions).`
+        `${targetLabel} (${viewState.locationMeta.name}) selected: ${formatPct(partitioned.compatibleSum)} compatible (${partitioned.compatible.length} browser versions), ${formatPct(partitioned.incompatibleSum)} incompatible (${partitioned.incompatible.length} browser versions).`
       );
     }
   }
@@ -1381,6 +1971,8 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     const targetObj = (this.data.targets || []).find((t) => t.id === this.selectedTargetId);
     const targetLabel = targetObj ? targetObj.label : `Baseline ${this.selectedTargetId}`;
+    const locBadge =
+      viewState.locationValue === "all" ? "" : ` • ${viewState.locationMeta.name}`;
 
     // Summary header above the bar
     const leftSummary = document.createElement("div");
@@ -1396,7 +1988,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     const centerNote = document.createElement("div");
     centerNote.className = "bar-center-target-label";
-    centerNote.textContent = `${targetLabel} • Last ${this.data.windowDays} days (${this.data.startDate} – ${this.data.endDate})`;
+    centerNote.textContent = `${targetLabel}${locBadge} • Last ${this.data.windowDays} days (${this.data.startDate} – ${this.data.endDate})`;
 
     const rightSummary = document.createElement("div");
     rightSummary.className = "bar-side-summary bar-side-incompatible";
@@ -1426,7 +2018,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
       viewBox: `0 0 ${W} ${svgH}`,
       class: "breakdown-bar-svg",
       role: "group",
-      "aria-label": `Browser compatibility breakdown bar for ${targetLabel} over the last ${this.data.windowDays} days: ${formatPct(partitioned.compatibleSum)} compatible from left, ${formatPct(partitioned.incompatibleSum)} incompatible from right. Use Tab or Left and Right arrow keys to inspect browser segments.`,
+      "aria-label": `Browser compatibility breakdown bar for ${targetLabel} (${viewState.locationMeta.name}) over the last ${this.data.windowDays} days: ${formatPct(partitioned.compatibleSum)} compatible from left, ${formatPct(partitioned.incompatibleSum)} incompatible from right. Use Tab or Left and Right arrow keys to inspect browser segments.`,
     });
 
     const defs = createSvgEl("defs");
@@ -1732,7 +2324,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
     const sideTitle = side === "compatible" ? "Compatible browsers" : "Incompatible browsers";
 
     if (panelObj.caption) {
-      panelObj.caption.textContent = `${sideTitle} for ${targetLabel} (${rawItems.length} versions, ${formatPct(totalShare)} total share)`;
+      panelObj.caption.textContent = `${sideTitle} for ${targetLabel} (${viewState.locationMeta.name}: ${rawItems.length} versions, ${formatPct(totalShare)} total share)`;
     }
 
     panelObj.countBadge.textContent = `${rawItems.length} version${rawItems.length === 1 ? "" : "s"}`;
@@ -1858,6 +2450,10 @@ class BaselineBrowserBreakdown extends HTMLElement {
 }
 
 initThemeToggle();
+
+if (!customElements.get("baseline-location-filter")) {
+  customElements.define("baseline-location-filter", BaselineLocationFilter);
+}
 
 if (!customElements.get("baseline-summary-table")) {
   customElements.define("baseline-summary-table", BaselineSummaryTable);

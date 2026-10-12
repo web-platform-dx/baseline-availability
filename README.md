@@ -8,22 +8,39 @@ Public HTML dashboard for [web-platform-dx](https://github.com/web-platform-dx),
 ├── .github/workflows/
 │   └── deploy.yml                # GitHub Actions pipeline to build 11ty & publish to GitHub Pages
 ├── queries/
-│   └── example.sql               # BigQuery SQL queries
+│   ├── country_daily_aggregates.sql # Daily country-level browser & OS version aggregates
+│   └── global_daily_aggregates.sql  # Daily global browser & OS version aggregates
 ├── scripts/
-│   └── fetch-data.js             # Queries BigQuery, processes results, and writes JSON to src/_data/bigquery/
+│   ├── calculate-baseline.js     # Maps RUM user agents to Baseline targets & builds global/regional/country bundles
+│   └── fetch-data.js             # Queries BigQuery, writes daily JSON files, and runs Baseline calculations
 ├── src/
 │   ├── _data/
-│   │   ├── bigquery/             # Local JSON files generated from BigQuery
+│   │   ├── bigquery/             # Raw per-day JSON files fetched from BigQuery
+│   │   ├── browsers.json         # Browser display names and metadata
+│   │   ├── regions.json          # UN M49 regional hierarchy & ISO 3166-1 alpha-2 country mappings
 │   │   └── site.json             # Global site metadata
 │   ├── _includes/layouts/
 │   │   └── base.njk              # Base HTML5 layout
+│   ├── assets/js/
+│   │   └── baseline-components.js # Interactive web components (location filter, summary table, charts)
 │   ├── css/
 │   │   └── styles.css            # Dashboard styles
 │   └── index.njk                 # Dashboard entry template
-├── eleventy.config.js            # 11ty configuration (includes HtmlBasePlugin for GitHub Pages path prefixes)
+├── eleventy.config.js            # 11ty configuration & template filters
 ├── .env.example                  # Template for local environment variables & GCP credentials
 └── package.json
 ```
+
+## Regional & Country Classification (UN M49)
+
+The dashboard supports filtering Baseline availability and browser compatibility breakdowns by **Worldwide**, **Region / Sub-Region**, or **Country**:
+
+- **Countries & Territories**: Keyed by two-letter **ISO 3166-1 alpha-2** country codes (e.g., `US`, `DE`, `JP`) reported in the RUM Archive `country` field (`src/_data/bigquery/country_daily_aggregates/`). Any traffic without a resolved country is grouped under `XX` (*Unspecified GeoIP*).
+- **Regional Hierarchy ([UN M49](https://unstats.un.org/unsd/methodology/m49/))**: Regions and sub-regions in `src/_data/regions.json` follow the United Nations **M49** standard (*Standard Country or Area Codes for Statistical Use*), organized into three nested levels:
+  1. **Macro-regions** (6 continental regions, such as *Africa*, *Americas*, *Asia*, *Europe*, *Oceania*, and *Antarctica*)
+  2. **Sub-regions** (18 groupings, such as *Sub-Saharan Africa*, *Latin America and the Caribbean*, *Northern Europe*, and *South-eastern Asia*)
+  3. **Intermediate / Leaf regions** (23 finest-grained regional subdivisions, such as *Eastern Africa*, *South America*, and *Western Africa*, which directly map to member countries and include cross-references to `caniuse-db` `alt-*` region codes)
+- **Traffic-Weighted Rollups**: Regional availability, 7-day deltas, daily time series, and browser version breakdowns are aggregated from member countries weighted by each country's page-load volume (`src/_data/baseline_region_summary.json` and client-side rollups in `src/assets/js/baseline-components.js`).
 
 ## Prerequisites & Environment Setup
 
