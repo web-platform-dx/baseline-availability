@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-10-13]
 
 ### Added
+- **Location and target filter URL parameters (`?country=`, `?region=`, and `?target=`)**: Added deep-linking and browser history navigation (`history.pushState` and `popstate` support) for `<baseline-location-filter>`, `<baseline-summary-table>`, `<baseline-timeseries-chart>`, and `<baseline-browser-breakdown>`, supporting ISO 3166-1 alpha-2 country codes or country slugs (`?country=US`, `?country=united-states`), UN M49 region slugs or numeric codes (`?region=europe`, `?region=northern-europe`, `?region=150`), and Baseline target filters (`?target=widely`, `?target=newly`, `?target=2025`), while clearing parameters when **Worldwide** is selected or a target is unpinned.
 - **Include WebViews / Exclude WebViews toggle**: Added a synchronized toggle in the 7-day average summary table and the 7-day browser compatibility breakdown to switch between including and excluding Android (`Chrome Mobile WebView`) and iOS (`Mobile Safari WebView`) traffic across the summary table, 90-day time-series chart, and browser version breakdown (and hiding the WebView share columns when WebViews are excluded), derived at runtime from existing WebView share data.
 - **Project changelog**: Added `CHANGELOG.md` to track ongoing site and data pipeline changes.
 

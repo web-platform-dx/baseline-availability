@@ -42,6 +42,7 @@ The dashboard supports filtering Baseline availability and browser compatibility
   2. **Sub-regions** (18 groupings, such as *Sub-Saharan Africa*, *Latin America and the Caribbean*, *Northern Europe*, and *South-eastern Asia*)
   3. **Intermediate / Leaf regions** (23 finest-grained regional subdivisions, such as *Eastern Africa*, *South America*, and *Western Africa*, which directly map to member countries and include cross-references to `caniuse-db` `alt-*` region codes)
 - **Traffic-Weighted Rollups**: Regional availability, 7-day deltas, daily time series, and browser version breakdowns are aggregated from member countries weighted by each country's page-load volume (`src/_data/baseline_region_summary.json` and client-side rollups in `src/assets/js/baseline-components.js`).
+- **Shareable URL Parameters**: Direct links to specific countries, regions, and Baseline targets are supported via `?country=<ISO_CODE>` (e.g., `?country=US`, `?country=JP`, or `?country=united-states`), `?region=<SLUG_OR_M49_CODE>` (e.g., `?region=europe`, `?region=northern-europe`, or `?region=150`), and `?target=<TARGET_ID>` (e.g., `?target=widely`, `?target=newly`, or `?target=2025`). Changing any location or target filter pushes a new history entry via `history.pushState` so browser Back/Forward buttons step through filter selections, and returning to **Worldwide** or unpinning a target clears the corresponding parameter.
 
 ## Prerequisites & Environment Setup
 

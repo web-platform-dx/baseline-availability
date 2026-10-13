@@ -77,6 +77,8 @@ const viewState = {
   webviewMode: "include", // "include" (Include WebViews) | "exclude" (Exclude WebViews)
   highlightedTargetId: null,
   pinnedTargetId: null,
+  breakdownTargetId: "widely",
+  urlTargetId: null,
   selectedDateIndex: null,
   locationValue: "all", // "all" | "region:<M49_CODE>" | "country:<ISO_CODE>"
   locationMeta: {
@@ -518,6 +520,143 @@ const COUNTRY_SEARCH_ALIASES = {
   XK: "kosovo",
 };
 
+const REGION_URL_ALIASES = {
+  "north-america": "021",
+  "alt-af": "002",
+  "alt-an": "010",
+  "alt-as": "142",
+  "alt-eu": "150",
+  "alt-na": "021",
+  "alt-oc": "009",
+  "alt-sa": "005",
+};
+
+const VALID_TARGET_IDS = new Set([
+  "widely",
+  "newly",
+  "2026",
+  "2025",
+  "2024",
+  "2023",
+  "2022",
+  "2021",
+  "2020",
+  "2019",
+  "2018",
+  "2017",
+  "2016",
+]);
+
+const TARGET_URL_ALIASES = {
+  "widely-available": "widely",
+  "baseline-widely": "widely",
+  "baseline-widely-available": "widely",
+  "newly-available": "newly",
+  "baseline-newly": "newly",
+  "baseline-newly-available": "newly",
+};
+
+/**
+ * Converts a location or region display name into a lowercase URL-safe slug (e.g. "Northern Europe" -> "northern-europe").
+ * @param {string} name
+ * @returns {string}
+ */
+function slugifyLocationName(name) {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Resolves a validated Baseline target ID from the `?target=` URL query parameter, or null if not set.
+ * @returns {string | null}
+ */
+function resolveTargetFromUrl() {
+  let params;
+  try {
+    params = new URLSearchParams(window.location.search);
+  } catch {
+    return null;
+  }
+
+  const rawTarget = params.get("target");
+  if (rawTarget === null) return null;
+
+  const cleaned = rawTarget.trim().toLowerCase();
+  if (!cleaned) return null;
+
+  const normalized =
+    TARGET_URL_ALIASES[cleaned] || cleaned.replace(/^baseline[-_\s]+/, "");
+
+  if (VALID_TARGET_IDS.has(normalized)) {
+    return normalized;
+  }
+
+  const dynamicTargets =
+    window.BASELINE_INITIAL_DATA?.targets ||
+    window.BASELINE_BROWSER_BREAKDOWN?.targets ||
+    [];
+  const match = dynamicTargets.find((t) => String(t.id).toLowerCase() === normalized);
+  return match ? String(match.id) : null;
+}
+
+/**
+ * Pushes a new browser history entry reflecting the current location (`?country=` or `?region=`)
+ * and selected Baseline target (`?target=`) filters so browser Back/Forward navigates through filter changes.
+ */
+function pushUrlState() {
+  if (!window.history || typeof window.history.pushState !== "function") {
+    return;
+  }
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("country");
+    url.searchParams.delete("region");
+    url.searchParams.delete("target");
+
+    const locVal = viewState.locationValue || "all";
+    const locMeta = viewState.locationMeta || {};
+    if (locVal !== "all") {
+      if (locMeta.kind === "country" && locMeta.code) {
+        url.searchParams.set("country", locMeta.code);
+      } else if (locMeta.kind === "region") {
+        const regionParam = slugifyLocationName(locMeta.name) || locMeta.code;
+        if (regionParam) {
+          url.searchParams.set("region", regionParam);
+        }
+      }
+    }
+
+    if (viewState.urlTargetId) {
+      url.searchParams.set("target", viewState.urlTargetId);
+    }
+
+    const nextHref = url.toString();
+    if (nextHref !== window.location.href) {
+      window.history.pushState(
+        {
+          locationValue: viewState.locationValue,
+          targetId: viewState.urlTargetId,
+        },
+        "",
+        nextHref
+      );
+    }
+  } catch {
+    // Ignore URL update errors in restricted environments
+  }
+}
+
+const initialUrlTargetId = resolveTargetFromUrl();
+if (initialUrlTargetId) {
+  viewState.urlTargetId = initialUrlTargetId;
+  viewState.pinnedTargetId = initialUrlTargetId;
+  viewState.highlightedTargetId = initialUrlTargetId;
+  viewState.breakdownTargetId = initialUrlTargetId;
+}
+
 /**
  * <baseline-location-filter>:
  * Accessible WAI-ARIA 1.2 searchable combobox and grouped listbox for filtering
@@ -673,6 +812,29 @@ class BaselineLocationFilter extends HTMLElement {
       }
     };
 
+    this.onPopState = () => {
+      const urlTarget = resolveTargetFromUrl();
+      viewState.urlTargetId = urlTarget;
+      viewState.pinnedTargetId = urlTarget;
+      viewState.highlightedTargetId = urlTarget;
+      viewState.breakdownTargetId = urlTarget || "widely";
+
+      const targetOpt =
+        this.resolveOptionFromUrl() ||
+        this.optionEls.find((opt) => opt.dataset.value === "all") ||
+        this.optionEls[0];
+
+      if (targetOpt && targetOpt !== this.selectedOption) {
+        this.selectOption(targetOpt, true, false);
+      } else {
+        notifyStateChange("popstate");
+      }
+
+      if (this.isOpen) {
+        this.closeListbox(true);
+      }
+    };
+
     this.onCountryDataReady = () => {
       if (viewState.locationValue !== "all") {
         regionInitialCache.clear();
@@ -704,8 +866,14 @@ class BaselineLocationFilter extends HTMLElement {
     if (this.resetBtn) {
       this.resetBtn.addEventListener("click", this.onResetClick);
     }
+    window.addEventListener("popstate", this.onPopState);
     window.addEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.addEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
+
+    const initialUrlOpt = this.resolveOptionFromUrl();
+    if (initialUrlOpt && initialUrlOpt !== this.selectedOption) {
+      this.selectOption(initialUrlOpt, false, false);
+    }
   }
 
   disconnectedCallback() {
@@ -730,6 +898,7 @@ class BaselineLocationFilter extends HTMLElement {
     if (this.resetBtn && this.onResetClick) {
       this.resetBtn.removeEventListener("click", this.onResetClick);
     }
+    window.removeEventListener("popstate", this.onPopState);
     window.removeEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.removeEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
   }
@@ -887,7 +1056,75 @@ class BaselineLocationFilter extends HTMLElement {
     this.setActiveOption(bestOpt, true);
   }
 
-  selectOption(opt, announce = false) {
+  resolveOptionFromUrl() {
+    let params;
+    try {
+      params = new URLSearchParams(window.location.search);
+    } catch {
+      return null;
+    }
+
+    const rawCountry = params.get("country");
+    if (rawCountry !== null) {
+      const cleaned = rawCountry.trim();
+      if (cleaned) {
+        const lower = cleaned.toLowerCase();
+        if (lower === "all" || lower === "ww" || lower === "worldwide") {
+          return this.optionEls.find((opt) => opt.dataset.value === "all") || null;
+        }
+        const upperCode = lower === "uk" ? "GB" : cleaned.toUpperCase();
+        const byCode = this.optionEls.find(
+          (opt) => opt.dataset.kind === "country" && opt.dataset.code === upperCode
+        );
+        if (byCode) return byCode;
+
+        const slug = slugifyLocationName(cleaned);
+        if (slug) {
+          const bySlug = this.optionEls.find(
+            (opt) =>
+              opt.dataset.kind === "country" &&
+              slugifyLocationName(opt.dataset.name) === slug
+          );
+          if (bySlug) return bySlug;
+        }
+      }
+    }
+
+    const rawRegion = params.get("region");
+    if (rawRegion !== null) {
+      const cleaned = rawRegion.trim();
+      if (cleaned) {
+        const lower = cleaned.toLowerCase();
+        if (lower === "all" || lower === "ww" || lower === "worldwide") {
+          return this.optionEls.find((opt) => opt.dataset.value === "all") || null;
+        }
+        const slug = slugifyLocationName(cleaned);
+        const aliasCode = REGION_URL_ALIASES[lower] || REGION_URL_ALIASES[slug];
+        const paddedM49 = /^\d{1,3}$/.test(cleaned) ? cleaned.padStart(3, "0") : null;
+        const targetCode = aliasCode || paddedM49;
+
+        if (targetCode) {
+          const byCode = this.optionEls.find(
+            (opt) => opt.dataset.kind === "region" && opt.dataset.code === targetCode
+          );
+          if (byCode) return byCode;
+        }
+
+        if (slug) {
+          const bySlug = this.optionEls.find(
+            (opt) =>
+              opt.dataset.kind === "region" &&
+              slugifyLocationName(opt.dataset.name) === slug
+          );
+          if (bySlug) return bySlug;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  selectOption(opt, announce = false, updateUrl = true) {
     if (!opt) return;
 
     if (this.selectedOption) {
@@ -923,6 +1160,10 @@ class BaselineLocationFilter extends HTMLElement {
       countryCount,
       memberCountries,
     };
+
+    if (updateUrl) {
+      pushUrlState();
+    }
 
     if (this.resetBtn) {
       this.resetBtn.hidden = value === "all";
@@ -1065,10 +1306,14 @@ class BaselineSummaryTable extends HTMLElement {
         if (viewState.pinnedTargetId === targetId) {
           viewState.pinnedTargetId = null;
           viewState.highlightedTargetId = null;
+          viewState.urlTargetId = null;
         } else {
           viewState.pinnedTargetId = targetId;
           viewState.highlightedTargetId = targetId;
+          viewState.breakdownTargetId = targetId;
+          viewState.urlTargetId = targetId;
         }
+        pushUrlState();
         notifyStateChange("table");
       };
 
@@ -1309,10 +1554,14 @@ class BaselineTimeseriesChart extends HTMLElement {
         if (viewState.pinnedTargetId === t.id) {
           viewState.pinnedTargetId = null;
           viewState.highlightedTargetId = null;
+          viewState.urlTargetId = null;
         } else {
           viewState.pinnedTargetId = t.id;
           viewState.highlightedTargetId = t.id;
+          viewState.breakdownTargetId = t.id;
+          viewState.urlTargetId = t.id;
         }
+        pushUrlState();
         notifyStateChange("chart-legend");
       });
 
@@ -1345,11 +1594,12 @@ class BaselineTimeseriesChart extends HTMLElement {
 
     this.chartGeom = { W, H, padL, padR, padT, padB, plotW, plotH };
 
+    const locName = viewState.locationMeta?.name || "Worldwide";
     const svg = createSvgEl("svg", {
       viewBox: `0 0 ${W} ${H}`,
       class: "timeseries-svg",
       role: "group",
-      "aria-label": `Interactive Baseline availability time series chart from ${dates[0]} to ${dates[dayCount - 1]}. Use Left and Right arrow keys to step through dates.`,
+      "aria-label": `Interactive Baseline availability time series chart for ${locName} from ${dates[0]} to ${dates[dayCount - 1]}. Use Left and Right arrow keys to step through dates.`,
       tabindex: "0",
     });
     this.svgEl = svg;
@@ -1532,10 +1782,14 @@ class BaselineTimeseriesChart extends HTMLElement {
       if (this.hoveredTargetId) {
         if (viewState.pinnedTargetId === this.hoveredTargetId) {
           viewState.pinnedTargetId = null;
+          viewState.urlTargetId = null;
         } else {
           viewState.pinnedTargetId = this.hoveredTargetId;
           viewState.highlightedTargetId = this.hoveredTargetId;
+          viewState.breakdownTargetId = this.hoveredTargetId;
+          viewState.urlTargetId = this.hoveredTargetId;
         }
+        pushUrlState();
         notifyStateChange("chart-click");
       }
     });
@@ -1872,7 +2126,7 @@ function formatSharePct(value) {
 class BaselineBrowserBreakdown extends HTMLElement {
   connectedCallback() {
     this.data = getActiveBreakdownData();
-    this.selectedTargetId = "widely";
+    this.selectedTargetId = viewState.breakdownTargetId || viewState.pinnedTargetId || "widely";
     this.activeMobileTab = "compatible";
     this.hoveredBlock = null;
     this.sortState = {
@@ -1894,6 +2148,9 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     this.onViewState = (e) => {
       const detail = e.detail || {};
+      if (detail.source === "breakdown-target") {
+        return;
+      }
       if (detail.source === "location-filter") {
         this.data = getActiveBreakdownData();
         if (!this.barContainer && this.data) {
@@ -1901,12 +2158,16 @@ class BaselineBrowserBreakdown extends HTMLElement {
           return;
         }
       }
-      if (
+      if (detail.source === "popstate" || detail.source === "location-filter") {
+        this.selectedTargetId = viewState.breakdownTargetId || "widely";
+        this.hoveredBlock = null;
+      } else if (
         detail.source !== "breakdown" &&
         detail.pinnedTargetId &&
         detail.pinnedTargetId !== this.selectedTargetId
       ) {
         this.selectedTargetId = detail.pinnedTargetId;
+        this.hoveredBlock = null;
       }
       this.updateView();
     };
@@ -2067,7 +2328,13 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
       btn.addEventListener("click", () => {
         this.selectedTargetId = t.id;
+        viewState.breakdownTargetId = t.id;
+        viewState.pinnedTargetId = t.id;
+        viewState.highlightedTargetId = t.id;
+        viewState.urlTargetId = t.id;
         this.hoveredBlock = null;
+        pushUrlState();
+        notifyStateChange("breakdown-target");
         this.updateView(true);
       });
 
