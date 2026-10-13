@@ -27,6 +27,7 @@ Public dashboard detailing Web Platform Baseline availability.  Based on the [Cl
 │   │   └── styles.css            # Dashboard styles
 │   └── index.njk                 # Dashboard entry template
 ├── eleventy.config.js            # 11ty configuration & template filters
+├── CHANGELOG.md                  # Chronological log of site and data pipeline changes
 ├── .env.example                  # Template for local environment variables & GCP credentials
 └── package.json
 ```

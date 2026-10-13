@@ -74,7 +74,7 @@ function formatTrafficShare(value) {
  * <baseline-timeseries-chart>, and <baseline-browser-breakdown>.
  */
 const viewState = {
-  metricMode: "pct", // "pct" (% of mapped) | "pctTotal" (% of total)
+  webviewMode: "include", // "include" (Include WebViews) | "exclude" (Exclude WebViews)
   highlightedTargetId: null,
   pinnedTargetId: null,
   selectedDateIndex: null,
@@ -116,6 +116,103 @@ function meanRound2(arr) {
 }
 
 /**
+ * Derives `series.pctNoWv`, `avg7.pctNoWv`, and `avg7.deltaNoWv` at runtime from
+ * each target's existing `pct`, `androidWv`, and `iosWv` series.
+ * @param {any} data
+ */
+function ensureNonWebviewSeries(data) {
+  if (!data || !Array.isArray(data.targets) || data._noWvComputed) {
+    return data;
+  }
+  const dayCount = data.dayCount || (Array.isArray(data.dates) ? data.dates.length : 0);
+  const recentWindowDays = data.recentWindowDays || Math.min(7, dayCount);
+
+  const nonWvMappedShare = new Array(dayCount).fill(100);
+  for (let d = 0; d < dayCount; d++) {
+    let maxWvPctOfMapped = 0;
+    for (const t of data.targets) {
+      const p = Number(t.series?.pct?.[d] || 0);
+      const wvShareOfCompat =
+        Number(t.series?.androidWv?.[d] || 0) + Number(t.series?.iosWv?.[d] || 0);
+      const wvPctOfMapped = (p * wvShareOfCompat) / 100;
+      if (wvPctOfMapped > maxWvPctOfMapped) {
+        maxWvPctOfMapped = wvPctOfMapped;
+      }
+    }
+    nonWvMappedShare[d] = Math.max(0, 100 - maxWvPctOfMapped);
+  }
+
+  const recentMapped = Array.isArray(data.mappedPct)
+    ? data.mappedPct.slice(-recentWindowDays)
+    : [];
+  const activeRecentIdx = [];
+  for (let i = 0; i < recentMapped.length; i++) {
+    if (recentMapped[i] > 0) activeRecentIdx.push(i);
+  }
+  const pickActive = (arr) =>
+    activeRecentIdx.length > 0 ? activeRecentIdx.map((i) => arr[i]) : arr;
+
+  for (const t of data.targets) {
+    const pctNoWv = [];
+    for (let d = 0; d < dayCount; d++) {
+      const denom = nonWvMappedShare[d];
+      if (denom <= 0) {
+        pctNoWv.push(0);
+        continue;
+      }
+      const p = Number(t.series?.pct?.[d] || 0);
+      const wvShareOfCompat =
+        Number(t.series?.androidWv?.[d] || 0) + Number(t.series?.iosWv?.[d] || 0);
+      const nonWvCompatPctOfMapped = p * (1 - wvShareOfCompat / 100);
+      pctNoWv.push(
+        round2(Math.min(100, Math.max(0, (nonWvCompatPctOfMapped / denom) * 100)))
+      );
+    }
+    t.series.pctNoWv = pctNoWv;
+    const rnw = pickActive(pctNoWv.slice(-recentWindowDays));
+    t.avg7.pctNoWv = meanRound2(rnw);
+    t.avg7.deltaNoWv = rnw.length > 1 ? round2(rnw[rnw.length - 1] - rnw[0]) : 0;
+  }
+
+  data._noWvComputed = true;
+  return data;
+}
+
+/**
+ * Derives `pctNoWv` at runtime for each browser entry in a breakdown payload by
+ * excluding `webview_android` and re-normalizing the remaining mapped traffic shares to 100%.
+ * @param {any} breakdownData
+ */
+function ensureNonWebviewBreakdown(breakdownData) {
+  if (
+    !breakdownData ||
+    !Array.isArray(breakdownData.browsers) ||
+    breakdownData._noWvComputed
+  ) {
+    return breakdownData;
+  }
+
+  let nonWvPctSum = 0;
+  for (const b of breakdownData.browsers) {
+    if (b.browser !== "webview_android") {
+      nonWvPctSum += Number(b.pct || 0);
+    }
+  }
+
+  for (const b of breakdownData.browsers) {
+    if (b.browser === "webview_android") {
+      b.pctNoWv = 0;
+    } else {
+      b.pctNoWv =
+        nonWvPctSum > 0 ? round4((Number(b.pct || 0) / nonWvPctSum) * 100) : 0;
+    }
+  }
+
+  breakdownData._noWvComputed = true;
+  return breakdownData;
+}
+
+/**
  * Computes the daily time-series & 7-day summary for a UN M49 region from its member countries.
  * @param {string} regionCode
  * @param {typeof viewState.locationMeta} meta
@@ -126,13 +223,13 @@ function computeRegionInitialData(regionCode, meta) {
   }
   const cData = window.BASELINE_COUNTRY_DATA;
   if (!cData || typeof cData.getCountry !== "function") {
-    return window.BASELINE_INITIAL_DATA || null;
+    return ensureNonWebviewSeries(window.BASELINE_INITIAL_DATA || null);
   }
 
   const memberCodes = Array.isArray(meta.memberCountries) ? meta.memberCountries : [];
   const memberObjs = memberCodes.map((cc) => cData.getCountry(cc)).filter(Boolean);
   if (memberObjs.length === 0) {
-    return window.BASELINE_INITIAL_DATA || null;
+    return ensureNonWebviewSeries(window.BASELINE_INITIAL_DATA || null);
   }
 
   const sample = memberObjs[0];
@@ -229,7 +326,7 @@ function computeRegionInitialData(regionCode, meta) {
     };
   });
 
-  const result = {
+  const result = ensureNonWebviewSeries({
     code: regionCode,
     name: meta.name,
     share: meta.share,
@@ -240,7 +337,7 @@ function computeRegionInitialData(regionCode, meta) {
     recentWindowDays,
     mappedPct,
     targets,
-  };
+  });
   regionInitialCache.set(regionCode, result);
   return result;
 }
@@ -257,7 +354,7 @@ function computeRegionBreakdownData(regionCode, meta) {
   const bData = window.BASELINE_COUNTRY_BREAKDOWN;
   const cData = window.BASELINE_COUNTRY_DATA;
   if (!bData || typeof bData.getCountry !== "function") {
-    return window.BASELINE_BROWSER_BREAKDOWN || null;
+    return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
   }
 
   const shareByCountry = new Map();
@@ -281,7 +378,7 @@ function computeRegionBreakdownData(regionCode, meta) {
   }
 
   if (entries.length === 0) {
-    return window.BASELINE_BROWSER_BREAKDOWN || null;
+    return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
   }
 
   const rawShareSum = entries.reduce((acc, e) => acc + e.share, 0);
@@ -335,7 +432,7 @@ function computeRegionBreakdownData(regionCode, meta) {
       pctTotal: totalWeight > 0 ? round4((item.weight / totalWeight) * 100) : 0,
     }));
 
-  const result = {
+  const result = ensureNonWebviewBreakdown({
     code: regionCode,
     name: meta.name,
     windowDays: bData.windowDays,
@@ -345,7 +442,7 @@ function computeRegionBreakdownData(regionCode, meta) {
     targets: bData.targets,
     targetMinMaps: bData.targetMinMaps,
     browsers,
-  };
+  });
   regionBreakdownCache.set(regionCode, result);
   return result;
 }
@@ -356,17 +453,19 @@ function computeRegionBreakdownData(regionCode, meta) {
 function getActiveInitialData() {
   const val = viewState.locationValue;
   if (!val || val === "all") {
-    return window.BASELINE_INITIAL_DATA || null;
+    return ensureNonWebviewSeries(window.BASELINE_INITIAL_DATA || null);
   }
   if (val.startsWith("country:")) {
     const code = val.slice(8);
-    return window.BASELINE_COUNTRY_DATA?.getCountry(code) || window.BASELINE_INITIAL_DATA || null;
+    return ensureNonWebviewSeries(
+      window.BASELINE_COUNTRY_DATA?.getCountry(code) || window.BASELINE_INITIAL_DATA || null
+    );
   }
   if (val.startsWith("region:")) {
     const code = val.slice(7);
     return computeRegionInitialData(code, viewState.locationMeta);
   }
-  return window.BASELINE_INITIAL_DATA || null;
+  return ensureNonWebviewSeries(window.BASELINE_INITIAL_DATA || null);
 }
 
 /**
@@ -375,21 +474,21 @@ function getActiveInitialData() {
 function getActiveBreakdownData() {
   const val = viewState.locationValue;
   if (!val || val === "all") {
-    return window.BASELINE_BROWSER_BREAKDOWN || null;
+    return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
   }
   if (val.startsWith("country:")) {
     const code = val.slice(8);
-    return (
+    return ensureNonWebviewBreakdown(
       window.BASELINE_COUNTRY_BREAKDOWN?.getCountry(code) ||
-      window.BASELINE_BROWSER_BREAKDOWN ||
-      null
+        window.BASELINE_BROWSER_BREAKDOWN ||
+        null
     );
   }
   if (val.startsWith("region:")) {
     const code = val.slice(7);
     return computeRegionBreakdownData(code, viewState.locationMeta);
   }
-  return window.BASELINE_BROWSER_BREAKDOWN || null;
+  return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
 }
 
 const COUNTRY_SEARCH_ALIASES = {
@@ -902,8 +1001,14 @@ class BaselineLocationFilter extends HTMLElement {
       const activeData = getActiveInitialData();
       const widelyTarget = activeData?.targets?.find((t) => t.id === "widely");
       const newlyTarget = activeData?.targets?.find((t) => t.id === "newly");
-      const widelyStr = widelyTarget ? `, Widely available ${formatPct(widelyTarget.avg7.pct)}` : "";
-      const newlyStr = newlyTarget ? `, Newly available ${formatPct(newlyTarget.avg7.pct)}` : "";
+      const getTargetAvg = (t) =>
+        viewState.webviewMode === "exclude" ? t.avg7.pctNoWv : t.avg7.pct;
+      const widelyStr = widelyTarget
+        ? `, Widely available ${formatPct(getTargetAvg(widelyTarget))}`
+        : "";
+      const newlyStr = newlyTarget
+        ? `, Newly available ${formatPct(getTargetAvg(newlyTarget))}`
+        : "";
       this.liveRegion.textContent = `Showing Baseline availability for ${name} (${shareLabel} of global traffic${widelyStr}${newlyStr}).`;
     }
   }
@@ -994,12 +1099,12 @@ class BaselineSummaryTable extends HTMLElement {
       }
     });
 
-    const modeButtons = this.querySelectorAll("button[data-metric-mode]");
+    const modeButtons = this.querySelectorAll("button[data-webview-mode]");
     modeButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const mode = btn.getAttribute("data-metric-mode");
-        if (mode === "pct" || mode === "pctTotal") {
-          viewState.metricMode = mode;
+        const mode = btn.getAttribute("data-webview-mode");
+        if (mode === "include" || mode === "exclude") {
+          viewState.webviewMode = mode;
           notifyStateChange("table-mode");
         }
       });
@@ -1011,14 +1116,19 @@ class BaselineSummaryTable extends HTMLElement {
   syncHighlightAndMetric() {
     const activeTargetId = viewState.pinnedTargetId || viewState.highlightedTargetId;
     const rows = this.querySelectorAll("tbody tr[data-target-id]");
+    const excludeWv = viewState.webviewMode === "exclude";
 
     const primaryHeader = this.querySelector("[data-primary-metric-header]");
     if (primaryHeader) {
-      primaryHeader.textContent =
-        viewState.metricMode === "pctTotal"
-          ? "7-Day Average (% of Total)"
-          : "7-Day Average (% of Mapped)";
+      primaryHeader.textContent = excludeWv
+        ? "7-Day Average (Excl. WebViews)"
+        : "7-Day Average (Incl. WebViews)";
     }
+
+    const webviewHeaders = this.querySelectorAll("th[data-webview-col]");
+    webviewHeaders.forEach((th) => {
+      th.hidden = excludeWv;
+    });
 
     const targetMap = new Map();
     if (this.data && Array.isArray(this.data.targets)) {
@@ -1049,8 +1159,7 @@ class BaselineSummaryTable extends HTMLElement {
       }
 
       if (target) {
-        const primaryVal =
-          viewState.metricMode === "pctTotal" ? target.avg7.pctTotal : target.avg7.pct;
+        const primaryVal = excludeWv ? target.avg7.pctNoWv : target.avg7.pct;
         const primaryText = row.querySelector("[data-cell-primary-value]");
         if (primaryText) {
           primaryText.textContent = formatPct(primaryVal);
@@ -1062,26 +1171,28 @@ class BaselineSummaryTable extends HTMLElement {
 
         const deltaBadge = row.querySelector("[data-cell-delta]");
         if (deltaBadge) {
-          const d = Number(target.avg7.delta || 0);
+          const d = Number((excludeWv ? target.avg7.deltaNoWv : target.avg7.delta) || 0);
           deltaBadge.textContent = formatDelta(d);
           deltaBadge.className = `delta-badge ${d > 0 ? "delta-pos" : d < 0 ? "delta-neg" : "delta-neutral"}`;
         }
 
         const androidWvCell = row.querySelector("[data-cell-android-wv]");
         if (androidWvCell) {
+          androidWvCell.hidden = excludeWv;
           androidWvCell.textContent = formatPct(target.avg7.androidWv);
         }
 
         const iosWvCell = row.querySelector("[data-cell-ios-wv]");
         if (iosWvCell) {
+          iosWvCell.hidden = excludeWv;
           iosWvCell.textContent = formatPct(target.avg7.iosWv);
         }
       }
     });
 
-    const modeButtons = this.querySelectorAll("button[data-metric-mode]");
+    const modeButtons = this.querySelectorAll("button[data-webview-mode]");
     modeButtons.forEach((btn) => {
-      const isSelected = btn.getAttribute("data-metric-mode") === viewState.metricMode;
+      const isSelected = btn.getAttribute("data-webview-mode") === viewState.webviewMode;
       btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
     });
   }
@@ -1470,8 +1581,8 @@ class BaselineTimeseriesChart extends HTMLElement {
 
   getValueForTarget(target, dateIdx) {
     const arr =
-      viewState.metricMode === "pctTotal" ? target.series.pctTotal : target.series.pct;
-    return arr[dateIdx] ?? 0;
+      viewState.webviewMode === "exclude" ? target.series.pctNoWv : target.series.pct;
+    return arr?.[dateIdx] ?? 0;
   }
 
   drawLines() {
@@ -1606,9 +1717,9 @@ class BaselineTimeseriesChart extends HTMLElement {
       const hint = document.createElement("span");
       hint.className = "inspector-hint";
       hint.textContent =
-        viewState.metricMode === "pctTotal"
-          ? "Showing % of total page loads (hover chart or use ←/→ keys)"
-          : "Showing % of mapped page loads (hover chart or use ←/→ keys)";
+        viewState.webviewMode === "exclude"
+          ? "Showing % of mapped page loads excluding WebViews (hover chart or use ←/→ keys)"
+          : "Showing % of mapped page loads including WebViews (hover chart or use ←/→ keys)";
       header.appendChild(hint);
 
       this.inspectorPanel.appendChild(header);
@@ -1816,8 +1927,8 @@ class BaselineBrowserBreakdown extends HTMLElement {
   }
 
   getShare(browserEntry) {
-    return viewState.metricMode === "pctTotal"
-      ? Number(browserEntry.pctTotal || 0)
+    return viewState.webviewMode === "exclude"
+      ? Number(browserEntry.pctNoWv || 0)
       : Number(browserEntry.pct || 0);
   }
 
@@ -1833,10 +1944,11 @@ class BaselineBrowserBreakdown extends HTMLElement {
     let incompatibleSum = 0;
 
     for (const b of this.data.browsers) {
+      const share = this.getShare(b);
+      if (share <= 0) continue;
       const minVer = minMap[b.browser];
       const isCompat =
         minVer !== undefined && compareBrowserVersions(b.version, minVer) >= 0;
-      const share = this.getShare(b);
       const item = { ...b, share };
       if (isCompat) {
         compatible.push(item);
@@ -1921,7 +2033,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
     this.liveStatus.setAttribute("aria-atomic", "true");
     this.appendChild(this.liveStatus);
 
-    // 1. Target Selector Buttons Row + Metric Mode Toggle
+    // 1. Target Selector Buttons Row + WebView Mode Toggle
     const controlsWrap = document.createElement("div");
     controlsWrap.className = "breakdown-controls-row";
 
@@ -1968,25 +2080,25 @@ class BaselineBrowserBreakdown extends HTMLElement {
     const modeGroup = document.createElement("div");
     modeGroup.className = "metric-toggle-group";
     modeGroup.setAttribute("role", "group");
-    modeGroup.setAttribute("aria-label", "Traffic share denominator");
+    modeGroup.setAttribute("aria-label", "WebView traffic filter");
 
     this.modeButtons = [];
     for (const modeDef of [
-      { mode: "pct", label: "% of Mapped", ariaLabel: "Percentage of mapped browser traffic" },
-      { mode: "pctTotal", label: "% of Total", ariaLabel: "Percentage of total traffic" },
+      { mode: "include", label: "Include WebViews", ariaLabel: "Include Android and iOS WebViews" },
+      { mode: "exclude", label: "Exclude WebViews", ariaLabel: "Exclude Android and iOS WebViews" },
     ]) {
       const mBtn = document.createElement("button");
       mBtn.type = "button";
       mBtn.className = "metric-toggle-btn";
-      mBtn.setAttribute("data-metric-mode", modeDef.mode);
+      mBtn.setAttribute("data-webview-mode", modeDef.mode);
       mBtn.setAttribute("aria-label", modeDef.ariaLabel);
       mBtn.setAttribute(
         "aria-pressed",
-        viewState.metricMode === modeDef.mode ? "true" : "false"
+        viewState.webviewMode === modeDef.mode ? "true" : "false"
       );
       mBtn.textContent = modeDef.label;
       mBtn.addEventListener("click", () => {
-        viewState.metricMode = modeDef.mode;
+        viewState.webviewMode = modeDef.mode;
         notifyStateChange("breakdown");
       });
       this.modeButtons.push(mBtn);
@@ -2216,10 +2328,10 @@ class BaselineBrowserBreakdown extends HTMLElement {
       }
     }
 
-    // Update metric toggle buttons
+    // Update WebView toggle buttons
     if (this.modeButtons) {
       for (const btn of this.modeButtons) {
-        const isSelected = btn.getAttribute("data-metric-mode") === viewState.metricMode;
+        const isSelected = btn.getAttribute("data-webview-mode") === viewState.webviewMode;
         btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
       }
     }
@@ -2253,7 +2365,9 @@ class BaselineBrowserBreakdown extends HTMLElement {
   buildBlockAccessibleDescription(block) {
     const sideLabel = block.side === "compatible" ? "Compatible" : "Incompatible";
     const denomLabel =
-      viewState.metricMode === "pctTotal" ? "of total traffic" : "of mapped traffic";
+      viewState.webviewMode === "exclude"
+        ? "of mapped traffic (excluding WebViews)"
+        : "of mapped traffic";
 
     if (block.type === "single") {
       const b = block.browser;

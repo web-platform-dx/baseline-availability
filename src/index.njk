@@ -221,12 +221,12 @@ title: Baseline Availability
             Average global browser compatibility across RUM Archive page loads (activate any target to pin and highlight on the charts below).
           </p>
         </div>
-        <div class="metric-toggle-group" role="group" aria-label="Availability denominator">
-          <button type="button" class="metric-toggle-btn" data-metric-mode="pct" aria-pressed="true" id="btn-mode-mapped" aria-label="Percentage of mapped browser traffic">
-            % of Mapped
+        <div class="metric-toggle-group" role="group" aria-label="WebView traffic filter">
+          <button type="button" class="metric-toggle-btn" data-webview-mode="include" aria-pressed="true" id="btn-webview-include" aria-label="Include Android and iOS WebViews">
+            Include WebViews
           </button>
-          <button type="button" class="metric-toggle-btn" data-metric-mode="pctTotal" aria-pressed="false" id="btn-mode-total" aria-label="Percentage of total traffic">
-            % of Total
+          <button type="button" class="metric-toggle-btn" data-webview-mode="exclude" aria-pressed="false" id="btn-webview-exclude" aria-label="Exclude Android and iOS WebViews">
+            Exclude WebViews
           </button>
         </div>
       </div>
@@ -237,10 +237,10 @@ title: Baseline Availability
           <thead>
             <tr>
               <th scope="col">Baseline Target</th>
-              <th scope="col" data-primary-metric-header>7-Day Average (% of Mapped)</th>
+              <th scope="col" data-primary-metric-header>7-Day Average (Incl. WebViews)</th>
               <th scope="col" class="num-col">7-Day Change</th>
-              <th scope="col" class="num-col">Android WebView Share</th>
-              <th scope="col" class="num-col">iOS WebView Share</th>
+              <th scope="col" class="num-col" data-webview-col>Android WebView Share</th>
+              <th scope="col" class="num-col" data-webview-col>iOS WebView Share</th>
             </tr>
           </thead>
           <tbody>
@@ -355,7 +355,7 @@ title: Baseline Availability
       </a>
     </div>
     <p class="footnote-intro">
-      Roughly 9&ndash;11% of global RUM Archive beacons cannot be deterministically mapped to a specific browser release in <a href="https://github.com/web-platform-dx/baseline-browser-mapping" rel="noopener noreferrer" target="_blank"><code>baseline-browser-mapping</code><span class="sr-only"> (opens in a new tab)</span></a> because the underlying telemetry lacks a usable browser or operating system version. Rather than guessing feature support from incomplete metadata, unmapped beacons are excluded from the <strong>% of Mapped</strong> view (and can be included in the denominator using the <strong>% of Total</strong> toggle):
+      Roughly 9&ndash;11% of global RUM Archive beacons cannot be deterministically mapped to a specific browser release in <a href="https://github.com/web-platform-dx/baseline-browser-mapping" rel="noopener noreferrer" target="_blank"><code>baseline-browser-mapping</code><span class="sr-only"> (opens in a new tab)</span></a> because the underlying telemetry lacks a usable browser or operating system version. Rather than guessing feature support from incomplete metadata, unmapped beacons are excluded from the availability calculations:
     </p>
     <ul class="footnote-list">
       <li>
