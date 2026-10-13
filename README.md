@@ -1,6 +1,6 @@
 # Baseline Availability
 
-Public HTML dashboard for [web-platform-dx](https://github.com/web-platform-dx), powered by **Google Cloud BigQuery** and built into static HTML with **Eleventy (11ty)** for hosting on GitHub Pages (`https://web-platform-dx.github.io/baseline-availability/`).
+Public dashboard detailing Web Platform Baseline availability.  Based on the [Cloudflare BEACON RUM dataset](https://blog.cloudflare.com/how-fast-is-the-web/), this dashboard is built with **Eleventy (11ty)** and hosted at the [Baseline Availability](https://github.com/web-platform-dx/baseline-availability) site.
 
 ## Project Structure
 
