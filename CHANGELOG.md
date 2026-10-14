@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [2026-10-14]
 
+### Added
+- **Multi-location combination & exclusion in `<baseline-location-filter>`**: Upgraded the Region / Country picker to support combining multiple regions and/or countries (`Include`) and excluding specific regions and/or countries (`Exclude`, either from **Worldwide** or from selected regions) using theme-adaptive vector SVG checkmark and cross action buttons, keyboard shortcuts (`Enter` to include, `Shift+Enter` to exclude), removable active filter chips, and shareable comma-separated URL query parameters (`?country=US,GB`, `?region=europe`, `?exclude=CN,SG`).
+
 ### Changed
 - **iOS browser breakdown aggregation & display**: For iOS traffic where `USERAGENTFAMILY` is not `Mobile Safari`, the 7-day browser compatibility breakdown now aggregates rows by `(USERAGENTFAMILY, OSVERSION)` and displays them as `"App name (on iOS VERSION)"` (e.g., `Chrome Mobile (on iOS 26.6)`, `Firefox Mobile (on iOS 18.7)`) rather than merging them into `Safari on iOS` or splitting by app version.
 

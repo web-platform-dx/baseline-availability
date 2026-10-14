@@ -80,7 +80,7 @@ const viewState = {
   breakdownTargetId: "widely",
   urlTargetId: null,
   selectedDateIndex: null,
-  locationValue: "all", // "all" | "region:<M49_CODE>" | "country:<ISO_CODE>"
+  locationValue: "all", // "all" | "region:<M49_CODE>" | "country:<ISO_CODE>" | "custom:<KEY>"
   locationMeta: {
     kind: "global",
     code: "WW",
@@ -90,6 +90,8 @@ const viewState = {
     mappedPct: null,
     countryCount: null,
     memberCountries: [],
+    includedItems: [],
+    excludedItems: [],
   },
 };
 
@@ -218,13 +220,13 @@ function ensureNonWebviewBreakdown(breakdownData) {
 }
 
 /**
- * Computes the daily time-series & 7-day summary for a UN M49 region from its member countries.
- * @param {string} regionCode
+ * Computes the daily time-series & 7-day summary for a region or custom country set from its member countries.
+ * @param {string} cacheKey
  * @param {typeof viewState.locationMeta} meta
  */
-function computeRegionInitialData(regionCode, meta) {
-  if (regionInitialCache.has(regionCode)) {
-    return regionInitialCache.get(regionCode);
+function computeRegionInitialData(cacheKey, meta) {
+  if (regionInitialCache.has(cacheKey)) {
+    return regionInitialCache.get(cacheKey);
   }
   const cData = window.BASELINE_COUNTRY_DATA;
   if (!cData || typeof cData.getCountry !== "function") {
@@ -234,7 +236,32 @@ function computeRegionInitialData(regionCode, meta) {
   const memberCodes = Array.isArray(meta.memberCountries) ? meta.memberCountries : [];
   const memberObjs = memberCodes.map((cc) => cData.getCountry(cc)).filter(Boolean);
   if (memberObjs.length === 0) {
-    return ensureNonWebviewSeries(window.BASELINE_INITIAL_DATA || null);
+    const fallback = window.BASELINE_INITIAL_DATA;
+    if (!fallback) return null;
+    const emptyDayCount = fallback.dayCount || fallback.dates.length;
+    const zeroes = new Array(emptyDayCount).fill(0);
+    const emptyResult = ensureNonWebviewSeries({
+      code: cacheKey,
+      name: meta.name,
+      share: 0,
+      dates: fallback.dates,
+      startDate: fallback.startDate,
+      endDate: fallback.endDate,
+      dayCount: emptyDayCount,
+      recentWindowDays: fallback.recentWindowDays,
+      mappedPct: zeroes,
+      targets: fallback.targets.map((t) => ({
+        id: t.id,
+        key: t.key,
+        label: t.label,
+        kind: t.kind,
+        year: t.year,
+        avg7: { pct: 0, pctTotal: 0, androidWv: 0, iosWv: 0, delta: 0 },
+        series: { pct: [...zeroes], pctTotal: [...zeroes], androidWv: [...zeroes], iosWv: [...zeroes] },
+      })),
+    });
+    regionInitialCache.set(cacheKey, emptyResult);
+    return emptyResult;
   }
 
   const sample = memberObjs[0];
@@ -332,7 +359,7 @@ function computeRegionInitialData(regionCode, meta) {
   });
 
   const result = ensureNonWebviewSeries({
-    code: regionCode,
+    code: cacheKey,
     name: meta.name,
     share: meta.share,
     dates,
@@ -343,18 +370,18 @@ function computeRegionInitialData(regionCode, meta) {
     mappedPct,
     targets,
   });
-  regionInitialCache.set(regionCode, result);
+  regionInitialCache.set(cacheKey, result);
   return result;
 }
 
 /**
- * Computes the 7-day browser compatibility breakdown for a UN M49 region from its member countries.
- * @param {string} regionCode
+ * Computes the 7-day browser compatibility breakdown for a region or custom country set from its member countries.
+ * @param {string} cacheKey
  * @param {typeof viewState.locationMeta} meta
  */
-function computeRegionBreakdownData(regionCode, meta) {
-  if (regionBreakdownCache.has(regionCode)) {
-    return regionBreakdownCache.get(regionCode);
+function computeRegionBreakdownData(cacheKey, meta) {
+  if (regionBreakdownCache.has(cacheKey)) {
+    return regionBreakdownCache.get(cacheKey);
   }
   const bData = window.BASELINE_COUNTRY_BREAKDOWN;
   const cData = window.BASELINE_COUNTRY_DATA;
@@ -383,7 +410,19 @@ function computeRegionBreakdownData(regionCode, meta) {
   }
 
   if (entries.length === 0) {
-    return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
+    const emptyBreakdown = ensureNonWebviewBreakdown({
+      code: cacheKey,
+      name: meta.name,
+      windowDays: bData.windowDays,
+      startDate: bData.startDate,
+      endDate: bData.endDate,
+      mappedPercentage: 0,
+      targets: bData.targets,
+      targetMinMaps: bData.targetMinMaps,
+      browsers: [],
+    });
+    regionBreakdownCache.set(cacheKey, emptyBreakdown);
+    return emptyBreakdown;
   }
 
   const rawShareSum = entries.reduce((acc, e) => acc + e.share, 0);
@@ -440,7 +479,7 @@ function computeRegionBreakdownData(regionCode, meta) {
     }));
 
   const result = ensureNonWebviewBreakdown({
-    code: regionCode,
+    code: cacheKey,
     name: meta.name,
     windowDays: bData.windowDays,
     startDate: bData.startDate,
@@ -450,7 +489,7 @@ function computeRegionBreakdownData(regionCode, meta) {
     targetMinMaps: bData.targetMinMaps,
     browsers,
   });
-  regionBreakdownCache.set(regionCode, result);
+  regionBreakdownCache.set(cacheKey, result);
   return result;
 }
 
@@ -471,6 +510,9 @@ function getActiveInitialData() {
   if (val.startsWith("region:")) {
     const code = val.slice(7);
     return computeRegionInitialData(code, viewState.locationMeta);
+  }
+  if (val.startsWith("custom:")) {
+    return computeRegionInitialData(val, viewState.locationMeta);
   }
   return ensureNonWebviewSeries(window.BASELINE_INITIAL_DATA || null);
 }
@@ -494,6 +536,9 @@ function getActiveBreakdownData() {
   if (val.startsWith("region:")) {
     const code = val.slice(7);
     return computeRegionBreakdownData(code, viewState.locationMeta);
+  }
+  if (val.startsWith("custom:")) {
+    return computeRegionBreakdownData(val, viewState.locationMeta);
   }
   return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
 }
@@ -608,7 +653,7 @@ function resolveTargetFromUrl() {
 }
 
 /**
- * Pushes a new browser history entry reflecting the current location (`?country=` or `?region=`)
+ * Pushes a new browser history entry reflecting the current location (`?country=`, `?region=`, `?exclude=`)
  * and selected Baseline target (`?target=`) filters so browser Back/Forward navigates through filter changes.
  */
 function pushUrlState() {
@@ -619,18 +664,34 @@ function pushUrlState() {
     const url = new URL(window.location.href);
     url.searchParams.delete("country");
     url.searchParams.delete("region");
+    url.searchParams.delete("exclude");
     url.searchParams.delete("target");
 
     const locVal = viewState.locationValue || "all";
     const locMeta = viewState.locationMeta || {};
     if (locVal !== "all") {
-      if (locMeta.kind === "country" && locMeta.code) {
-        url.searchParams.set("country", locMeta.code);
-      } else if (locMeta.kind === "region") {
-        const regionParam = slugifyLocationName(locMeta.name) || locMeta.code;
-        if (regionParam) {
-          url.searchParams.set("region", regionParam);
-        }
+      const incItems = Array.isArray(locMeta.includedItems) ? locMeta.includedItems : [];
+      const excItems = Array.isArray(locMeta.excludedItems) ? locMeta.excludedItems : [];
+
+      const incCountries = incItems
+        .filter((it) => it.kind === "country" && it.code)
+        .map((it) => it.code);
+      const incRegions = incItems
+        .filter((it) => it.kind === "region")
+        .map((it) => slugifyLocationName(it.name) || it.code)
+        .filter(Boolean);
+      const excTokens = excItems
+        .map((it) => (it.kind === "country" ? it.code : slugifyLocationName(it.name) || it.code))
+        .filter(Boolean);
+
+      if (incCountries.length > 0) {
+        url.searchParams.set("country", incCountries.join(","));
+      }
+      if (incRegions.length > 0) {
+        url.searchParams.set("region", incRegions.join(","));
+      }
+      if (excTokens.length > 0) {
+        url.searchParams.set("exclude", excTokens.join(","));
       }
     }
 
@@ -677,14 +738,31 @@ class BaselineLocationFilter extends HTMLElement {
     this.emptyStateEl = this.querySelector("[data-location-empty]");
     this.resetBtn = this.querySelector("#location-reset-btn");
     this.breadcrumbEl = this.querySelector("[data-location-breadcrumb]");
+    this.chipsEl = this.querySelector("[data-location-chips]");
     this.liveRegion = this.querySelector("[data-location-live-region]");
 
     if (!this.inputEl || !this.listboxEl) return;
 
     this.groupEls = Array.from(this.listboxEl.querySelectorAll("[data-location-group]"));
     this.optionEls = Array.from(this.listboxEl.querySelectorAll(".location-option"));
-    this.selectedOption =
-      this.optionEls.find((opt) => opt.dataset.value === "all") || this.optionEls[0] || null;
+
+    this.optionByValue = new Map();
+    this.countryOptByCode = new Map();
+    for (const opt of this.optionEls) {
+      if (opt.dataset.value) {
+        this.optionByValue.set(opt.dataset.value, opt);
+      }
+      if (opt.dataset.kind === "country" && opt.dataset.code) {
+        this.countryOptByCode.set(opt.dataset.code, opt);
+      }
+    }
+    this.allCountryCodes = Array.from(this.countryOptByCode.keys());
+    this.allOpt = this.optionByValue.get("all") || this.optionEls[0] || null;
+
+    this.includedMap = new Map();
+    this.excludedMap = new Map();
+
+    this.selectedOption = this.allOpt;
     this.activeOption = this.selectedOption;
     this.isOpen = false;
     this.justFocused = false;
@@ -744,8 +822,11 @@ class BaselineLocationFilter extends HTMLElement {
       } else if (e.key === "Enter") {
         if (this.isOpen && this.activeOption && !this.activeOption.hidden) {
           e.preventDefault();
-          this.selectOption(this.activeOption, true);
-          this.closeListbox(true);
+          const mode = e.shiftKey || e.altKey ? "exclude" : "include";
+          this.toggleOptionMode(this.activeOption, mode, true);
+          if (this.isOpen && this.inputEl.value) {
+            this.inputEl.select();
+          }
         }
       } else if (e.key === "Escape") {
         if (this.isOpen) {
@@ -788,10 +869,20 @@ class BaselineLocationFilter extends HTMLElement {
     this.onListboxMouseDown = (e) => {
       // Keep focus on input while interacting with the listbox
       e.preventDefault();
+      const actionBtn = e.target.closest("[data-opt-action]");
       const opt = e.target.closest(".location-option");
-      if (opt && !opt.hidden) {
-        this.selectOption(opt, true);
-        this.closeListbox(true);
+      if (!opt || opt.hidden) return;
+
+      if (opt.dataset.value === "all") {
+        this.toggleOptionMode(opt, "include", true);
+        return;
+      }
+
+      const mode =
+        actionBtn && actionBtn.dataset.optAction === "exclude" ? "exclude" : "include";
+      this.toggleOptionMode(opt, mode, true);
+      if (this.isOpen && this.inputEl.value) {
+        this.inputEl.select();
       }
     };
 
@@ -809,9 +900,11 @@ class BaselineLocationFilter extends HTMLElement {
     };
 
     this.onResetClick = () => {
-      const allOpt = this.optionEls.find((opt) => opt.dataset.value === "all");
-      if (allOpt) {
-        this.selectOption(allOpt, true);
+      if (this.allOpt) {
+        this.includedMap.clear();
+        this.excludedMap.clear();
+        this.setActiveOption(this.allOpt, false);
+        this.applySelectionState(true, true);
         this.closeListbox(true);
         this.inputEl.focus();
       }
@@ -824,16 +917,7 @@ class BaselineLocationFilter extends HTMLElement {
       viewState.highlightedTargetId = urlTarget;
       viewState.breakdownTargetId = urlTarget || "widely";
 
-      const targetOpt =
-        this.resolveOptionFromUrl() ||
-        this.optionEls.find((opt) => opt.dataset.value === "all") ||
-        this.optionEls[0];
-
-      if (targetOpt && targetOpt !== this.selectedOption) {
-        this.selectOption(targetOpt, true, false);
-      } else {
-        notifyStateChange("popstate");
-      }
+      this.applySelectionFromUrl(true, false);
 
       if (this.isOpen) {
         this.closeListbox(true);
@@ -843,7 +927,7 @@ class BaselineLocationFilter extends HTMLElement {
     this.onCountryDataReady = () => {
       if (viewState.locationValue !== "all") {
         regionInitialCache.clear();
-        notifyStateChange("location-filter");
+        this.applySelectionState(false, false);
       }
     };
 
@@ -875,9 +959,8 @@ class BaselineLocationFilter extends HTMLElement {
     window.addEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.addEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
 
-    const initialUrlOpt = this.resolveOptionFromUrl();
-    if (initialUrlOpt && initialUrlOpt !== this.selectedOption) {
-      this.selectOption(initialUrlOpt, false, false);
+    if (this.hasLocationParamsInUrl()) {
+      this.applySelectionFromUrl(false, false);
     }
   }
 
@@ -909,12 +992,23 @@ class BaselineLocationFilter extends HTMLElement {
   }
 
   getSelectedDisplayLabel() {
-    if (!this.selectedOption) return "Worldwide (All Regions & Countries)";
-    return (
-      this.selectedOption.dataset.displayLabel ||
-      this.selectedOption.dataset.name ||
-      "Worldwide"
-    );
+    if (this.includedMap.size === 0 && this.excludedMap.size === 0) {
+      return "Worldwide (All Regions & Countries)";
+    }
+    if (this.includedMap.size === 1 && this.excludedMap.size === 0) {
+      const onlyOpt = Array.from(this.includedMap.values())[0];
+      return (
+        onlyOpt.dataset.displayLabel ||
+        onlyOpt.dataset.name ||
+        "Worldwide"
+      );
+    }
+    const meta = viewState.locationMeta;
+    if (meta && meta.name) {
+      const shareStr = formatTrafficShare(meta.share || 0);
+      return `${meta.name} — ${shareStr}`;
+    }
+    return "Worldwide (All Regions & Countries)";
   }
 
   syncInputToSelected() {
@@ -1061,98 +1155,434 @@ class BaselineLocationFilter extends HTMLElement {
     this.setActiveOption(bestOpt, true);
   }
 
-  resolveOptionFromUrl() {
+  getOptionCountryCodes(opt) {
+    if (!opt) return [];
+    const kind = opt.dataset.kind;
+    if (kind === "country") {
+      return opt.dataset.code ? [opt.dataset.code] : [];
+    }
+    if (kind === "region") {
+      return opt.dataset.memberCountries
+        ? opt.dataset.memberCountries.split(",").filter(Boolean)
+        : [];
+    }
+    return [];
+  }
+
+  resolveCountryToken(token) {
+    const cleaned = (token || "").trim();
+    if (!cleaned) return null;
+    const lower = cleaned.toLowerCase();
+    if (lower === "all" || lower === "ww" || lower === "worldwide") {
+      return this.allOpt;
+    }
+    const upperCode = lower === "uk" ? "GB" : cleaned.toUpperCase();
+    const byCode = this.countryOptByCode.get(upperCode);
+    if (byCode) return byCode;
+
+    const slug = slugifyLocationName(cleaned);
+    if (slug) {
+      const bySlug = this.optionEls.find(
+        (opt) =>
+          opt.dataset.kind === "country" &&
+          slugifyLocationName(opt.dataset.name) === slug
+      );
+      if (bySlug) return bySlug;
+    }
+    return null;
+  }
+
+  resolveRegionToken(token) {
+    const cleaned = (token || "").trim();
+    if (!cleaned) return null;
+    const lower = cleaned.toLowerCase();
+    if (lower === "all" || lower === "ww" || lower === "worldwide") {
+      return this.allOpt;
+    }
+    const slug = slugifyLocationName(cleaned);
+    const aliasCode = REGION_URL_ALIASES[lower] || REGION_URL_ALIASES[slug];
+    const paddedM49 = /^\d{1,3}$/.test(cleaned) ? cleaned.padStart(3, "0") : null;
+    const targetCode = aliasCode || paddedM49;
+
+    if (targetCode) {
+      const byCode = this.optionByValue.get(`region:${targetCode}`);
+      if (byCode) return byCode;
+    }
+
+    if (slug) {
+      const bySlug = this.optionEls.find(
+        (opt) =>
+          opt.dataset.kind === "region" &&
+          slugifyLocationName(opt.dataset.name) === slug
+      );
+      if (bySlug) return bySlug;
+    }
+    return null;
+  }
+
+  resolveAnyLocationToken(token) {
+    const cleaned = (token || "").trim();
+    if (!cleaned) return null;
+    if (/^[A-Za-z]{2}$/.test(cleaned)) {
+      const countryOpt = this.resolveCountryToken(cleaned);
+      if (countryOpt) return countryOpt;
+    }
+    const regionOpt = this.resolveRegionToken(cleaned);
+    if (regionOpt) return regionOpt;
+    return this.resolveCountryToken(cleaned);
+  }
+
+  hasLocationParamsInUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return (
+        params.has("country") ||
+        params.has("region") ||
+        params.has("exclude")
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  applySelectionFromUrl(announce = false, updateUrl = false) {
+    this.includedMap.clear();
+    this.excludedMap.clear();
+
     let params;
     try {
       params = new URLSearchParams(window.location.search);
     } catch {
-      return null;
-    }
-
-    const rawCountry = params.get("country");
-    if (rawCountry !== null) {
-      const cleaned = rawCountry.trim();
-      if (cleaned) {
-        const lower = cleaned.toLowerCase();
-        if (lower === "all" || lower === "ww" || lower === "worldwide") {
-          return this.optionEls.find((opt) => opt.dataset.value === "all") || null;
-        }
-        const upperCode = lower === "uk" ? "GB" : cleaned.toUpperCase();
-        const byCode = this.optionEls.find(
-          (opt) => opt.dataset.kind === "country" && opt.dataset.code === upperCode
-        );
-        if (byCode) return byCode;
-
-        const slug = slugifyLocationName(cleaned);
-        if (slug) {
-          const bySlug = this.optionEls.find(
-            (opt) =>
-              opt.dataset.kind === "country" &&
-              slugifyLocationName(opt.dataset.name) === slug
-          );
-          if (bySlug) return bySlug;
-        }
-      }
+      this.applySelectionState(announce, updateUrl);
+      return;
     }
 
     const rawRegion = params.get("region");
-    if (rawRegion !== null) {
-      const cleaned = rawRegion.trim();
-      if (cleaned) {
-        const lower = cleaned.toLowerCase();
-        if (lower === "all" || lower === "ww" || lower === "worldwide") {
-          return this.optionEls.find((opt) => opt.dataset.value === "all") || null;
-        }
-        const slug = slugifyLocationName(cleaned);
-        const aliasCode = REGION_URL_ALIASES[lower] || REGION_URL_ALIASES[slug];
-        const paddedM49 = /^\d{1,3}$/.test(cleaned) ? cleaned.padStart(3, "0") : null;
-        const targetCode = aliasCode || paddedM49;
-
-        if (targetCode) {
-          const byCode = this.optionEls.find(
-            (opt) => opt.dataset.kind === "region" && opt.dataset.code === targetCode
-          );
-          if (byCode) return byCode;
-        }
-
-        if (slug) {
-          const bySlug = this.optionEls.find(
-            (opt) =>
-              opt.dataset.kind === "region" &&
-              slugifyLocationName(opt.dataset.name) === slug
-          );
-          if (bySlug) return bySlug;
+    if (rawRegion) {
+      for (const token of rawRegion.split(",")) {
+        const opt = this.resolveRegionToken(token);
+        if (opt && opt.dataset.value && opt.dataset.value !== "all") {
+          this.includedMap.set(opt.dataset.value, opt);
         }
       }
     }
 
-    return null;
+    const rawCountry = params.get("country");
+    if (rawCountry) {
+      for (const token of rawCountry.split(",")) {
+        const opt = this.resolveCountryToken(token);
+        if (opt && opt.dataset.value && opt.dataset.value !== "all") {
+          this.includedMap.set(opt.dataset.value, opt);
+        }
+      }
+    }
+
+    const rawExclude = params.get("exclude");
+    if (rawExclude) {
+      for (const token of rawExclude.split(",")) {
+        const opt = this.resolveAnyLocationToken(token);
+        if (opt && opt.dataset.value && opt.dataset.value !== "all") {
+          this.includedMap.delete(opt.dataset.value);
+          this.excludedMap.set(opt.dataset.value, opt);
+        }
+      }
+    }
+
+    this.applySelectionState(announce, updateUrl);
   }
 
-  selectOption(opt, announce = false, updateUrl = true) {
+  toggleOptionMode(opt, mode = "include", announce = true) {
     if (!opt) return;
+    const val = opt.dataset.value || "all";
 
-    if (this.selectedOption) {
-      this.selectedOption.classList.remove("is-selected");
-      this.selectedOption.setAttribute("aria-selected", "false");
+    if (val === "all") {
+      this.includedMap.clear();
+      this.excludedMap.clear();
+      this.setActiveOption(this.allOpt, false);
+      this.applySelectionState(announce, true);
+      this.closeListbox(true);
+      return;
     }
-    this.selectedOption = opt;
-    this.selectedOption.classList.add("is-selected");
-    this.selectedOption.setAttribute("aria-selected", "true");
-    this.setActiveOption(opt, false);
-    this.syncInputToSelected();
 
-    const value = opt.dataset.value || "all";
-    const kind = opt.dataset.kind || "global";
-    const code = opt.dataset.code || "WW";
-    const name = opt.dataset.name || "Worldwide";
-    const breadcrumb = opt.dataset.breadcrumb || name;
-    const share = Number(opt.dataset.share || 0);
-    const mappedPct = Number(opt.dataset.mappedPct || 0);
-    const countryCount = opt.dataset.countryCount ? Number(opt.dataset.countryCount) : null;
-    const memberCountries = opt.dataset.memberCountries
-      ? opt.dataset.memberCountries.split(",").filter(Boolean)
-      : [];
+    if (mode === "exclude") {
+      if (this.excludedMap.has(val)) {
+        this.excludedMap.delete(val);
+      } else {
+        this.includedMap.delete(val);
+        this.excludedMap.set(val, opt);
+      }
+    } else {
+      if (this.includedMap.has(val)) {
+        this.includedMap.delete(val);
+      } else {
+        this.excludedMap.delete(val);
+        this.includedMap.set(val, opt);
+      }
+    }
+
+    this.setActiveOption(opt, false);
+    this.applySelectionState(announce, true);
+  }
+
+  createStatusIconSvg(mode) {
+    const svg = createSvgEl("svg", {
+      width: "10",
+      height: "10",
+      viewBox: "0 0 14 14",
+      fill: "none",
+      "aria-hidden": "true",
+    });
+    const path = createSvgEl("path", {
+      d: mode === "exclude" ? "M3.5 3.5L10.5 10.5M10.5 3.5L3.5 10.5" : "M2.5 7.25L5.5 10.25L11.5 3.75",
+      stroke: "currentColor",
+      "stroke-width": "2.2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+    });
+    svg.appendChild(path);
+    return svg;
+  }
+
+  createRemoveIconSvg() {
+    const svg = createSvgEl("svg", {
+      width: "10",
+      height: "10",
+      viewBox: "0 0 14 14",
+      fill: "none",
+      "aria-hidden": "true",
+    });
+    const path = createSvgEl("path", {
+      d: "M3.5 3.5L10.5 10.5M10.5 3.5L3.5 10.5",
+      stroke: "currentColor",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+    });
+    svg.appendChild(path);
+    return svg;
+  }
+
+  renderActiveChips(includedItems, excludedItems) {
+    if (!this.chipsEl) return;
+
+    if (includedItems.length === 0 && excludedItems.length === 0) {
+      this.chipsEl.hidden = true;
+      this.chipsEl.replaceChildren();
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    const buildChip = (item, mode) => {
+      const chip = document.createElement("span");
+      chip.className = `location-chip location-chip-${mode}`;
+
+      const iconWrap = document.createElement("span");
+      iconWrap.className = "location-chip-status-icon";
+      iconWrap.appendChild(this.createStatusIconSvg(mode));
+      chip.appendChild(iconWrap);
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "location-chip-label";
+      const displayCode = item.kind === "country" ? ` (${item.code})` : "";
+      labelEl.textContent =
+        mode === "exclude"
+          ? `Excluded: ${item.name}${displayCode}`
+          : `${item.name}${displayCode}`;
+      chip.appendChild(labelEl);
+
+      const shareEl = document.createElement("span");
+      shareEl.className = "location-chip-share";
+      shareEl.textContent = formatTrafficShare(item.share);
+      chip.appendChild(shareEl);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "location-chip-remove";
+      removeBtn.setAttribute(
+        "aria-label",
+        mode === "exclude"
+          ? `Stop excluding ${item.name}`
+          : `Remove ${item.name} from selection`
+      );
+      removeBtn.title =
+        mode === "exclude"
+          ? `Stop excluding ${item.name}`
+          : `Remove ${item.name}`;
+      removeBtn.appendChild(this.createRemoveIconSvg());
+      removeBtn.addEventListener("click", () => {
+        const opt = this.optionByValue.get(item.value);
+        if (opt) {
+          this.toggleOptionMode(opt, mode, true);
+        }
+      });
+      chip.appendChild(removeBtn);
+
+      return chip;
+    };
+
+    for (const item of includedItems) {
+      fragment.appendChild(buildChip(item, "include"));
+    }
+    for (const item of excludedItems) {
+      fragment.appendChild(buildChip(item, "exclude"));
+    }
+
+    this.chipsEl.replaceChildren(fragment);
+    this.chipsEl.hidden = false;
+  }
+
+  applySelectionState(announce = false, updateUrl = true) {
+    const includedOpts = Array.from(this.includedMap.values());
+    const excludedOpts = Array.from(this.excludedMap.values());
+
+    const toItemMeta = (opt) => ({
+      value: opt.dataset.value,
+      kind: opt.dataset.kind,
+      code: opt.dataset.code,
+      name: opt.dataset.name,
+      breadcrumb: opt.dataset.breadcrumb || opt.dataset.name,
+      share: Number(opt.dataset.share || 0),
+    });
+
+    const includedItems = includedOpts.map(toItemMeta);
+    const excludedItems = excludedOpts.map(toItemMeta);
+
+    const explicitIncludedCountries = new Set();
+    const regionIncludedCountries = new Set();
+    for (const opt of includedOpts) {
+      const codes = this.getOptionCountryCodes(opt);
+      for (const c of codes) {
+        explicitIncludedCountries.add(c);
+        if (opt.dataset.kind === "region") {
+          regionIncludedCountries.add(c);
+        }
+      }
+    }
+
+    const explicitExcludedCountries = new Set();
+    const regionExcludedCountries = new Set();
+    for (const opt of excludedOpts) {
+      const codes = this.getOptionCountryCodes(opt);
+      for (const c of codes) {
+        explicitExcludedCountries.add(c);
+        if (opt.dataset.kind === "region") {
+          regionExcludedCountries.add(c);
+        }
+      }
+    }
+
+    const isWorldwide = includedOpts.length === 0 && excludedOpts.length === 0;
+
+    for (const opt of this.optionEls) {
+      const val = opt.dataset.value;
+      if (val === "all") {
+        opt.classList.toggle("is-selected", isWorldwide);
+        opt.classList.toggle("is-included", isWorldwide);
+        opt.setAttribute("aria-selected", isWorldwide ? "true" : "false");
+        continue;
+      }
+
+      const isInc = this.includedMap.has(val);
+      const isExc = this.excludedMap.has(val);
+      const code = opt.dataset.code;
+      const isCountry = opt.dataset.kind === "country";
+      const isMemberInc =
+        !isInc && !isExc && isCountry && regionIncludedCountries.has(code);
+      const isMemberExc =
+        !isExc && isCountry && regionExcludedCountries.has(code);
+
+      opt.classList.toggle("is-selected", isInc);
+      opt.classList.toggle("is-included", isInc);
+      opt.classList.toggle("is-excluded", isExc);
+      opt.classList.toggle("is-member-included", isMemberInc && !isMemberExc);
+      opt.classList.toggle("is-member-excluded", isMemberExc);
+      opt.setAttribute("aria-selected", isInc ? "true" : "false");
+
+      const incBtn = opt.querySelector('[data-opt-action="include"]');
+      if (incBtn) {
+        incBtn.setAttribute("aria-pressed", isInc ? "true" : "false");
+      }
+      const excBtn = opt.querySelector('[data-opt-action="exclude"]');
+      if (excBtn) {
+        excBtn.setAttribute("aria-pressed", isExc ? "true" : "false");
+      }
+    }
+
+    let value = "all";
+    let kind = "global";
+    let code = "WW";
+    let name = "Worldwide";
+    let breadcrumb = "Worldwide";
+    let share = 100;
+    let mappedPct = Number(this.allOpt?.dataset.mappedPct || 89.42);
+    let countryCount = null;
+    let memberCountries = [];
+
+    if (isWorldwide) {
+      this.selectedOption = this.allOpt;
+    } else if (includedOpts.length === 1 && excludedOpts.length === 0) {
+      const opt = includedOpts[0];
+      this.selectedOption = opt;
+      value = opt.dataset.value || "all";
+      kind = opt.dataset.kind || "global";
+      code = opt.dataset.code || "WW";
+      name = opt.dataset.name || "Worldwide";
+      breadcrumb = opt.dataset.breadcrumb || name;
+      share = Number(opt.dataset.share || 0);
+      mappedPct = Number(opt.dataset.mappedPct || 0);
+      countryCount = opt.dataset.countryCount ? Number(opt.dataset.countryCount) : null;
+      memberCountries = this.getOptionCountryCodes(opt);
+    } else {
+      this.selectedOption = includedOpts[0] || excludedOpts[0] || this.allOpt;
+      const baseSet =
+        includedOpts.length > 0
+          ? new Set(explicitIncludedCountries)
+          : new Set(this.allCountryCodes);
+      for (const c of explicitExcludedCountries) {
+        baseSet.delete(c);
+      }
+      memberCountries = Array.from(baseSet).sort();
+      countryCount = memberCountries.length;
+
+      const incKey = includedItems.map((i) => i.value).join("+") || "all";
+      const excKey = excludedItems.map((i) => i.value).join("+");
+      value = excKey ? `custom:${incKey}!${excKey}` : `custom:${incKey}`;
+      kind = "custom";
+      code = "CUSTOM";
+
+      let totalShare = 0;
+      let weightedMappedSum = 0;
+      for (const cCode of memberCountries) {
+        const cOpt = this.countryOptByCode.get(cCode);
+        if (!cOpt) continue;
+        const cShare = Number(cOpt.dataset.share || 0);
+        const cMapped = Number(cOpt.dataset.mappedPct || 0);
+        totalShare += cShare;
+        weightedMappedSum += cShare * cMapped;
+      }
+      share = Number(totalShare.toFixed(4));
+      mappedPct =
+        totalShare > 0 ? Number((weightedMappedSum / totalShare).toFixed(2)) : 0;
+
+      const formatList = (items, maxShown, sep = " + ") => {
+        if (items.length <= maxShown) {
+          return items.map((i) => i.name).join(sep);
+        }
+        return `${items
+          .slice(0, maxShown - 1)
+          .map((i) => i.name)
+          .join(", ")} + ${items.length - (maxShown - 1)} more`;
+      };
+
+      const incLabel =
+        includedItems.length > 0 ? formatList(includedItems, 3, " + ") : "Worldwide";
+      const excLabel =
+        excludedItems.length > 0
+          ? ` (excl. ${formatList(excludedItems, 2, ", ")})`
+          : "";
+      name = `${incLabel}${excLabel}`;
+      breadcrumb = name;
+    }
 
     viewState.locationValue = value;
     viewState.locationMeta = {
@@ -1164,7 +1594,19 @@ class BaselineLocationFilter extends HTMLElement {
       mappedPct,
       countryCount,
       memberCountries,
+      includedItems,
+      excludedItems,
     };
+
+    const computedInitial = getActiveInitialData();
+    if (computedInitial?.meta && typeof computedInitial.meta.mappedPct === "number") {
+      mappedPct = computedInitial.meta.mappedPct;
+      viewState.locationMeta.mappedPct = mappedPct;
+    }
+
+    if (!this.isOpen) {
+      this.syncInputToSelected();
+    }
 
     if (updateUrl) {
       pushUrlState();
@@ -1173,6 +1615,8 @@ class BaselineLocationFilter extends HTMLElement {
     if (this.resetBtn) {
       this.resetBtn.hidden = value === "all";
     }
+
+    this.renderActiveChips(includedItems, excludedItems);
 
     const shareLabel = value === "all" ? "100.00%" : formatTrafficShare(share);
 
@@ -1198,8 +1642,11 @@ class BaselineLocationFilter extends HTMLElement {
       } else if (kind === "region") {
         const countWord = countryCount === 1 ? "1 country" : `${countryCount} countries`;
         this.breadcrumbEl.textContent = `Region: ${breadcrumb} • ${countWord} • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
-      } else {
+      } else if (kind === "country") {
         this.breadcrumbEl.textContent = `Country: ${breadcrumb} (${code}) • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
+      } else {
+        const countWord = countryCount === 1 ? "1 country" : `${countryCount} countries`;
+        this.breadcrumbEl.textContent = `Custom filter: ${breadcrumb} • ${countWord} • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
       }
     }
 
@@ -1244,9 +1691,8 @@ class BaselineLocationFilter extends HTMLElement {
     notifyStateChange("location-filter");
 
     if (announce && this.liveRegion) {
-      const activeData = getActiveInitialData();
-      const widelyTarget = activeData?.targets?.find((t) => t.id === "widely");
-      const newlyTarget = activeData?.targets?.find((t) => t.id === "newly");
+      const widelyTarget = computedInitial?.targets?.find((t) => t.id === "widely");
+      const newlyTarget = computedInitial?.targets?.find((t) => t.id === "newly");
       const getTargetAvg = (t) =>
         viewState.webviewMode === "exclude" ? t.avg7.pctNoWv : t.avg7.pct;
       const widelyStr = widelyTarget
