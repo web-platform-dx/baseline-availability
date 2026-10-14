@@ -194,15 +194,18 @@ function ensureNonWebviewBreakdown(breakdownData) {
     return breakdownData;
   }
 
+  const isWebviewEntry = (b) =>
+    b.browser === "webview_android" || (b.onIos && b.name === "Mobile Safari Webview");
+
   let nonWvPctSum = 0;
   for (const b of breakdownData.browsers) {
-    if (b.browser !== "webview_android") {
+    if (!isWebviewEntry(b)) {
       nonWvPctSum += Number(b.pct || 0);
     }
   }
 
   for (const b of breakdownData.browsers) {
-    if (b.browser === "webview_android") {
+    if (isWebviewEntry(b)) {
       b.pctNoWv = 0;
     } else {
       b.pctNoWv =
@@ -398,7 +401,7 @@ function computeRegionBreakdownData(regionCode, meta) {
     mappedWeight += mW;
 
     for (const b of entry.breakdown.browsers || []) {
-      const bvKey = `${b.browser}|${b.version}`;
+      const bvKey = `${b.browser}|${b.onIos ? b.name : ""}|${b.version}`;
       const bWeight = w * (Number(b.pctTotal || 0) / 100);
       const existing = byBrowserVer.get(bvKey);
       if (existing) {
@@ -408,6 +411,7 @@ function computeRegionBreakdownData(regionCode, meta) {
           browser: b.browser,
           name: b.name,
           version: b.version,
+          onIos: Boolean(b.onIos),
           releaseDate: b.releaseDate,
           engine: b.engine,
           engineVersion: b.engineVersion,
@@ -425,6 +429,7 @@ function computeRegionBreakdownData(regionCode, meta) {
       browser: item.browser,
       name: item.name,
       version: item.version,
+      onIos: item.onIos,
       releaseDate: item.releaseDate,
       engine: item.engine,
       engineVersion: item.engineVersion,
@@ -2629,6 +2634,13 @@ class BaselineBrowserBreakdown extends HTMLElement {
     }
   }
 
+  formatBrowserLabel(b) {
+    if (b.onIos) {
+      return `${b.name} (on iOS ${b.version})`;
+    }
+    return `${b.name} ${b.version}`;
+  }
+
   buildBlockAccessibleDescription(block) {
     const sideLabel = block.side === "compatible" ? "Compatible" : "Incompatible";
     const denomLabel =
@@ -2638,7 +2650,10 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
     if (block.type === "single") {
       const b = block.browser;
-      const parts = [`${sideLabel}: ${b.name} ${b.version}`, `${formatPct(block.share)} ${denomLabel}`];
+      const parts = [
+        `${sideLabel}: ${this.formatBrowserLabel(b)}`,
+        `${formatPct(block.share)} ${denomLabel}`,
+      ];
       if (b.isDownstream && b.engine) {
         parts.push(`Engine: ${b.engine}${b.engineVersion ? ` ${b.engineVersion}` : ""}`);
       }
@@ -2656,7 +2671,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
         b.isDownstream && b.engine
           ? ` (${b.engine}${b.engineVersion ? ` ${b.engineVersion}` : ""})`
           : "";
-      return `${b.name} ${b.version}${engInfo} ${formatPct(b.share)}`;
+      return `${this.formatBrowserLabel(b)}${engInfo} ${formatPct(b.share)}`;
     });
     const remaining = block.items.length - topPreview.length;
     const previewSuffix =
@@ -2800,7 +2815,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
       if (block.type === "single") {
         const b = block.browser;
-        line1 = `${b.name} ${b.version} — ${formatPct(block.share)}`;
+        line1 = `${this.formatBrowserLabel(b)} — ${formatPct(block.share)}`;
         const details = [];
         if (b.isDownstream && b.engine) {
           details.push(`Engine: ${b.engine}${b.engineVersion ? ` ${b.engineVersion}` : ""}`);
@@ -2821,7 +2836,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
             b.isDownstream && b.engine
               ? ` [${b.engine}${b.engineVersion ? ` ${b.engineVersion}` : ""}]`
               : "";
-          return `${b.name} ${b.version}${engInfo} (${formatPct(b.share)})`;
+          return `${this.formatBrowserLabel(b)}${engInfo} (${formatPct(b.share)})`;
         });
         const remaining = block.items.length - topPreview.length;
         line2 =
@@ -2904,7 +2919,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
         });
         primaryLabel.textContent =
           block.type === "single"
-            ? `${block.browser.name} ${block.browser.version}`
+            ? this.formatBrowserLabel(block.browser)
             : `<0.5% (${block.items.length})`;
 
         const pctLabel = createSvgEl("text", {
@@ -3091,7 +3106,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
       const mainName = document.createElement("span");
       mainName.className = "browser-title-text";
-      mainName.textContent = `${item.name} ${item.version}`;
+      mainName.textContent = this.formatBrowserLabel(item);
       nameTh.appendChild(mainName);
 
       if (item.isDownstream && item.engine) {

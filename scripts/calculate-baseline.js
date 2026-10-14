@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +12,7 @@ const AGGREGATES_DIR = path.resolve(PROJECT_ROOT, "src", "_data", "bigquery", "g
 const COUNTRY_AGGREGATES_DIR = path.resolve(PROJECT_ROOT, "src", "_data", "bigquery", "country_daily_aggregates");
 const OUTPUT_DIR = path.resolve(PROJECT_ROOT, "src", "_data", "baseline_daily");
 const COUNTRY_DAILY_OUTPUT_DIR = path.resolve(PROJECT_ROOT, "src", "_data", "baseline_country_daily");
+const BROWSERS_DEFINITIONS_PATH = path.resolve(PROJECT_ROOT, "src", "_data", "browsers.json");
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const VERSION_PATTERN = /^\d+(\.\d+)?$/;
@@ -130,12 +132,22 @@ function buildBbmLookups() {
     listAllBrowsers: true,
   });
 
+  /** @type {Record<string, string>} */
+  let shortToFamily = {};
+  try {
+    const parsedBrowsers = JSON.parse(readFileSync(BROWSERS_DEFINITIONS_PATH, "utf8"));
+    shortToFamily = parsedBrowsers.shortToFamily || {};
+  } catch {
+    shortToFamily = {};
+  }
+
   return {
     knownVersionsByBrowser,
     maxVersionByBrowser,
     versionMetaByBrowser,
     safariMajorVersions,
     timelineEvents,
+    shortToFamily,
   };
 }
 
@@ -237,7 +249,8 @@ function getWebviewType(row, colIdx) {
  * 1. iOS (`OS === "iOS"`):
  *    - If `USERAGENTFAMILY` is Mobile Safari (`"si"`), map to `safari_ios` using `USERAGENTVERSION`
  *      (with fallback to `OSVERSION` if `USERAGENTVERSION` is missing or not a Safari version).
- *    - If `USERAGENTFAMILY` is not Mobile Safari, map to `safari_ios` using `OSVERSION`.
+ *    - If `USERAGENTFAMILY` is not Mobile Safari, map to `safari_ios` using `OSVERSION` (and record
+ *      `iosApp` so the browser breakdown aggregates by app name and iOS version).
  *    - If the required version is unavailable or invalid, return `null` (recorded as unmapped).
  * 2. Android (`OS === "Android OS"`):
  *    - Chrome Mobile Webview (`"wva"`) maps to `webview_android` and all other Blink browsers map to
@@ -257,7 +270,7 @@ function getWebviewType(row, colIdx) {
  * @param {unknown[]} row
  * @param {Record<string, number>} colIdx
  * @param {ReturnType<typeof buildBbmLookups>} lookups
- * @returns {{ browser: string, version: string } | null}
+ * @returns {{ browser: string, version: string, iosApp?: string } | null}
  */
 function resolveRowToBaselineBrowser(row, colIdx, lookups) {
   const ua = String(row[colIdx.USERAGENTFAMILY] ?? "");
@@ -269,7 +282,7 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
 
   // 1. All iOS rows map to safari_ios: Mobile Safari via UAVERSION (with OSVERSION fallback), all others via OSVERSION
   if (os === "iOS") {
-    const isMobileSafari = ua === "si" || ua === "Mobile Safari";
+    const isMobileSafari = !ua || ua === "si" || ua === "Mobile Safari";
     if (
       isMobileSafari &&
       isValidVersion(uav) &&
@@ -278,7 +291,9 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
       return { browser: "safari_ios", version: String(uav) };
     }
     if (isValidVersion(osv) && lookups.safariMajorVersions.has(getMajorVersion(osv))) {
-      return { browser: "safari_ios", version: String(osv) };
+      return isMobileSafari
+        ? { browser: "safari_ios", version: String(osv) }
+        : { browser: "safari_ios", version: String(osv), iosApp: ua };
     }
     return null;
   }
@@ -848,8 +863,10 @@ export async function writeBrowserBreakdownBundle() {
 
   let totalPageLoads = 0;
   let mappedPageLoads = 0;
-  /** @type {Map<string, { browser: string, version: string, pageLoads: number }>} */
+  /** @type {Map<string, { browser: string, rowKey: string, iosApp: string | null, version: string, pageLoads: number }>} */
   const countsByBrowserVer = new Map();
+  /** @type {Map<string, string>} */
+  const iosAppNames = new Map();
 
   for (const fileName of recentFiles) {
     const inputPath = resolveSafeFilePath(AGGREGATES_DIR, fileName);
@@ -873,13 +890,20 @@ export async function writeBrowserBreakdownBundle() {
       if (!resolved) continue;
 
       mappedPageLoads += count;
-      const key = `${resolved.browser}|${resolved.version}`;
+      const iosApp = resolved.iosApp || null;
+      const rowKey = iosApp ? `ios:${iosApp}` : resolved.browser;
+      if (iosApp) {
+        iosAppNames.set(rowKey, lookups.shortToFamily[iosApp] || iosApp);
+      }
+      const key = `${rowKey}|${resolved.version}`;
       const existing = countsByBrowserVer.get(key);
       if (existing) {
         existing.pageLoads += count;
       } else {
         countsByBrowserVer.set(key, {
           browser: resolved.browser,
+          rowKey,
+          iosApp,
           version: resolved.version,
           pageLoads: count,
         });
@@ -924,51 +948,57 @@ export async function writeBrowserBreakdownBundle() {
   }
 
   // Enrich each browser+version entry with releaseDate, engine, engineVersion, engineReleaseDate
-  const browsers = [...countsByBrowserVer.values()]
-    .sort((a, b) => b.pageLoads - a.pageLoads)
-    .map((item) => {
-      const { browser, version, pageLoads } = item;
-      const meta = lookups.versionMetaByBrowser[browser]?.[version] || null;
-      const isDownstream = DOWNSTREAM_BBM_BROWSERS.has(browser);
+  const sortedCounts = [...countsByBrowserVer.values()].sort(
+    (a, b) => b.pageLoads - a.pageLoads
+  );
+  const browsers = sortedCounts.map((item) => {
+    const { browser, iosApp, version, pageLoads } = item;
+    const meta = lookups.versionMetaByBrowser[browser]?.[version] || null;
+    const isDownstream = DOWNSTREAM_BBM_BROWSERS.has(browser);
 
-      const releaseDate = meta?.releaseDate || null;
-      let engine = null;
-      let engineVersion = null;
-      let engineReleaseDate = null;
+    const releaseDate = meta?.releaseDate || null;
+    let engine = null;
+    let engineVersion = null;
+    let engineReleaseDate = null;
 
-      if (isDownstream) {
-        engine = meta?.engine || (browser === "kai_os" ? "Gecko" : "Blink");
-        engineVersion =
-          meta?.engineVersion || (browser === "webview_android" ? version : null);
-        if (engine && engineVersion) {
-          if (engine === "Gecko") {
-            engineReleaseDate =
-              lookups.versionMetaByBrowser.firefox?.[engineVersion]?.releaseDate ||
-              lookups.versionMetaByBrowser.firefox_android?.[engineVersion]?.releaseDate ||
-              null;
-          } else {
-            engineReleaseDate =
-              lookups.versionMetaByBrowser.chrome?.[engineVersion]?.releaseDate ||
-              lookups.versionMetaByBrowser.chrome_android?.[engineVersion]?.releaseDate ||
-              null;
-          }
+    if (isDownstream) {
+      engine = meta?.engine || (browser === "kai_os" ? "Gecko" : "Blink");
+      engineVersion =
+        meta?.engineVersion || (browser === "webview_android" ? version : null);
+      if (engine && engineVersion) {
+        if (engine === "Gecko") {
+          engineReleaseDate =
+            lookups.versionMetaByBrowser.firefox?.[engineVersion]?.releaseDate ||
+            lookups.versionMetaByBrowser.firefox_android?.[engineVersion]?.releaseDate ||
+            null;
+        } else {
+          engineReleaseDate =
+            lookups.versionMetaByBrowser.chrome?.[engineVersion]?.releaseDate ||
+            lookups.versionMetaByBrowser.chrome_android?.[engineVersion]?.releaseDate ||
+            null;
         }
       }
+    }
 
-      return {
-        browser,
-        name: BBM_BROWSER_NAMES[browser] || browser,
-        version,
-        isDownstream,
-        releaseDate,
-        engine,
-        engineVersion,
-        engineReleaseDate,
-        pageLoads,
-        pct: mappedPageLoads > 0 ? round4((pageLoads / mappedPageLoads) * 100) : 0,
-        pctTotal: totalPageLoads > 0 ? round4((pageLoads / totalPageLoads) * 100) : 0,
-      };
-    });
+    const name = iosApp
+      ? lookups.shortToFamily[iosApp] || iosApp
+      : BBM_BROWSER_NAMES[browser] || browser;
+
+    return {
+      browser,
+      name,
+      version,
+      ...(iosApp ? { onIos: true } : {}),
+      isDownstream,
+      releaseDate,
+      engine,
+      engineVersion,
+      engineReleaseDate,
+      pageLoads,
+      pct: mappedPageLoads > 0 ? round4((pageLoads / mappedPageLoads) * 100) : 0,
+      pctTotal: totalPageLoads > 0 ? round4((pageLoads / totalPageLoads) * 100) : 0,
+    };
+  });
 
   const breakdownPayload = {
     generatedAt: new Date().toISOString(),
@@ -994,12 +1024,15 @@ export async function writeBrowserBreakdownBundle() {
     s: startDate,
     e: endDate,
     m: breakdownPayload.mappedPercentage,
-    names: BBM_BROWSER_NAMES,
+    names: {
+      ...BBM_BROWSER_NAMES,
+      ...Object.fromEntries(iosAppNames),
+    },
     targets: targetsList,
     minMaps: targetMinMaps,
-    // Each row: [browser, version, pctOfMapped, pctOfTotal, releaseDate, engine, engineVersion, engineReleaseDate]
-    rows: browsers.map((b) => [
-      b.browser,
+    // Each row: [rowKey, version, pctOfMapped, pctOfTotal, releaseDate, engine, engineVersion, engineReleaseDate]
+    rows: browsers.map((b, idx) => [
+      sortedCounts[idx].rowKey,
       b.version,
       b.pct,
       b.pctTotal,
@@ -1012,7 +1045,7 @@ export async function writeBrowserBreakdownBundle() {
 
   const breakdownJs =
     `(()=>{const D=${JSON.stringify(compactClientData)};` +
-    `const browsers=D.rows.map(r=>({browser:r[0],name:D.names[r[0]]||r[0],version:r[1],pct:r[2],pctTotal:r[3],releaseDate:r[4],engine:r[5],engineVersion:r[6],engineReleaseDate:r[7],isDownstream:Boolean(r[5])}));` +
+    `const browsers=D.rows.map(r=>{const onIos=r[0].startsWith("ios:"),b=onIos?"safari_ios":r[0];return{browser:b,name:D.names[r[0]]||r[0],version:r[1],onIos,pct:r[2],pctTotal:r[3],releaseDate:r[4],engine:r[5],engineVersion:r[6],engineReleaseDate:r[7],isDownstream:Boolean(r[5])}});` +
     `window.BASELINE_BROWSER_BREAKDOWN={windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:D.m,targets:D.targets,targetMinMaps:D.minMaps,browsers};` +
     `window.dispatchEvent(new CustomEvent("baseline-breakdown-ready",{detail:window.BASELINE_BROWSER_BREAKDOWN}))})();\n`;
 
@@ -2081,11 +2114,13 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
 
   const effectiveLookups = lookups || buildBbmLookups();
 
-  /** @type {Map<string, { totalPageLoads: number, mappedPageLoads: number, byBrowserVer: Map<string, { browser: string, version: string, pageLoads: number }> }>} */
+  /** @type {Map<string, { totalPageLoads: number, mappedPageLoads: number, byBrowserVer: Map<string, { browser: string, rowKey: string, iosApp: string | null, version: string, pageLoads: number }> }>} */
   const byCountry = new Map();
   /** @type {Map<string, { browser: string, version: string }>} */
   const allBrowserVers = new Map();
-  /** @type {Map<string, { browser: string, version: string } | null>} */
+  /** @type {Map<string, string>} */
+  const iosAppNames = new Map();
+  /** @type {Map<string, { browser: string, version: string, iosApp?: string } | null>} */
   const uaResolveCache = new Map();
 
   for (const fileName of recentFiles) {
@@ -2135,17 +2170,25 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
       if (!resolved) continue;
 
       cBucket.mappedPageLoads += count;
-      const bvKey = `${resolved.browser}|${resolved.version}`;
-      if (!allBrowserVers.has(bvKey)) {
-        allBrowserVers.set(bvKey, resolved);
+      const iosApp = resolved.iosApp || null;
+      const rowKey = iosApp ? `ios:${iosApp}` : resolved.browser;
+      if (iosApp) {
+        iosAppNames.set(rowKey, effectiveLookups.shortToFamily[iosApp] || iosApp);
+      }
+      const metaKey = `${resolved.browser}|${resolved.version}`;
+      if (!allBrowserVers.has(metaKey)) {
+        allBrowserVers.set(metaKey, { browser: resolved.browser, version: resolved.version });
       }
 
+      const bvKey = `${rowKey}|${resolved.version}`;
       const existing = cBucket.byBrowserVer.get(bvKey);
       if (existing) {
         existing.pageLoads += count;
       } else {
         cBucket.byBrowserVer.set(bvKey, {
           browser: resolved.browser,
+          rowKey,
+          iosApp,
           version: resolved.version,
           pageLoads: count,
         });
@@ -2245,15 +2288,22 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
     const mappedPercentage =
       totalPageLoads > 0 ? round2((mappedPageLoads / totalPageLoads) * 100) : 0;
 
-    const browsers = [...byBrowserVer.values()]
-      .sort((a, b) => b.pageLoads - a.pageLoads)
-      .map((item) => ({
-        browser: item.browser,
-        version: item.version,
-        pageLoads: item.pageLoads,
-        pct: mappedPageLoads > 0 ? round4((item.pageLoads / mappedPageLoads) * 100) : 0,
-        pctTotal: totalPageLoads > 0 ? round4((item.pageLoads / totalPageLoads) * 100) : 0,
-      }));
+    const sortedItems = [...byBrowserVer.values()].sort(
+      (a, b) => b.pageLoads - a.pageLoads
+    );
+    const browsers = sortedItems.map((item) => ({
+      browser: item.browser,
+      ...(item.iosApp
+        ? {
+            name: effectiveLookups.shortToFamily[item.iosApp] || item.iosApp,
+            onIos: true,
+          }
+        : {}),
+      version: item.version,
+      pageLoads: item.pageLoads,
+      pct: mappedPageLoads > 0 ? round4((item.pageLoads / mappedPageLoads) * 100) : 0,
+      pctTotal: totalPageLoads > 0 ? round4((item.pageLoads / totalPageLoads) * 100) : 0,
+    }));
 
     countries[code] = {
       code,
@@ -2268,7 +2318,12 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
 
     compactCountries[code] = {
       m: mappedPercentage,
-      rows: browsers.map((b) => [b.browser, b.version, b.pct, b.pctTotal]),
+      rows: browsers.map((b, idx) => [
+        sortedItems[idx].rowKey,
+        b.version,
+        b.pct,
+        b.pctTotal,
+      ]),
     };
   }
 
@@ -2306,7 +2361,10 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
     w: recentFiles.length,
     s: startDate,
     e: endDate,
-    names: BBM_BROWSER_NAMES,
+    names: {
+      ...BBM_BROWSER_NAMES,
+      ...Object.fromEntries(iosAppNames),
+    },
     targets: targetsList,
     minMaps: targetMinMaps,
     meta: compactMeta,
@@ -2316,8 +2374,8 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
   const countryBreakdownJs =
     `(()=>{const D=${JSON.stringify(compactClientPayload)},cache={};` +
     `function getCountryBreakdown(code){if(cache[code])return cache[code];const C=D.c[code];if(!C)return null;` +
-    `const browsers=C.rows.map(r=>{const k=r[0]+"|"+r[1],m=D.meta[k]||[null,null,null,null];` +
-    `return{browser:r[0],name:D.names[r[0]]||r[0],version:r[1],pct:r[2],pctTotal:r[3],releaseDate:m[0],engine:m[1],engineVersion:m[2],engineReleaseDate:m[3],isDownstream:Boolean(m[1])}});` +
+    `const browsers=C.rows.map(r=>{const onIos=r[0].startsWith("ios:"),b=onIos?"safari_ios":r[0],k=b+"|"+r[1],m=D.meta[k]||[null,null,null,null];` +
+    `return{browser:b,name:D.names[r[0]]||r[0],version:r[1],onIos,pct:r[2],pctTotal:r[3],releaseDate:m[0],engine:m[1],engineVersion:m[2],engineReleaseDate:m[3],isDownstream:Boolean(m[1])}});` +
     `return(cache[code]={code,windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:C.m,targets:D.targets,targetMinMaps:D.minMaps,browsers})}` +
     `window.BASELINE_COUNTRY_BREAKDOWN={windowDays:D.w,startDate:D.s,endDate:D.e,targets:D.targets,targetMinMaps:D.minMaps,getCountry:getCountryBreakdown};` +
     `window.dispatchEvent(new CustomEvent("baseline-country-breakdown-ready",{detail:window.BASELINE_COUNTRY_BREAKDOWN}))})();\n`;
