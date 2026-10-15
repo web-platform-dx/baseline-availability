@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getCompatibleVersions, getTimeline } from "baseline-browser-mapping";
+import { features as webFeatures, groups as webFeatureGroups } from "web-features";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -757,6 +758,19 @@ const COUNTRY_BREAKDOWN_JS_BUNDLE_PATH = path.resolve(
   "js",
   "baseline-country-breakdown.js"
 );
+const FEATURES_DATA_PATH = path.resolve(
+  PROJECT_ROOT,
+  "src",
+  "_data",
+  "baseline_features.json"
+);
+const FEATURES_JS_BUNDLE_PATH = path.resolve(
+  PROJECT_ROOT,
+  "src",
+  "assets",
+  "js",
+  "baseline-features-data.js"
+);
 const MAX_CHART_DAYS = 90;
 const AVG_WINDOW_DAYS = 7;
 
@@ -837,6 +851,7 @@ function meanRound2(values) {
  * Aggregates browser versions over the last 7 days of raw daily aggregate files and writes:
  * 1. `src/_data/baseline_browser_breakdown.json` for build-time template metadata
  * 2. `src/assets/js/baseline-browser-breakdown.js` for the interactive horizontal breakdown bar chart and sortable tables
+ * 3. `src/_data/baseline_features.json` and `src/assets/js/baseline-features-data.js` for precalculated per-feature compatibility
  */
 export async function writeBrowserBreakdownBundle() {
   let aggEntries = [];
@@ -955,6 +970,12 @@ export async function writeBrowserBreakdownBundle() {
     const { browser, iosApp, version, pageLoads } = item;
     const meta = lookups.versionMetaByBrowser[browser]?.[version] || null;
     const isDownstream = DOWNSTREAM_BBM_BROWSERS.has(browser);
+    const maxVer = lookups.maxVersionByBrowser[browser];
+    const fallbackMeta =
+      !meta && isDownstream && maxVer && compareVersions(version, maxVer) > 0
+        ? lookups.versionMetaByBrowser[browser]?.[maxVer] || null
+        : null;
+    const effectiveMeta = meta || fallbackMeta;
 
     const releaseDate = meta?.releaseDate || null;
     let engine = null;
@@ -962,9 +983,9 @@ export async function writeBrowserBreakdownBundle() {
     let engineReleaseDate = null;
 
     if (isDownstream) {
-      engine = meta?.engine || (browser === "kai_os" ? "Gecko" : "Blink");
+      engine = effectiveMeta?.engine || (browser === "kai_os" ? "Gecko" : "Blink");
       engineVersion =
-        meta?.engineVersion || (browser === "webview_android" ? version : null);
+        effectiveMeta?.engineVersion || (browser === "webview_android" ? version : null);
       if (engine && engineVersion) {
         if (engine === "Gecko") {
           engineReleaseDate =
@@ -1053,6 +1074,386 @@ export async function writeBrowserBreakdownBundle() {
   await fs.writeFile(BREAKDOWN_JS_BUNDLE_PATH, breakdownJs, "utf8");
   console.log(
     `Wrote 7-day browser breakdown (${browsers.length} browser versions, ${Buffer.byteLength(breakdownJs, "utf8")} bytes) -> ${path.relative(PROJECT_ROOT, BREAKDOWN_JS_BUNDLE_PATH)}`
+  );
+
+  await writeFeaturesBundle(breakdownPayload);
+}
+
+const CORE_FEATURE_BROWSERS = [
+  "chrome",
+  "chrome_android",
+  "edge",
+  "firefox",
+  "firefox_android",
+  "safari",
+  "safari_ios",
+];
+
+/**
+ * Resolves the root group ID and full group breadcrumb path for a feature in `web-features`.
+ * @param {string | string[] | undefined} rawGroup
+ * @returns {{ groupId: string, groupName: string, groupPath: string }}
+ */
+function resolveFeatureGroupInfo(rawGroup) {
+  const gArr = Array.isArray(rawGroup) ? rawGroup : rawGroup ? [rawGroup] : [];
+  if (gArr.length === 0) {
+    return { groupId: "other", groupName: "Other", groupPath: "Other" };
+  }
+  const primaryId = gArr[0];
+  const parts = [];
+  let curr = primaryId;
+  let rootId = primaryId;
+  const visited = new Set();
+  while (curr && !visited.has(curr)) {
+    visited.add(curr);
+    const def = webFeatureGroups?.[curr];
+    if (def) {
+      parts.unshift(def.name || curr);
+      rootId = curr;
+      curr = def.parent || null;
+    } else {
+      parts.unshift(curr);
+      rootId = curr;
+      break;
+    }
+  }
+  const rootName = webFeatureGroups?.[rootId]?.name || parts[0] || "Other";
+  return {
+    groupId: rootId,
+    groupName: rootName,
+    groupPath: parts.join(" › ") || rootName,
+  };
+}
+
+/**
+ * Precalculates 7-day global compatibility percentages (including and excluding WebViews)
+ * for every individual feature in the `web-features` module and writes:
+ * 1. `src/_data/baseline_features.json` for Eleventy build-time rendering
+ * 2. `src/assets/js/baseline-features-data.js` for client-side filtering & instant location rollups
+ * @param {{ windowDays: number, startDate: string, endDate: string, totalPageLoads: number, mappedPageLoads: number, mappedPercentage: number, browsers: Array<any> }} breakdownPayload
+ */
+export async function writeFeaturesBundle(breakdownPayload) {
+  const {
+    windowDays,
+    startDate,
+    endDate,
+    totalPageLoads,
+    mappedPageLoads,
+    mappedPercentage,
+    browsers,
+  } = breakdownPayload;
+
+  // Group browser entries by (coreBrowser, effectiveVersion) for fast threshold aggregation
+  let nonWvMappedPageLoads = 0;
+  /** @type {Map<string, Map<string, { ver: string, loads: number, nonWvLoads: number, awvLoads: number, iwvLoads: number }>>} */
+  const byCoreBrowser = new Map();
+
+  for (const b of browsers) {
+    const isAndroidWv = b.browser === "webview_android";
+    const isIosWv = Boolean(b.onIos && b.name === "Mobile Safari Webview");
+    const loads = Number(b.pageLoads || 0);
+    if (!isAndroidWv && !isIosWv) {
+      nonWvMappedPageLoads += loads;
+    }
+
+    const coreBrowser =
+      b.browser === "opera"
+        ? "chrome"
+        : b.browser === "kai_os"
+          ? "firefox_android"
+          : b.isDownstream
+            ? "chrome_android"
+            : b.browser;
+    const effectiveVersion = b.isDownstream
+      ? b.engineVersion || (b.browser === "webview_android" ? b.version : null)
+      : b.version;
+    if (!effectiveVersion) continue;
+
+    let coreMap = byCoreBrowser.get(coreBrowser);
+    if (!coreMap) {
+      coreMap = new Map();
+      byCoreBrowser.set(coreBrowser, coreMap);
+    }
+    let entry = coreMap.get(effectiveVersion);
+    if (!entry) {
+      entry = {
+        ver: effectiveVersion,
+        loads: 0,
+        nonWvLoads: 0,
+        awvLoads: 0,
+        iwvLoads: 0,
+      };
+      coreMap.set(effectiveVersion, entry);
+    }
+    entry.loads += loads;
+    if (!isAndroidWv && !isIosWv) {
+      entry.nonWvLoads += loads;
+    }
+    if (isAndroidWv) {
+      entry.awvLoads += loads;
+    }
+    if (isIosWv) {
+      entry.iwvLoads += loads;
+    }
+  }
+
+  /** @type {Map<string, { loads: number, nonWvLoads: number, awvLoads: number, iwvLoads: number }>} */
+  const thresholdCache = new Map();
+  function getCoreThresholdLoads(coreBrowser, minVer) {
+    const key = `${coreBrowser}|${minVer}`;
+    const cached = thresholdCache.get(key);
+    if (cached) return cached;
+
+    const acc = { loads: 0, nonWvLoads: 0, awvLoads: 0, iwvLoads: 0 };
+    const coreMap = byCoreBrowser.get(coreBrowser);
+    if (coreMap) {
+      for (const entry of coreMap.values()) {
+        if (compareVersions(entry.ver, minVer) >= 0) {
+          acc.loads += entry.loads;
+          acc.nonWvLoads += entry.nonWvLoads;
+          acc.awvLoads += entry.awvLoads;
+          acc.iwvLoads += entry.iwvLoads;
+        }
+      }
+    }
+    thresholdCache.set(key, acc);
+    return acc;
+  }
+
+  const counts = {
+    total: 0,
+    widely: 0,
+    newly: 0,
+    limited: 0,
+    discouraged: 0,
+  };
+  /** @type {Map<string, { id: string, name: string, count: number }>} */
+  const groupCounts = new Map();
+  /** @type {Map<number, number>} */
+  const yearCounts = new Map();
+  const featuresList = [];
+
+  for (const [id, f] of Object.entries(webFeatures || {})) {
+    if ((f.kind && f.kind !== "feature") || !f.status) {
+      continue;
+    }
+
+    const baseline = f.status.baseline;
+    const statusKind =
+      baseline === "high" ? "widely" : baseline === "low" ? "newly" : "limited";
+    const statusLabel =
+      baseline === "high"
+        ? "Widely available"
+        : baseline === "low"
+          ? "Newly available"
+          : "Limited availability";
+
+    const rawLowDate = f.status.baseline_low_date ? String(f.status.baseline_low_date) : null;
+    const rawHighDate = f.status.baseline_high_date ? String(f.status.baseline_high_date) : null;
+    const lowDate = rawLowDate ? rawLowDate.replace(/^≤/, "") : null;
+    const highDate = rawHighDate ? rawHighDate.replace(/^≤/, "") : null;
+    const year =
+      lowDate && /^\d{4}/.test(lowDate) ? Number(lowDate.slice(0, 4)) : null;
+    const discouraged = Boolean(f.discouraged);
+
+    /** @type {Record<string, string>} */
+    const support = {};
+    /** @type {Record<string, string>} */
+    const rawSupport = {};
+    for (const coreBrowser of CORE_FEATURE_BROWSERS) {
+      const rawVal = f.status.support?.[coreBrowser];
+      if (rawVal) {
+        const rawStr = String(rawVal);
+        rawSupport[coreBrowser] = rawStr;
+        support[coreBrowser] = rawStr.replace(/^≤/, "");
+      }
+    }
+
+    let compatLoads = 0;
+    let compatNonWvLoads = 0;
+    let androidWvLoads = 0;
+    let iosWvLoads = 0;
+
+    for (const [coreBrowser, minVer] of Object.entries(support)) {
+      const tLoads = getCoreThresholdLoads(coreBrowser, minVer);
+      compatLoads += tLoads.loads;
+      compatNonWvLoads += tLoads.nonWvLoads;
+      androidWvLoads += tLoads.awvLoads;
+      iosWvLoads += tLoads.iwvLoads;
+    }
+
+    const pct =
+      mappedPageLoads > 0
+        ? Math.min(100, round2((compatLoads / mappedPageLoads) * 100))
+        : 0;
+    const pctNoWv =
+      nonWvMappedPageLoads > 0
+        ? Math.min(100, round2((compatNonWvLoads / nonWvMappedPageLoads) * 100))
+        : 0;
+    const pctTotal =
+      totalPageLoads > 0
+        ? Math.min(100, round2((compatLoads / totalPageLoads) * 100))
+        : 0;
+    const androidWv =
+      compatLoads > 0 ? round2((androidWvLoads / compatLoads) * 100) : 0;
+    const iosWv = compatLoads > 0 ? round2((iosWvLoads / compatLoads) * 100) : 0;
+
+    const { groupId, groupName, groupPath } = resolveFeatureGroupInfo(f.group);
+
+    counts.total += 1;
+    if (statusKind === "widely") counts.widely += 1;
+    else if (statusKind === "newly") counts.newly += 1;
+    else counts.limited += 1;
+    if (discouraged) counts.discouraged += 1;
+
+    const gEntry = groupCounts.get(groupId);
+    if (gEntry) {
+      gEntry.count += 1;
+    } else {
+      groupCounts.set(groupId, { id: groupId, name: groupName, count: 1 });
+    }
+
+    if (year !== null && !Number.isNaN(year)) {
+      yearCounts.set(year, (yearCounts.get(year) || 0) + 1);
+    }
+
+    featuresList.push({
+      id,
+      name: f.name || id,
+      description: f.description || "",
+      group: groupId,
+      groupName,
+      groupPath,
+      statusKind,
+      statusLabel,
+      lowDate,
+      highDate,
+      year,
+      discouraged,
+      pct,
+      pctNoWv,
+      pctTotal,
+      androidWv,
+      iosWv,
+      support,
+      rawSupport,
+    });
+  }
+
+  // Sort features by availability percentage descending, then name ascending
+  featuresList.sort((a, b) => {
+    if (b.pct !== a.pct) return b.pct - a.pct;
+    return a.name.localeCompare(b.name);
+  });
+
+  let sumPct = 0;
+  let sumPctNoWv = 0;
+  let count95 = 0;
+  let count99 = 0;
+  for (const f of featuresList) {
+    sumPct += f.pct;
+    sumPctNoWv += f.pctNoWv;
+    if (f.pct >= 95) count95 += 1;
+    if (f.pct >= 99) count99 += 1;
+  }
+  const totalCount = featuresList.length;
+  const kpi = {
+    meanPct: totalCount > 0 ? round2(sumPct / totalCount) : 0,
+    meanPctNoWv: totalCount > 0 ? round2(sumPctNoWv / totalCount) : 0,
+    count95,
+    share95: totalCount > 0 ? round2((count95 / totalCount) * 100) : 0,
+    count99,
+    share99: totalCount > 0 ? round2((count99 / totalCount) * 100) : 0,
+  };
+
+  const sortedGroups = [...groupCounts.values()].sort((a, b) => {
+    if (a.id === "other") return 1;
+    if (b.id === "other") return -1;
+    if (b.count !== a.count) return b.count - a.count;
+    return a.name.localeCompare(b.name);
+  });
+
+  const sortedYears = [...yearCounts.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([year, count]) => ({ year, count }));
+
+  const featuresPayload = {
+    generatedAt: new Date().toISOString(),
+    windowDays,
+    startDate,
+    endDate,
+    mappedPercentage,
+    counts,
+    kpi,
+    groups: sortedGroups,
+    years: sortedYears,
+    features: featuresList,
+  };
+
+  await fs.mkdir(path.dirname(FEATURES_DATA_PATH), { recursive: true });
+  await fs.writeFile(FEATURES_DATA_PATH, JSON.stringify(featuresPayload, null, 2) + "\n", "utf8");
+
+  // Deduplicate [group, groupName, groupPath] into a compact lookup table `gp`
+  /** @type {Array<[string, string, string]>} */
+  const gpList = [];
+  /** @type {Map<string, number>} */
+  const gpIndex = new Map();
+
+  const compactRows = featuresList.map((f) => {
+    const gpKey = `${f.group}|${f.groupName}|${f.groupPath}`;
+    let gIdx = gpIndex.get(gpKey);
+    if (gIdx === undefined) {
+      gIdx = gpList.length;
+      gpIndex.set(gpKey, gIdx);
+      gpList.push([f.group, f.groupName, f.groupPath]);
+    }
+    const sk = f.statusKind === "widely" ? 0 : f.statusKind === "newly" ? 1 : 2;
+    return [
+      f.id,
+      f.name === f.id ? 0 : f.name,
+      f.description,
+      gIdx,
+      sk,
+      f.lowDate || 0,
+      f.discouraged ? 1 : 0,
+      f.pct,
+      f.pctNoWv,
+      f.androidWv,
+      f.iosWv,
+      CORE_FEATURE_BROWSERS.map((cb) => f.rawSupport[cb] || 0),
+    ];
+  });
+
+  // Build compact client-side bundle so `web-features` never loads in the browser
+  const compactFeaturesPayload = {
+    w: windowDays,
+    s: startDate,
+    e: endDate,
+    m: mappedPercentage,
+    counts,
+    kpi,
+    groups: sortedGroups,
+    years: sortedYears,
+    gp: gpList,
+    rows: compactRows,
+  };
+
+  const featuresJs =
+    `(()=>{const D=${JSON.stringify(compactFeaturesPayload)},` +
+    `B=["chrome","chrome_android","edge","firefox","firefox_android","safari","safari_ios"];` +
+    `const features=D.rows.map(r=>{const sup={},rawSup={};for(let i=0;i<B.length;i++){const rv=r[11][i];if(rv){const s=String(rv);rawSup[B[i]]=s;sup[B[i]]=s.replace(/^≤/,"")}}` +
+    `const gp=D.gp[r[3]]||["other","Other","Other"],sk=r[4]===0?"widely":r[4]===1?"newly":"limited",ld=r[5]?String(r[5]):null;` +
+    `return{id:r[0],name:r[1]||r[0],description:r[2],group:gp[0],groupName:gp[1],groupPath:gp[2],statusKind:sk,` +
+    `statusLabel:sk==="widely"?"Widely available":sk==="newly"?"Newly available":"Limited availability",` +
+    `lowDate:ld,year:ld&&/^\\d{4}/.test(ld)?Number(ld.slice(0,4)):null,discouraged:Boolean(r[6]),` +
+    `pct:r[7],pctNoWv:r[8],androidWv:r[9],iosWv:r[10],support:sup,rawSupport:rawSup}});` +
+    `window.BASELINE_FEATURES_DATA={windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:D.m,counts:D.counts,kpi:D.kpi,groups:D.groups,years:D.years,features};` +
+    `window.dispatchEvent(new CustomEvent("baseline-features-ready",{detail:window.BASELINE_FEATURES_DATA}))})();\n`;
+
+  await fs.mkdir(path.dirname(FEATURES_JS_BUNDLE_PATH), { recursive: true });
+  await fs.writeFile(FEATURES_JS_BUNDLE_PATH, featuresJs, "utf8");
+  console.log(
+    `Wrote precalculated web-features bundle (${featuresList.length} features, ${Buffer.byteLength(featuresJs, "utf8")} bytes) -> ${path.relative(PROJECT_ROOT, FEATURES_JS_BUNDLE_PATH)}`
   );
 }
 
@@ -2247,6 +2648,13 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
       engine = meta?.engine || (browser === "kai_os" ? "Gecko" : "Blink");
       engineVersion =
         meta?.engineVersion || (browser === "webview_android" ? version : null);
+      if (!engineVersion) {
+        const maxVer = effectiveLookups.maxVersionByBrowser[browser];
+        if (maxVer && compareVersions(version, maxVer) > 0) {
+          engineVersion =
+            effectiveLookups.versionMetaByBrowser[browser]?.[maxVer]?.engineVersion || null;
+        }
+      }
       if (engine && engineVersion) {
         if (engine === "Gecko") {
           engineReleaseDate =
@@ -2277,16 +2685,28 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
   const sortedCountries = [...byCountry.entries()].sort(
     (a, b) => b[1].totalPageLoads - a[1].totalPageLoads
   );
+  const globalTotalPageLoads = sortedCountries.reduce(
+    (sum, [, bucket]) => sum + bucket.totalPageLoads,
+    0
+  );
 
   /** @type {Record<string, unknown>} */
   const countries = {};
-  /** @type {Record<string, { m: number, rows: Array<[string, string, number, number]> }>} */
+  /** @type {Array<[string, string]>} */
+  const bvCatalog = [];
+  /** @type {Map<string, number>} */
+  const bvIndexByKey = new Map();
+  /** @type {Record<string, { m: number, s: number, r: number[] }>} */
   const compactCountries = {};
 
   for (const [code, bucket] of sortedCountries) {
     const { totalPageLoads, mappedPageLoads, byBrowserVer } = bucket;
     const mappedPercentage =
       totalPageLoads > 0 ? round2((mappedPageLoads / totalPageLoads) * 100) : 0;
+    const shareOfGlobalTraffic =
+      globalTotalPageLoads > 0
+        ? round4((totalPageLoads / globalTotalPageLoads) * 100)
+        : 0;
 
     const sortedItems = [...byBrowserVer.values()].sort(
       (a, b) => b.pageLoads - a.pageLoads
@@ -2312,18 +2732,29 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
       mappedPageLoads,
       unmappedPageLoads: totalPageLoads - mappedPageLoads,
       mappedPercentage,
+      shareOfGlobalTraffic,
       browserVersionCount: browsers.length,
       browsers,
     };
 
+    const packedRows = [];
+    for (let idx = 0; idx < browsers.length; idx++) {
+      const b = browsers[idx];
+      const rk = sortedItems[idx].rowKey;
+      const catKey = `${rk}|${b.version}`;
+      let bvIdx = bvIndexByKey.get(catKey);
+      if (bvIdx === undefined) {
+        bvIdx = bvCatalog.length;
+        bvIndexByKey.set(catKey, bvIdx);
+        bvCatalog.push([rk, b.version]);
+      }
+      packedRows.push(bvIdx, Math.round(b.pct * 10000));
+    }
+
     compactCountries[code] = {
       m: mappedPercentage,
-      rows: browsers.map((b, idx) => [
-        sortedItems[idx].rowKey,
-        b.version,
-        b.pct,
-        b.pctTotal,
-      ]),
+      s: shareOfGlobalTraffic,
+      r: packedRows,
     };
   }
 
@@ -2368,15 +2799,16 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
     targets: targetsList,
     minMaps: targetMinMaps,
     meta: compactMeta,
+    bv: bvCatalog,
     c: compactCountries,
   };
 
   const countryBreakdownJs =
     `(()=>{const D=${JSON.stringify(compactClientPayload)},cache={};` +
     `function getCountryBreakdown(code){if(cache[code])return cache[code];const C=D.c[code];if(!C)return null;` +
-    `const browsers=C.rows.map(r=>{const onIos=r[0].startsWith("ios:"),b=onIos?"safari_ios":r[0],k=b+"|"+r[1],m=D.meta[k]||[null,null,null,null];` +
-    `return{browser:b,name:D.names[r[0]]||r[0],version:r[1],onIos,pct:r[2],pctTotal:r[3],releaseDate:m[0],engine:m[1],engineVersion:m[2],engineReleaseDate:m[3],isDownstream:Boolean(m[1])}});` +
-    `return(cache[code]={code,windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:C.m,targets:D.targets,targetMinMaps:D.minMaps,browsers})}` +
+    `const browsers=[],R=C.r,mFactor=C.m/100;for(let i=0;i<R.length;i+=2){const bv=D.bv[R[i]],pct=R[i+1]/1e4,pctTotal=Math.round(pct*mFactor*1e4)/1e4,rk=bv[0],ver=bv[1],onIos=rk.startsWith("ios:"),b=onIos?"safari_ios":rk,m=D.meta[b+"|"+ver]||[null,null,null,null];` +
+    `browsers.push({browser:b,name:D.names[rk]||rk,version:ver,onIos,pct,pctTotal,releaseDate:m[0],engine:m[1],engineVersion:m[2],engineReleaseDate:m[3],isDownstream:Boolean(m[1])})}` +
+    `return(cache[code]={code,share:C.s,windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:C.m,targets:D.targets,targetMinMaps:D.minMaps,browsers})}` +
     `window.BASELINE_COUNTRY_BREAKDOWN={windowDays:D.w,startDate:D.s,endDate:D.e,targets:D.targets,targetMinMaps:D.minMaps,getCountry:getCountryBreakdown};` +
     `window.dispatchEvent(new CustomEvent("baseline-country-breakdown-ready",{detail:window.BASELINE_COUNTRY_BREAKDOWN}))})();\n`;
 

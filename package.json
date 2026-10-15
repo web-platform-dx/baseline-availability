@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^7.9.0",
-    "baseline-browser-mapping": "^2.11.27"
+    "baseline-browser-mapping": "^2.11.27",
+    "web-features": "^3.42.0"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",

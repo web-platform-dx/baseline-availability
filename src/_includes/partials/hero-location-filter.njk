@@ -1,0 +1,197 @@
+  {% if baseline_summary and baseline_summary.rows %}
+    <div class="meta-pills" role="region" aria-label="Dataset summary">
+      <span class="meta-pill">
+        <strong>{{ baseline_summary.recentWindowDays }}-day window:</strong>
+        <code>{{ baseline_summary.recentStartDate }}</code> <span aria-hidden="true">&rarr;</span><span class="sr-only">to</span> <code>{{ baseline_summary.recentEndDate }}</code>
+      </span>
+      <span class="meta-pill">
+        <strong>Scope:</strong> <span data-meta-location-text>Worldwide (100.00% of traffic)</span>
+      </span>
+      <span class="meta-pill">
+        <strong>Mapped traffic:</strong> <span data-meta-mapped-pct>{{ baseline_summary.avgMappedPercentage | formatPct }}</span><a href="#footnote-mapped-traffic" id="footnote-ref-mapped-traffic" class="footnote-ref" aria-label="Footnote: Why some traffic is not mapped" title="Why some traffic is not mapped">*</a>
+      </span>
+    </div>
+
+    {% set locationHierarchy = baseline_region_summary | buildLocationHierarchy(baseline_country_summary) %}
+    <baseline-location-filter id="baseline-location-filter" class="location-filter-bar" role="region" aria-labelledby="location-filter-label">
+      <div class="location-filter-controls">
+        <label for="location-combobox-input" id="location-filter-label" class="location-filter-label">
+          <svg class="location-filter-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span>Region or Country</span>
+        </label>
+
+        <div class="location-select-wrap" data-combobox-wrap>
+          <div class="location-combobox-field">
+            <svg class="location-search-icon" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="9" cy="9" r="6"></circle>
+              <path d="m13.5 13.5 4 4"></path>
+            </svg>
+            <input
+              type="text"
+              id="location-combobox-input"
+              class="location-combobox-input"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="location-listbox"
+              aria-activedescendant=""
+              aria-describedby="location-filter-meta"
+              autocomplete="off"
+              spellcheck="false"
+              value="Worldwide (All Regions &amp; Countries)"
+              placeholder="Search to include or exclude regions &amp; countries..."
+            >
+            <button
+              type="button"
+              class="location-input-clear-btn"
+              data-clear-search-btn
+              hidden
+              tabindex="-1"
+              aria-label="Clear search text"
+              title="Clear search text"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M4 4l8 8M12 4l-8 8"></path>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="location-combobox-toggle-btn"
+              data-toggle-listbox-btn
+              tabindex="-1"
+              aria-label="Toggle region and country options"
+            >
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m4 6 4 4 4-4"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div
+            id="location-listbox"
+            class="location-listbox"
+            role="listbox"
+            aria-multiselectable="true"
+            aria-labelledby="location-filter-label"
+            hidden
+          >
+            <div class="location-listbox-hint" role="presentation">
+              <span class="listbox-hint-item">
+                <span class="listbox-hint-icon listbox-hint-include" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3.25 8.25 6.5 11.5 12.75 4.5"></path>
+                  </svg>
+                </span>
+                <span>Include / combine (<kbd>Enter</kbd>)</span>
+              </span>
+              <span class="listbox-hint-item">
+                <span class="listbox-hint-icon listbox-hint-exclude" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4.25 4.25l7.5 7.5M11.75 4.25l-7.5 7.5"></path>
+                  </svg>
+                </span>
+                <span>Exclude (<kbd>Shift+Enter</kbd>)</span>
+              </span>
+            </div>
+
+            <div class="location-group" data-location-group>
+              <div
+                id="loc-opt-all"
+                class="location-option is-selected is-included"
+                role="option"
+                aria-selected="true"
+                data-value="all"
+                data-kind="global"
+                data-depth="0"
+                data-name="Worldwide"
+                data-display-label="Worldwide (All Regions &amp; Countries)"
+                data-code="WW"
+                data-breadcrumb="Worldwide"
+                data-share="100"
+                data-mapped-pct="{{ baseline_summary.avgMappedPercentage }}"
+              >
+                <span class="opt-main">
+                  <span class="opt-badge opt-badge-global">Global</span>
+                  <span class="opt-name">Worldwide (All Regions &amp; Countries)</span>
+                </span>
+                <span class="opt-meta">100.00%</span>
+                <span class="opt-actions" aria-hidden="true">
+                  <span class="opt-action-btn opt-action-include is-static-indicator">
+                    <svg class="opt-action-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3.25 8.25 6.5 11.5 12.75 4.5"></path>
+                    </svg>
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <svg class="sr-only" width="0" height="0" aria-hidden="true" focusable="false">
+              <defs>
+                <symbol id="icon-opt-include" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3.25 8.25 6.5 11.5 12.75 4.5"></path>
+                </symbol>
+                <symbol id="icon-opt-exclude" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4.25 4.25l7.5 7.5M11.75 4.25l-7.5 7.5"></path>
+                </symbol>
+              </defs>
+            </svg>
+            {%- if locationHierarchy.regionTree.length > 0 %}
+              <div class="location-group" data-location-group>
+                <div class="location-group-header" role="presentation">Regions &amp; Sub-Regions</div>
+                {%- for reg in locationHierarchy.regionTree %}
+                <div id="loc-opt-region-{{ reg.code }}" class="location-option" role="option" aria-selected="false" data-value="{{ reg.value }}" data-kind="region" data-region-kind="{{ reg.kind }}" data-depth="{{ reg.depth }}" data-code="{{ reg.code }}" data-name="{{ reg.name }}" data-display-label="{{ reg.name }}" data-breadcrumb="{{ reg.breadcrumb }}" data-country-count="{{ reg.activeCountryCount }}" data-member-countries="{{ reg.memberCountries }}" data-share="{{ reg.shareOfGlobalTraffic }}" data-mapped-pct="{{ reg.avgMappedPercentage }}">
+                  <span class="opt-main"><span class="opt-name">{{ reg.name }}</span> <span class="opt-subcount">({{ reg.activeCountryCount }} {% if reg.activeCountryCount == 1 %}country{% else %}countries{% endif %})</span></span>
+                  <span class="opt-meta">{{ reg.shareOfGlobalTraffic | formatTrafficShare }}</span>
+                  <span class="opt-actions">
+                    <button type="button" class="opt-action-btn opt-action-include" data-opt-action="include" tabindex="-1" aria-pressed="false" aria-label="Include {{ reg.name }}" title="Include {{ reg.name }}"><svg class="opt-action-icon" width="13" height="13" aria-hidden="true"><use href="#icon-opt-include"></use></svg></button>
+                    <button type="button" class="opt-action-btn opt-action-exclude" data-opt-action="exclude" tabindex="-1" aria-pressed="false" aria-label="Exclude {{ reg.name }}" title="Exclude {{ reg.name }}"><svg class="opt-action-icon" width="13" height="13" aria-hidden="true"><use href="#icon-opt-exclude"></use></svg></button>
+                  </span>
+                </div>
+                {%- endfor %}
+              </div>
+            {%- endif %}
+
+            {%- for group in locationHierarchy.countryGroups %}
+              <div class="location-group" data-location-group>
+                <div class="location-group-header" role="presentation">{{ group.label }}</div>
+                {%- for country in group.countries %}
+                <div id="loc-opt-country-{{ country.code }}" class="location-option" role="option" aria-selected="false" data-value="country:{{ country.code }}" data-kind="country" data-depth="1" data-code="{{ country.code }}" data-name="{{ country.name }}" data-display-label="{{ country.name }} ({{ country.code }})" data-breadcrumb="{{ group.breadcrumb }} › {{ country.name }}" data-share="{{ country.shareOfGlobalTraffic }}" data-mapped-pct="{{ country.avgMappedPercentage }}">
+                  <span class="opt-main"><span class="opt-badge opt-badge-country">{{ country.code }}</span> <span class="opt-name">{{ country.name }}</span></span>
+                  <span class="opt-meta">{{ country.shareOfGlobalTraffic | formatTrafficShare }}</span>
+                  <span class="opt-actions">
+                    <button type="button" class="opt-action-btn opt-action-include" data-opt-action="include" tabindex="-1" aria-pressed="false" aria-label="Include {{ country.name }}" title="Include {{ country.name }}"><svg class="opt-action-icon" width="13" height="13" aria-hidden="true"><use href="#icon-opt-include"></use></svg></button>
+                    <button type="button" class="opt-action-btn opt-action-exclude" data-opt-action="exclude" tabindex="-1" aria-pressed="false" aria-label="Exclude {{ country.name }}" title="Exclude {{ country.name }}"><svg class="opt-action-icon" width="13" height="13" aria-hidden="true"><use href="#icon-opt-exclude"></use></svg></button>
+                  </span>
+                </div>
+                {%- endfor %}
+              </div>
+            {%- endfor %}
+
+            <div class="location-empty-state" data-location-empty hidden>
+              No matching regions or countries found.
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="location-reset-btn"
+          id="location-reset-btn"
+          hidden
+          aria-label="Reset location filter to Worldwide"
+        >
+          Reset to Worldwide
+        </button>
+      </div>
+
+      <div class="location-filter-meta" id="location-filter-meta">
+        <div class="location-active-chips" data-location-chips hidden role="region" aria-label="Active location filters"></div>
+        <span class="location-breadcrumb-pill" data-location-breadcrumb>Showing Worldwide traffic (100.00% of global page loads)</span>
+      </div>
+
+      <div class="sr-only" aria-live="polite" aria-atomic="true" data-location-live-region></div>
+    </baseline-location-filter>
+  {% endif %}

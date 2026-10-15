@@ -1,0 +1,333 @@
+---
+layout: layouts/base.njk
+title: Features — Baseline Availability
+description: Explore real-world browser support percentages for individual web platform features from the web-features catalog based on Cloudflare RUM Archive data.
+includeFeaturesBundle: true
+---
+
+<section class="hero-section" aria-labelledby="page-main-heading">
+  <h1 id="page-main-heading" class="sr-only">Web Platform Features Availability</h1>
+  <p class="lead">
+    Real-world user availability for individual web platform features from the <a href="https://github.com/web-platform-dx/web-features" rel="noopener noreferrer" target="_blank"><code>web-features</code><span class="sr-only"> (opens in a new tab)</span></a> catalog, precalculated against Cloudflare RUM Archive traffic.
+  </p>
+  {% include "partials/hero-location-filter.njk" %}
+</section>
+
+{% if baseline_features and baseline_features.features and baseline_features.features.length > 0 %}
+  <section class="status-card features-card" aria-labelledby="features-heading">
+    <baseline-features-explorer id="baseline-features-explorer">
+      <div class="status-header">
+        <div>
+          <h2 id="features-heading">
+            <span>Web Platform Features</span>
+            <span class="scope-heading-badge" data-scope-badge hidden></span>
+          </h2>
+          <p class="section-subtitle" data-features-subtitle>
+            Showing global browser compatibility across {{ baseline_features.counts.total }} web platform features over the last {{ baseline_features.windowDays }} days (<code>{{ baseline_features.startDate }}</code> &ndash; <code>{{ baseline_features.endDate }}</code>).
+          </p>
+        </div>
+        <div class="metric-toggle-group" role="group" aria-label="WebView traffic filter">
+          <button type="button" class="metric-toggle-btn" data-webview-mode="include" aria-pressed="true" id="btn-features-webview-include" aria-label="Include Android and iOS WebViews">
+            Include WebViews
+          </button>
+          <button type="button" class="metric-toggle-btn" data-webview-mode="exclude" aria-pressed="false" id="btn-features-webview-exclude" aria-label="Exclude Android and iOS WebViews">
+            Exclude WebViews
+          </button>
+        </div>
+      </div>
+
+      <div class="features-kpi-grid" role="region" aria-label="Filtered features summary">
+        <div class="features-kpi-card">
+          <span class="features-kpi-label">Matching Features</span>
+          <span class="features-kpi-value" data-kpi-matching-count>{{ baseline_features.counts.total }}</span>
+          <span class="features-kpi-sub" data-kpi-matching-sub>of {{ baseline_features.counts.total }} total features</span>
+        </div>
+        <div class="features-kpi-card">
+          <span class="features-kpi-label">Mean User Availability</span>
+          <span class="features-kpi-value" data-kpi-avg-pct>{% if baseline_features.kpi %}{{ baseline_features.kpi.meanPct | formatPct }}{% else %}&mdash;{% endif %}</span>
+          <span class="features-kpi-sub" data-kpi-avg-sub>Across matching features (Incl. WebViews)</span>
+        </div>
+        <div class="features-kpi-card">
+          <span class="features-kpi-label">&ge; 95% User Support</span>
+          <span class="features-kpi-value" data-kpi-95-count>{% if baseline_features.kpi %}{{ baseline_features.kpi.count95 }}{% else %}&mdash;{% endif %}</span>
+          <span class="features-kpi-sub" data-kpi-95-sub>{% if baseline_features.kpi %}{{ baseline_features.kpi.share95 | formatPct }} of matching features{% else %}Features supported for 95%+ of users{% endif %}</span>
+        </div>
+        <div class="features-kpi-card">
+          <span class="features-kpi-label">&ge; 99% User Support</span>
+          <span class="features-kpi-value" data-kpi-99-count>{% if baseline_features.kpi %}{{ baseline_features.kpi.count99 }}{% else %}&mdash;{% endif %}</span>
+          <span class="features-kpi-sub" data-kpi-99-sub>{% if baseline_features.kpi %}{{ baseline_features.kpi.share99 | formatPct }} of matching features{% else %}Features supported for 99%+ of users{% endif %}</span>
+        </div>
+      </div>
+
+      <div class="features-controls-bar" role="region" aria-label="Feature filters and search">
+        <div class="features-status-tabs" role="group" aria-label="Filter by Baseline status">
+          <button type="button" class="features-status-pill is-active" data-status-filter="all" aria-pressed="true">
+            <span>All features</span>
+            <span class="features-pill-count" data-status-count="all">{{ baseline_features.counts.total }}</span>
+          </button>
+          <button type="button" class="features-status-pill" data-status-filter="widely" aria-pressed="false">
+            <img src="/assets/img/baseline-widely-icon.svg" alt="" width="22" height="13" aria-hidden="true" class="features-pill-icon">
+            <span>Widely available</span>
+            <span class="features-pill-count" data-status-count="widely">{{ baseline_features.counts.widely }}</span>
+          </button>
+          <button type="button" class="features-status-pill" data-status-filter="newly" aria-pressed="false">
+            <img src="/assets/img/baseline-newly-icon.svg" alt="" width="22" height="13" aria-hidden="true" class="features-pill-icon">
+            <span>Newly available</span>
+            <span class="features-pill-count" data-status-count="newly">{{ baseline_features.counts.newly }}</span>
+          </button>
+          <button type="button" class="features-status-pill" data-status-filter="limited" aria-pressed="false">
+            <span class="features-limited-dot" aria-hidden="true"></span>
+            <span>Limited availability</span>
+            <span class="features-pill-count" data-status-count="limited">{{ baseline_features.counts.limited }}</span>
+          </button>
+        </div>
+
+        <div class="features-avail-filter-bar" role="group" aria-labelledby="features-avail-filter-label">
+          <span id="features-avail-filter-label" class="features-select-label features-avail-bar-label">User Availability</span>
+
+          <div class="features-avail-presets" role="group" aria-label="Quick user availability thresholds">
+            <button type="button" class="features-avail-chip is-active" data-avail-preset="all" aria-pressed="true">All</button>
+            <button type="button" class="features-avail-chip" data-avail-preset="gte:99" aria-pressed="false">&ge; 99%</button>
+            <button type="button" class="features-avail-chip" data-avail-preset="gte:95" aria-pressed="false">&ge; 95%</button>
+            <button type="button" class="features-avail-chip" data-avail-preset="gte:90" aria-pressed="false">&ge; 90%</button>
+            <button type="button" class="features-avail-chip" data-avail-preset="lt:95" aria-pressed="false">&lt; 95%</button>
+            <button type="button" class="features-avail-chip" data-avail-preset="lt:50" aria-pressed="false">&lt; 50%</button>
+          </div>
+
+          <div class="features-avail-custom">
+            <label for="features-avail-op" class="sr-only">Availability comparison operator</label>
+            <select id="features-avail-op" class="features-select features-avail-op-select" data-features-avail-op>
+              <option value="all">Any %</option>
+              <option value="gte">&ge; At least</option>
+              <option value="gt">&gt; Greater than</option>
+              <option value="lte">&le; At most</option>
+              <option value="lt">&lt; Less than</option>
+              <option value="between">Between</option>
+            </select>
+
+            <div class="features-avail-input-wrap" data-features-avail-val-wrap>
+              <label for="features-avail-val" class="sr-only">Availability percentage threshold</label>
+              <input
+                type="number"
+                id="features-avail-val"
+                class="features-avail-input"
+                data-features-avail-val
+                min="0"
+                max="100"
+                step="0.1"
+                placeholder="0–100"
+                inputmode="decimal"
+              >
+              <span class="features-avail-unit" aria-hidden="true">%</span>
+            </div>
+
+            <span class="features-avail-range-sep" data-features-avail-sep hidden>to</span>
+
+            <div class="features-avail-input-wrap" data-features-avail-max-wrap hidden>
+              <label for="features-avail-max" class="sr-only">Maximum availability percentage threshold</label>
+              <input
+                type="number"
+                id="features-avail-max"
+                class="features-avail-input"
+                data-features-avail-max
+                min="0"
+                max="100"
+                step="0.1"
+                placeholder="100"
+                inputmode="decimal"
+              >
+              <span class="features-avail-unit" aria-hidden="true">%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="features-filter-row">
+          <div class="features-search-wrap">
+            <label for="features-search-input" class="sr-only">Search features by name, ID, or description</label>
+            <svg class="features-search-icon" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="9" cy="9" r="6"></circle>
+              <path d="m13.5 13.5 4 4"></path>
+            </svg>
+            <input
+              type="search"
+              id="features-search-input"
+              class="features-search-input"
+              data-features-search
+              placeholder="Search features by name, ID, or keyword (e.g. popover, :has, subgrid, webgpu)..."
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <button
+              type="button"
+              class="features-search-clear"
+              data-features-search-clear
+              hidden
+              aria-label="Clear feature search"
+              title="Clear feature search"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M4 4l8 8M12 4l-8 8"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="features-select-group">
+            <div class="features-select-field">
+              <label for="features-year-select" class="features-select-label">Baseline Year</label>
+              <select id="features-year-select" class="features-select" data-features-year>
+                <option value="all">All Baseline years</option>
+                {% for y in baseline_features.years %}
+                  <option value="{{ y.year }}">Baseline {{ y.year }} ({{ y.count }})</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="features-select-field">
+              <label for="features-group-select" class="features-select-label">Category</label>
+              <select id="features-group-select" class="features-select" data-features-group>
+                <option value="all">All categories ({{ baseline_features.counts.total }})</option>
+                {% for grp in baseline_features.groups %}
+                  <option value="{{ grp.id }}">{{ grp.name }} ({{ grp.count }})</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="features-select-field">
+              <label for="features-sort-select" class="features-select-label">Sort by</label>
+              <select id="features-sort-select" class="features-select" data-features-sort>
+                <option value="pct-desc">Availability: High to Low</option>
+                <option value="pct-asc">Availability: Low to High</option>
+                <option value="name-asc">Feature Name: A to Z</option>
+                <option value="date-desc">Baseline Date: Newest first</option>
+                <option value="date-asc">Baseline Date: Oldest first</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              class="features-reset-btn"
+              data-features-reset
+              hidden
+              aria-label="Reset feature filters"
+            >
+              Reset filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sr-only" aria-live="polite" aria-atomic="true" data-features-live-region></div>
+
+      {% set coreBrowserCols = [
+        { id: "chrome", short: "Chrome" },
+        { id: "chrome_android", short: "Chrome And." },
+        { id: "edge", short: "Edge" },
+        { id: "firefox", short: "Firefox" },
+        { id: "firefox_android", short: "Firefox And." },
+        { id: "safari", short: "Safari" },
+        { id: "safari_ios", short: "Safari iOS" }
+      ] %}
+      <div class="table-wrapper features-table-wrapper">
+        <table class="data-table features-table" id="baseline-features-table">
+          <caption class="sr-only" data-features-caption>
+            Web platform features availability across RUM Archive browser traffic
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="features-col-name">
+                <button type="button" class="features-sort-header-btn" data-sort-col="name">
+                  <span>Feature &amp; Browser Thresholds</span>
+                  <span class="sort-indicator" data-sort-indicator="name" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th scope="col" class="features-col-status">
+                <button type="button" class="features-sort-header-btn" data-sort-col="date">
+                  <span>Baseline Status</span>
+                  <span class="sort-indicator" data-sort-indicator="date" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th scope="col" class="features-col-pct">
+                <button type="button" class="features-sort-header-btn is-sorted" data-sort-col="pct">
+                  <span data-features-pct-header>User Availability (Incl. WebViews)</span>
+                  <span class="sort-indicator" data-sort-indicator="pct" aria-hidden="true">&darr;</span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody data-features-tbody>
+            {%- for f in baseline_features.features | head(25) %}
+              <tr class="feature-row feature-row-{{ f.statusKind }}" data-feature-id="{{ f.id }}">
+                <th scope="row" class="feature-name-cell">
+                  <div class="feature-title-row">
+                    <span class="feature-name-text">{{ f.name }}</span>
+                    <code class="feature-id-badge">{{ f.id }}</code>
+                    {%- if f.groupPath or f.groupName %}
+                      <span class="feature-group-badge">{{ f.groupPath or f.groupName }}</span>
+                    {%- endif %}
+                    {%- if f.discouraged %}
+                      <span class="feature-discouraged-badge">Discouraged</span>
+                    {%- endif %}
+                  </div>
+                  {%- if f.description %}
+                    <p class="feature-desc-text">{{ f.description }}</p>
+                  {%- endif %}
+                  <div class="feature-browsers-row" aria-label="Minimum supported browser versions">
+                    {%- for bMeta in coreBrowserCols %}
+                      {%- set rawVer = f.rawSupport[bMeta.id] or f.support[bMeta.id] %}
+                      <span class="feature-browser-chip {% if rawVer %}is-supported{% else %}is-unsupported{% endif %}"><span class="feature-browser-chip-name">{{ bMeta.short }}: </span><span class="feature-browser-chip-ver">{% if rawVer %}{{ rawVer }}+{% else %}No{% endif %}</span></span>
+                    {%- endfor %}
+                  </div>
+                </th>
+                <td class="feature-status-cell">
+                  <div class="feature-status-badge feature-status-{{ f.statusKind }}">
+                    {%- if f.statusKind == "widely" %}
+                      <img src="/assets/img/baseline-widely-icon.svg" alt="" width="24" height="14" aria-hidden="true" class="feature-status-icon">
+                    {%- elif f.statusKind == "newly" %}
+                      <img src="/assets/img/baseline-newly-icon.svg" alt="" width="24" height="14" aria-hidden="true" class="feature-status-icon">
+                    {%- else %}
+                      <span class="features-limited-dot" aria-hidden="true"></span>
+                    {%- endif %}
+                    <span class="feature-status-label">{{ f.statusLabel }}</span>
+                  </div>
+                  {%- if f.year or f.lowDate %}
+                    <div class="feature-status-meta">
+                      {%- if f.year %}
+                        <span class="year-badge feature-year-badge">Baseline {{ f.year }}</span>
+                      {%- endif %}
+                      {%- if f.lowDate %}
+                        <span class="feature-date-text">{{ f.lowDate }}</span>
+                      {%- endif %}
+                    </div>
+                  {%- endif %}
+                </td>
+                <td class="primary-metric-cell feature-pct-cell">
+                  <div class="pct-bar-cell">
+                    <span class="pct-value-strong">{{ f.pct | formatPct }}</span>
+                    <svg class="pct-bar-svg" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true">
+                      <rect class="pct-bar-track" x="0" y="0" width="100" height="6" rx="3"></rect>
+                      <rect class="pct-bar-fill {% if f.statusKind == 'widely' %}pct-fill-widely{% elif f.statusKind == 'newly' %}pct-fill-newly{% else %}pct-fill-year{% endif %}" x="0" y="0" width="{{ f.pct }}" height="6" rx="3"></rect>
+                    </svg>
+                  </div>
+                  <div class="feature-wv-sub">Android WV: {{ f.androidWv | formatPct }} &middot; iOS WV: {{ f.iosWv | formatPct }}</div>
+                </td>
+              </tr>
+            {%- endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="features-empty-state" data-features-empty hidden>
+        <p class="features-empty-title">No web platform features match your current filters.</p>
+        <button type="button" class="location-reset-btn" data-features-empty-reset>Reset feature filters</button>
+      </div>
+    </baseline-features-explorer>
+  </section>
+
+  {% include "partials/mapped-traffic-footnote.njk" %}
+{% else %}
+  <section class="status-card">
+    <p class="empty-state">
+      No precalculated feature availability data found. Run <code>npm run calculate-baseline</code> to generate per-feature metrics.
+    </p>
+  </section>
+{% endif %}

@@ -374,6 +374,61 @@ function computeRegionInitialData(cacheKey, meta) {
   return result;
 }
 
+let isCountryDataScriptLoading = false;
+let isCountryBreakdownScriptLoading = false;
+
+function pageHasTimeSeriesComponents() {
+  return Boolean(
+    document.querySelector("baseline-summary-table, baseline-timeseries-chart")
+  );
+}
+
+/**
+ * Lazily loads `/assets/js/baseline-country-data.js` (per-country 90-day time-series)
+ * only when needed on the Baseline stats page. Never loaded on the Features page.
+ */
+function ensureCountryDataScriptLoaded() {
+  if (!pageHasTimeSeriesComponents()) return;
+  if (window.BASELINE_COUNTRY_DATA || isCountryDataScriptLoading) return;
+  isCountryDataScriptLoading = true;
+  const script = document.createElement("script");
+  script.src = "/assets/js/baseline-country-data.js";
+  script.async = true;
+  script.addEventListener("error", () => {
+    isCountryDataScriptLoading = false;
+  });
+  document.head.appendChild(script);
+}
+
+/**
+ * Lazily loads `/assets/js/baseline-country-breakdown.js` (per-country 7-day browser breakdown)
+ * only when the user interacts with the location filter or visits a URL with location parameters.
+ */
+function ensureCountryBreakdownScriptLoaded() {
+  if (window.BASELINE_COUNTRY_BREAKDOWN || isCountryBreakdownScriptLoading) return;
+  isCountryBreakdownScriptLoading = true;
+  const script = document.createElement("script");
+  script.src = "/assets/js/baseline-country-breakdown.js";
+  script.async = true;
+  script.addEventListener("error", () => {
+    isCountryBreakdownScriptLoading = false;
+  });
+  document.head.appendChild(script);
+}
+
+/**
+ * Preloads the country bundle(s) required by the current page view when the user
+ * interacts with `<baseline-location-filter>` or loads a non-Worldwide URL.
+ * - On `/features/`, only `baseline-country-breakdown.js` is needed (never `baseline-country-data.js`).
+ * - On `/`, both `baseline-country-data.js` and `baseline-country-breakdown.js` are loaded on demand.
+ */
+function preloadCountryBundlesForCurrentPage() {
+  if (pageHasTimeSeriesComponents()) {
+    ensureCountryDataScriptLoaded();
+  }
+  ensureCountryBreakdownScriptLoaded();
+}
+
 /**
  * Computes the 7-day browser compatibility breakdown for a region or custom country set from its member countries.
  * @param {string} cacheKey
@@ -384,12 +439,13 @@ function computeRegionBreakdownData(cacheKey, meta) {
     return regionBreakdownCache.get(cacheKey);
   }
   const bData = window.BASELINE_COUNTRY_BREAKDOWN;
-  const cData = window.BASELINE_COUNTRY_DATA;
   if (!bData || typeof bData.getCountry !== "function") {
+    ensureCountryBreakdownScriptLoaded();
     return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
   }
 
   const shareByCountry = new Map();
+  const cData = window.BASELINE_COUNTRY_DATA;
   if (cData && Array.isArray(cData.countries)) {
     for (const c of cData.countries) {
       shareByCountry.set(c.code, Number(c.share || 0));
@@ -401,10 +457,14 @@ function computeRegionBreakdownData(cacheKey, meta) {
   for (const cc of memberCodes) {
     const breakdown = bData.getCountry(cc);
     if (breakdown) {
+      const share =
+        breakdown.share !== undefined
+          ? Number(breakdown.share)
+          : shareByCountry.get(cc) ?? 0;
       entries.push({
         cc,
         breakdown,
-        share: shareByCountry.get(cc) ?? 0,
+        share,
       });
     }
   }
@@ -501,6 +561,9 @@ function getActiveInitialData() {
   if (!val || val === "all") {
     return ensureNonWebviewSeries(window.BASELINE_INITIAL_DATA || null);
   }
+  if (!window.BASELINE_COUNTRY_DATA) {
+    ensureCountryDataScriptLoaded();
+  }
   if (val.startsWith("country:")) {
     const code = val.slice(8);
     return ensureNonWebviewSeries(
@@ -524,6 +587,9 @@ function getActiveBreakdownData() {
   const val = viewState.locationValue;
   if (!val || val === "all") {
     return ensureNonWebviewBreakdown(window.BASELINE_BROWSER_BREAKDOWN || null);
+  }
+  if (!window.BASELINE_COUNTRY_BREAKDOWN) {
+    ensureCountryBreakdownScriptLoaded();
   }
   if (val.startsWith("country:")) {
     const code = val.slice(8);
@@ -584,6 +650,7 @@ const REGION_URL_ALIASES = {
 const VALID_TARGET_IDS = new Set([
   "widely",
   "newly",
+  "limited",
   "2026",
   "2025",
   "2024",
@@ -595,6 +662,7 @@ const VALID_TARGET_IDS = new Set([
   "2018",
   "2017",
   "2016",
+  "2015",
 ]);
 
 const TARGET_URL_ALIASES = {
@@ -604,6 +672,8 @@ const TARGET_URL_ALIASES = {
   "newly-available": "newly",
   "baseline-newly": "newly",
   "baseline-newly-available": "newly",
+  "limited-availability": "limited",
+  "baseline-limited": "limited",
 };
 
 /**
@@ -822,10 +892,13 @@ class BaselineLocationFilter extends HTMLElement {
       } else if (e.key === "Enter") {
         if (this.isOpen && this.activeOption && !this.activeOption.hidden) {
           e.preventDefault();
-          const mode = e.shiftKey || e.altKey ? "exclude" : "include";
-          this.toggleOptionMode(this.activeOption, mode, true);
-          if (this.isOpen && this.inputEl.value) {
-            this.inputEl.select();
+          if (e.shiftKey || e.altKey) {
+            this.toggleOptionMode(this.activeOption, "exclude", true);
+            if (this.isOpen && this.inputEl.value) {
+              this.inputEl.select();
+            }
+          } else {
+            this.selectSingleOption(this.activeOption, true);
           }
         }
       } else if (e.key === "Escape") {
@@ -873,13 +946,13 @@ class BaselineLocationFilter extends HTMLElement {
       const opt = e.target.closest(".location-option");
       if (!opt || opt.hidden) return;
 
-      if (opt.dataset.value === "all") {
-        this.toggleOptionMode(opt, "include", true);
+      if (opt.dataset.value === "all" || !actionBtn) {
+        this.selectSingleOption(opt, true);
         return;
       }
 
       const mode =
-        actionBtn && actionBtn.dataset.optAction === "exclude" ? "exclude" : "include";
+        actionBtn.dataset.optAction === "exclude" ? "exclude" : "include";
       this.toggleOptionMode(opt, mode, true);
       if (this.isOpen && this.inputEl.value) {
         this.inputEl.select();
@@ -935,6 +1008,14 @@ class BaselineLocationFilter extends HTMLElement {
       if (viewState.locationValue !== "all") {
         regionBreakdownCache.clear();
         notifyStateChange("location-filter");
+        window.dispatchEvent(
+          new CustomEvent("baseline:location-change", {
+            detail: {
+              value: viewState.locationValue,
+              meta: viewState.locationMeta,
+            },
+          })
+        );
       }
     };
 
@@ -960,6 +1041,7 @@ class BaselineLocationFilter extends HTMLElement {
     window.addEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
 
     if (this.hasLocationParamsInUrl()) {
+      preloadCountryBundlesForCurrentPage();
       this.applySelectionFromUrl(false, false);
     }
   }
@@ -1019,6 +1101,7 @@ class BaselineLocationFilter extends HTMLElement {
   }
 
   openListbox(resetFilter = false) {
+    preloadCountryBundlesForCurrentPage();
     this.isOpen = true;
     this.listboxEl.hidden = false;
     this.inputEl.setAttribute("aria-expanded", "true");
@@ -1291,16 +1374,26 @@ class BaselineLocationFilter extends HTMLElement {
     this.applySelectionState(announce, updateUrl);
   }
 
+  selectSingleOption(opt, announce = true) {
+    if (!opt) return;
+    const val = opt.dataset.value || "all";
+
+    this.includedMap.clear();
+    this.excludedMap.clear();
+    if (val !== "all") {
+      this.includedMap.set(val, opt);
+    }
+    this.setActiveOption(val === "all" ? this.allOpt : opt, false);
+    this.closeListbox(false);
+    this.applySelectionState(announce, true);
+  }
+
   toggleOptionMode(opt, mode = "include", announce = true) {
     if (!opt) return;
     const val = opt.dataset.value || "all";
 
     if (val === "all") {
-      this.includedMap.clear();
-      this.excludedMap.clear();
-      this.setActiveOption(this.allOpt, false);
-      this.applySelectionState(announce, true);
-      this.closeListbox(true);
+      this.selectSingleOption(opt, announce);
       return;
     }
 
@@ -1598,7 +1691,7 @@ class BaselineLocationFilter extends HTMLElement {
       excludedItems,
     };
 
-    const computedInitial = getActiveInitialData();
+    const computedInitial = pageHasTimeSeriesComponents() ? getActiveInitialData() : null;
     if (computedInitial?.meta && typeof computedInitial.meta.mappedPct === "number") {
       mappedPct = computedInitial.meta.mappedPct;
       viewState.locationMeta.mappedPct = mappedPct;
@@ -1689,6 +1782,14 @@ class BaselineLocationFilter extends HTMLElement {
     }
 
     notifyStateChange("location-filter");
+    window.dispatchEvent(
+      new CustomEvent("baseline:location-change", {
+        detail: {
+          value: viewState.locationValue,
+          meta: viewState.locationMeta,
+        },
+      })
+    );
 
     if (announce && this.liveRegion) {
       const widelyTarget = computedInitial?.targets?.find((t) => t.id === "widely");
@@ -3612,7 +3713,1208 @@ class BaselineBrowserBreakdown extends HTMLElement {
   }
 }
 
+const CORE_FEATURE_BROWSER_LABELS = [
+  { id: "chrome", label: "Chrome", short: "Chrome" },
+  { id: "chrome_android", label: "Chrome Android", short: "Chrome And." },
+  { id: "edge", label: "Edge", short: "Edge" },
+  { id: "firefox", label: "Firefox", short: "Firefox" },
+  { id: "firefox_android", label: "Firefox Android", short: "Firefox And." },
+  { id: "safari", label: "Safari", short: "Safari" },
+  { id: "safari_ios", label: "Safari iOS", short: "Safari iOS" },
+];
+
+const CORE_FEATURE_BROWSER_SET = new Set(
+  CORE_FEATURE_BROWSER_LABELS.map((b) => b.id)
+);
+
+/**
+ * Computes per-feature availability metrics for a non-global breakdown payload
+ * (region, sub-region, country, or custom combination) and caches them on `breakdownData`.
+ * @param {Array<any>} features
+ * @param {any} breakdownData
+ * @returns {Map<string, { pct: number, pctNoWv: number, androidWv: number, iosWv: number }>}
+ */
+function getFeatureMetricsMapForBreakdown(features, breakdownData) {
+  if (!breakdownData || !Array.isArray(breakdownData.browsers)) {
+    return new Map();
+  }
+  if (breakdownData._featureMetricsById) {
+    return breakdownData._featureMetricsById;
+  }
+
+  /** @type {Record<string, Array<{ effectiveVer: string | null, pct: number, pctNoWv: number, isAndroidWv: boolean, isIosWv: boolean }>>} */
+  const buckets = {
+    chrome: [],
+    chrome_android: [],
+    edge: [],
+    firefox: [],
+    firefox_android: [],
+    safari: [],
+    safari_ios: [],
+  };
+
+  for (const b of breakdownData.browsers) {
+    let coreBrowser;
+    if (CORE_FEATURE_BROWSER_SET.has(b.browser)) {
+      coreBrowser = b.browser;
+    } else if (b.browser === "opera") {
+      coreBrowser = "chrome";
+    } else if (b.browser === "kai_os") {
+      coreBrowser = "firefox_android";
+    } else {
+      coreBrowser = "chrome_android";
+    }
+
+    const effectiveVer = CORE_FEATURE_BROWSER_SET.has(b.browser)
+      ? b.version
+      : b.engineVersion || (b.browser === "webview_android" ? b.version : null);
+
+    buckets[coreBrowser].push({
+      effectiveVer,
+      pct: Number(b.pct || 0),
+      pctNoWv: Number(b.pctNoWv || 0),
+      isAndroidWv: b.browser === "webview_android",
+      isIosWv: Boolean(b.onIos && b.name === "Mobile Safari Webview"),
+    });
+  }
+
+  /** @type {Map<string, { pct: number, pctNoWv: number, androidWv: number, iosWv: number }>} */
+  const thresholdCache = new Map();
+  const ZERO_SUMS = { pct: 0, pctNoWv: 0, androidWv: 0, iosWv: 0 };
+
+  const getCoreThresholdSums = (coreBrowser, minVer) => {
+    if (!minVer) return ZERO_SUMS;
+    const key = `${coreBrowser}|${minVer}`;
+    const cached = thresholdCache.get(key);
+    if (cached) return cached;
+
+    let pct = 0;
+    let pctNoWv = 0;
+    let androidWv = 0;
+    let iosWv = 0;
+    const list = buckets[coreBrowser] || [];
+
+    for (let i = 0; i < list.length; i++) {
+      const entry = list[i];
+      if (
+        entry.effectiveVer &&
+        compareBrowserVersions(entry.effectiveVer, minVer) >= 0
+      ) {
+        pct += entry.pct;
+        pctNoWv += entry.pctNoWv;
+        if (entry.isAndroidWv) androidWv += entry.pct;
+        if (entry.isIosWv) iosWv += entry.pct;
+      }
+    }
+
+    const res = { pct, pctNoWv, androidWv, iosWv };
+    thresholdCache.set(key, res);
+    return res;
+  };
+
+  /** @type {Map<string, { pct: number, pctNoWv: number, androidWv: number, iosWv: number }>} */
+  const metricsById = new Map();
+
+  for (let i = 0; i < features.length; i++) {
+    const f = features[i];
+    const sup = f.support || {};
+    let pctSum = 0;
+    let pctNoWvSum = 0;
+    let androidWvRaw = 0;
+    let iosWvRaw = 0;
+
+    for (let bIdx = 0; bIdx < CORE_FEATURE_BROWSER_LABELS.length; bIdx++) {
+      const bId = CORE_FEATURE_BROWSER_LABELS[bIdx].id;
+      const minVer = sup[bId];
+      if (!minVer) continue;
+      const sums = getCoreThresholdSums(bId, minVer);
+      pctSum += sums.pct;
+      pctNoWvSum += sums.pctNoWv;
+      androidWvRaw += sums.androidWv;
+      iosWvRaw += sums.iosWv;
+    }
+
+    metricsById.set(f.id, {
+      pct: round2(Math.min(100, Math.max(0, pctSum))),
+      pctNoWv: round2(Math.min(100, Math.max(0, pctNoWvSum))),
+      androidWv: pctSum > 0 ? round2((androidWvRaw / pctSum) * 100) : 0,
+      iosWv: pctSum > 0 ? round2((iosWvRaw / pctSum) * 100) : 0,
+    });
+  }
+
+  breakdownData._featureMetricsById = metricsById;
+  return metricsById;
+}
+
+/**
+ * <baseline-features-explorer>:
+ * Interactive explorer for individual web-features availability percentages,
+ * supporting the same location filters (Worldwide, UN M49 Regions, Countries, Custom sets),
+ * WebView mode toggle, Baseline status/year filters, category filter, search, and sorting.
+ */
+class BaselineFeaturesExplorer extends HTMLElement {
+  connectedCallback() {
+    const bundle = window.BASELINE_FEATURES_DATA;
+    if (!bundle || !Array.isArray(bundle.features)) return;
+
+    this.bundle = bundle;
+    this.features = bundle.features;
+    this.webviewMode = viewState.webviewMode || "include";
+    this.locationValue = viewState.locationValue || "all";
+    this.locationMeta = viewState.locationMeta;
+
+    // Initialize filters from URL ?target= if present
+    this.statusFilter = "all";
+    this.yearFilter = "all";
+    this.groupFilter = "all";
+    this.searchQuery = "";
+    this.sortOrder = "pct-desc";
+    this.availOp = "all";
+    this.availVal = null;
+    this.availMax = null;
+
+    if (viewState.urlTargetId) {
+      if (
+        viewState.urlTargetId === "widely" ||
+        viewState.urlTargetId === "newly" ||
+        viewState.urlTargetId === "limited"
+      ) {
+        this.statusFilter = viewState.urlTargetId;
+      } else if (/^\d{4}$/.test(viewState.urlTargetId)) {
+        this.yearFilter = viewState.urlTargetId;
+      }
+    }
+
+    this.scopeBadgeEl = this.querySelector("[data-scope-badge]");
+    this.subtitleEl = this.querySelector("[data-features-subtitle]");
+    this.captionEl = this.querySelector("[data-features-caption]");
+    this.pctHeaderEl = this.querySelector("[data-features-pct-header]");
+    this.liveRegionEl = this.querySelector("[data-features-live-region]");
+    this.tbodyEl = this.querySelector("[data-features-tbody]");
+    this.tableWrapEl = this.querySelector(".features-table-wrapper");
+    this.emptyStateEl = this.querySelector("[data-features-empty]");
+    this.emptyResetBtn = this.querySelector("[data-features-empty-reset]");
+
+    this.kpiMatchingCountEl = this.querySelector("[data-kpi-matching-count]");
+    this.kpiMatchingSubEl = this.querySelector("[data-kpi-matching-sub]");
+    this.kpiAvgPctEl = this.querySelector("[data-kpi-avg-pct]");
+    this.kpiAvgSubEl = this.querySelector("[data-kpi-avg-sub]");
+    this.kpi95CountEl = this.querySelector("[data-kpi-95-count]");
+    this.kpi95SubEl = this.querySelector("[data-kpi-95-sub]");
+    this.kpi99CountEl = this.querySelector("[data-kpi-99-count]");
+    this.kpi99SubEl = this.querySelector("[data-kpi-99-sub]");
+
+    this.webviewBtns = Array.from(this.querySelectorAll("[data-webview-mode]"));
+    this.statusBtns = Array.from(this.querySelectorAll("[data-status-filter]"));
+    this.availPresetBtns = Array.from(this.querySelectorAll("[data-avail-preset]"));
+    this.availOpSelect = this.querySelector("[data-features-avail-op]");
+    this.availValWrap = this.querySelector("[data-features-avail-val-wrap]");
+    this.availValInput = this.querySelector("[data-features-avail-val]");
+    this.availSepEl = this.querySelector("[data-features-avail-sep]");
+    this.availMaxWrap = this.querySelector("[data-features-avail-max-wrap]");
+    this.availMaxInput = this.querySelector("[data-features-avail-max]");
+    this.searchInput = this.querySelector("[data-features-search]");
+    this.searchClearBtn = this.querySelector("[data-features-search-clear]");
+    this.yearSelect = this.querySelector("[data-features-year]");
+    this.groupSelect = this.querySelector("[data-features-group]");
+    this.sortSelect = this.querySelector("[data-features-sort]");
+    this.resetBtn = this.querySelector("[data-features-reset]");
+    this.sortHeaderBtns = Array.from(this.querySelectorAll("[data-sort-col]"));
+
+    /** @type {Map<string, { tr: HTMLTableRowElement, pctValueEl: HTMLElement, pctFillRect: SVGRectElement, wvSubEl: HTMLElement, currentPct: number }>} */
+    this.rowMap = new Map();
+    this.pendingRenderHandle = null;
+    this.pendingRenderUsingIdle = false;
+
+    this.bindEvents();
+    this.syncFilterControlsUi();
+    this.updateView(false);
+  }
+
+  cancelPendingRender() {
+    if (this.pendingRenderHandle === null) return;
+    if (this.pendingRenderUsingIdle && typeof window.cancelIdleCallback === "function") {
+      window.cancelIdleCallback(this.pendingRenderHandle);
+    } else {
+      window.cancelAnimationFrame(this.pendingRenderHandle);
+    }
+    this.pendingRenderHandle = null;
+    this.pendingRenderUsingIdle = false;
+  }
+
+  getOrCreateRow(f) {
+    const existing = this.rowMap.get(f.id);
+    if (existing) return existing;
+
+    const tr = document.createElement("tr");
+    tr.className = `feature-row feature-row-${f.statusKind}`;
+    tr.dataset.featureId = f.id;
+
+    // 1. Feature Name, ID, Category, Description, and Browser Minimum Versions
+    const nameTh = document.createElement("th");
+    nameTh.scope = "row";
+    nameTh.className = "feature-name-cell";
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "feature-title-row";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "feature-name-text";
+    nameSpan.textContent = f.name;
+    titleRow.appendChild(nameSpan);
+
+    const idCode = document.createElement("code");
+    idCode.className = "feature-id-badge";
+    idCode.textContent = f.id;
+    titleRow.appendChild(idCode);
+
+    if (f.groupPath || f.groupName) {
+      const groupBadge = document.createElement("span");
+      groupBadge.className = "feature-group-badge";
+      groupBadge.textContent = f.groupPath || f.groupName;
+      titleRow.appendChild(groupBadge);
+    }
+
+    if (f.discouraged) {
+      const discBadge = document.createElement("span");
+      discBadge.className = "feature-discouraged-badge";
+      discBadge.textContent = "Discouraged";
+      titleRow.appendChild(discBadge);
+    }
+
+    nameTh.appendChild(titleRow);
+
+    if (f.description) {
+      const descP = document.createElement("p");
+      descP.className = "feature-desc-text";
+      descP.textContent = f.description;
+      nameTh.appendChild(descP);
+    }
+
+    const browsersRow = document.createElement("div");
+    browsersRow.className = "feature-browsers-row";
+    browsersRow.setAttribute("aria-label", "Minimum supported browser versions");
+
+    for (let bIdx = 0; bIdx < CORE_FEATURE_BROWSER_LABELS.length; bIdx++) {
+      const bMeta = CORE_FEATURE_BROWSER_LABELS[bIdx];
+      const rawVer = f.rawSupport?.[bMeta.id] || f.support?.[bMeta.id] || null;
+      const chip = document.createElement("span");
+      chip.className = rawVer
+        ? "feature-browser-chip is-supported"
+        : "feature-browser-chip is-unsupported";
+
+      const bNameSpan = document.createElement("span");
+      bNameSpan.className = "feature-browser-chip-name";
+      bNameSpan.textContent = `${bMeta.short}: `;
+      chip.appendChild(bNameSpan);
+
+      const bVerSpan = document.createElement("span");
+      bVerSpan.className = "feature-browser-chip-ver";
+      bVerSpan.textContent = rawVer ? `${rawVer}+` : "No";
+      chip.appendChild(bVerSpan);
+
+      browsersRow.appendChild(chip);
+    }
+
+    nameTh.appendChild(browsersRow);
+    tr.appendChild(nameTh);
+
+    // 2. Baseline Status Column
+    const statusTd = document.createElement("td");
+    statusTd.className = "feature-status-cell";
+
+    const statusBadge = document.createElement("div");
+    statusBadge.className = `feature-status-badge feature-status-${f.statusKind}`;
+
+    if (f.statusKind === "widely" || f.statusKind === "newly") {
+      const iconImg = document.createElement("img");
+      iconImg.src =
+        f.statusKind === "widely"
+          ? "/assets/img/baseline-widely-icon.svg"
+          : "/assets/img/baseline-newly-icon.svg";
+      iconImg.alt = "";
+      iconImg.width = 24;
+      iconImg.height = 14;
+      iconImg.setAttribute("aria-hidden", "true");
+      iconImg.className = "feature-status-icon";
+      statusBadge.appendChild(iconImg);
+    } else {
+      const dot = document.createElement("span");
+      dot.className = "features-limited-dot";
+      dot.setAttribute("aria-hidden", "true");
+      statusBadge.appendChild(dot);
+    }
+
+    const statusText = document.createElement("span");
+    statusText.className = "feature-status-label";
+    statusText.textContent = f.statusLabel;
+    statusBadge.appendChild(statusText);
+    statusTd.appendChild(statusBadge);
+
+    if (f.year || f.lowDate) {
+      const metaDiv = document.createElement("div");
+      metaDiv.className = "feature-status-meta";
+      if (f.year) {
+        const yearPill = document.createElement("span");
+        yearPill.className = "year-badge feature-year-badge";
+        yearPill.textContent = `Baseline ${f.year}`;
+        metaDiv.appendChild(yearPill);
+      }
+      if (f.lowDate) {
+        const dateSpan = document.createElement("span");
+        dateSpan.className = "feature-date-text";
+        dateSpan.textContent = f.lowDate;
+        metaDiv.appendChild(dateSpan);
+      }
+      statusTd.appendChild(metaDiv);
+    }
+
+    tr.appendChild(statusTd);
+
+    // 3. User Availability Percentage Column
+    const pctTd = document.createElement("td");
+    pctTd.className = "primary-metric-cell feature-pct-cell";
+
+    const barCell = document.createElement("div");
+    barCell.className = "pct-bar-cell";
+
+    const pctValueEl = document.createElement("span");
+    pctValueEl.className = "pct-value-strong";
+    pctValueEl.textContent = formatPct(f.pct);
+    barCell.appendChild(pctValueEl);
+
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "pct-bar-svg");
+    svg.setAttribute("viewBox", "0 0 100 6");
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("aria-hidden", "true");
+
+    const trackRect = document.createElementNS(SVG_NS, "rect");
+    trackRect.setAttribute("class", "pct-bar-track");
+    trackRect.setAttribute("x", "0");
+    trackRect.setAttribute("y", "0");
+    trackRect.setAttribute("width", "100");
+    trackRect.setAttribute("height", "6");
+    trackRect.setAttribute("rx", "3");
+    svg.appendChild(trackRect);
+
+    const fillRect = document.createElementNS(SVG_NS, "rect");
+    const fillKindClass =
+      f.statusKind === "widely"
+        ? "pct-fill-widely"
+        : f.statusKind === "newly"
+        ? "pct-fill-newly"
+        : "pct-fill-year";
+    fillRect.setAttribute("class", `pct-bar-fill ${fillKindClass}`);
+    fillRect.setAttribute("x", "0");
+    fillRect.setAttribute("y", "0");
+    fillRect.setAttribute("width", String(f.pct));
+    fillRect.setAttribute("height", "6");
+    fillRect.setAttribute("rx", "3");
+    svg.appendChild(fillRect);
+
+    barCell.appendChild(svg);
+    pctTd.appendChild(barCell);
+
+    const wvSubEl = document.createElement("div");
+    wvSubEl.className = "feature-wv-sub";
+    wvSubEl.textContent = `Android WV: ${formatPct(f.androidWv)} · iOS WV: ${formatPct(f.iosWv)}`;
+    pctTd.appendChild(wvSubEl);
+
+    tr.appendChild(pctTd);
+
+    const rowRef = {
+      tr,
+      pctValueEl,
+      pctFillRect: fillRect,
+      wvSubEl,
+      currentPct: f.pct,
+    };
+    this.rowMap.set(f.id, rowRef);
+    return rowRef;
+  }
+
+  applyItemToRow(item, isExcludeWv) {
+    const rowRef = this.getOrCreateRow(item.feature);
+    rowRef.currentPct = item.pct;
+    rowRef.pctValueEl.textContent = formatPct(item.pct);
+    rowRef.pctFillRect.setAttribute("width", String(item.pct));
+    if (isExcludeWv) {
+      rowRef.wvSubEl.hidden = true;
+    } else {
+      rowRef.wvSubEl.hidden = false;
+      rowRef.wvSubEl.textContent = `Android WV: ${formatPct(item.androidWv)} · iOS WV: ${formatPct(item.iosWv)}`;
+    }
+    rowRef.tr.hidden = false;
+    return rowRef.tr;
+  }
+
+  bindEvents() {
+    this.webviewBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-webview-mode");
+        if (!mode || mode === this.webviewMode) return;
+        this.webviewMode = mode;
+        viewState.webviewMode = mode;
+        this.syncFilterControlsUi();
+        this.updateView(true);
+        window.dispatchEvent(
+          new CustomEvent("baseline:webview-mode-change", {
+            detail: { mode },
+          })
+        );
+      });
+    });
+
+    window.addEventListener("baseline:webview-mode-change", (e) => {
+      const mode = e.detail?.mode || "include";
+      if (mode !== this.webviewMode) {
+        this.webviewMode = mode;
+        this.syncFilterControlsUi();
+        this.updateView(false);
+      }
+    });
+
+    window.addEventListener("baseline:location-change", (e) => {
+      this.locationValue = e.detail?.value || "all";
+      this.locationMeta = e.detail?.meta || viewState.locationMeta;
+      this.updateView(true);
+    });
+
+    window.addEventListener("baseline-country-breakdown-ready", () => {
+      if (this.locationValue && this.locationValue !== "all") {
+        this.updateView(true);
+      }
+    });
+
+    this.statusBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const status = btn.getAttribute("data-status-filter") || "all";
+        if (this.statusFilter === status) return;
+        this.statusFilter = status;
+        if (status !== "all" && status !== "widely" && status !== "newly") {
+          // "limited" features don't have a Baseline year
+          this.yearFilter = "all";
+        }
+        this.syncUrlTarget();
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    });
+
+    this.availPresetBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const preset = btn.getAttribute("data-avail-preset") || "all";
+        if (preset === "all") {
+          this.availOp = "all";
+          this.availVal = null;
+          this.availMax = null;
+          if (this.availValInput) this.availValInput.value = "";
+          if (this.availMaxInput) this.availMaxInput.value = "";
+        } else {
+          const [op, rawVal] = preset.split(":");
+          const numVal = Number(rawVal);
+          if (this.availOp === op && this.availVal === numVal && this.availMax === null) {
+            // Clicking an active preset chip toggles back to "All"
+            this.availOp = "all";
+            this.availVal = null;
+            this.availMax = null;
+            if (this.availValInput) this.availValInput.value = "";
+            if (this.availMaxInput) this.availMaxInput.value = "";
+          } else {
+            this.availOp = op;
+            this.availVal = numVal;
+            this.availMax = null;
+            if (this.availValInput) this.availValInput.value = String(numVal);
+            if (this.availMaxInput) this.availMaxInput.value = "";
+          }
+        }
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    });
+
+    if (this.availOpSelect) {
+      this.availOpSelect.addEventListener("change", () => {
+        const op = this.availOpSelect.value || "all";
+        this.availOp = op;
+        if (op === "all") {
+          this.availVal = null;
+          this.availMax = null;
+          if (this.availValInput) this.availValInput.value = "";
+          if (this.availMaxInput) this.availMaxInput.value = "";
+        } else if (op === "between") {
+          if (this.availVal === null) {
+            this.availVal = 50;
+            if (this.availValInput) this.availValInput.value = "50";
+          }
+          if (this.availMax === null) {
+            this.availMax = 95;
+            if (this.availMaxInput) this.availMaxInput.value = "95";
+          }
+        } else {
+          this.availMax = null;
+          if (this.availMaxInput) this.availMaxInput.value = "";
+          if (this.availVal === null) {
+            const defaultVal = op === "lt" || op === "lte" ? 50 : 95;
+            this.availVal = defaultVal;
+            if (this.availValInput) {
+              this.availValInput.value = String(defaultVal);
+              this.availValInput.focus();
+              this.availValInput.select();
+            }
+          }
+        }
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    }
+
+    if (this.availValInput) {
+      this.availValInput.addEventListener("input", () => {
+        const raw = this.availValInput.value.trim();
+        if (raw === "") {
+          this.availVal = null;
+          if (this.availOp !== "between") {
+            this.availOp = "all";
+          }
+        } else {
+          const parsed = Number(raw);
+          if (!Number.isNaN(parsed)) {
+            this.availVal = Math.min(100, Math.max(0, parsed));
+            if (this.availOp === "all") {
+              this.availOp = "gte";
+            }
+          }
+        }
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    }
+
+    if (this.availMaxInput) {
+      this.availMaxInput.addEventListener("input", () => {
+        const raw = this.availMaxInput.value.trim();
+        if (raw === "") {
+          this.availMax = null;
+        } else {
+          const parsed = Number(raw);
+          if (!Number.isNaN(parsed)) {
+            this.availMax = Math.min(100, Math.max(0, parsed));
+          }
+        }
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    }
+
+    if (this.yearSelect) {
+      this.yearSelect.addEventListener("change", () => {
+        this.yearFilter = this.yearSelect.value || "all";
+        if (this.yearFilter !== "all" && this.statusFilter === "limited") {
+          this.statusFilter = "all";
+        }
+        this.syncUrlTarget();
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    }
+
+    if (this.groupSelect) {
+      this.groupSelect.addEventListener("change", () => {
+        this.groupFilter = this.groupSelect.value || "all";
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    }
+
+    if (this.sortSelect) {
+      this.sortSelect.addEventListener("change", () => {
+        this.sortOrder = this.sortSelect.value || "pct-desc";
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    }
+
+    if (this.searchInput) {
+      this.searchInput.addEventListener("input", () => {
+        this.searchQuery = (this.searchInput.value || "").trim().toLowerCase();
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    }
+
+    if (this.searchClearBtn && this.searchInput) {
+      this.searchClearBtn.addEventListener("click", () => {
+        this.searchInput.value = "";
+        this.searchQuery = "";
+        this.syncFilterControlsUi();
+        this.updateView(true);
+        this.searchInput.focus();
+      });
+    }
+
+    const handleResetFilters = () => {
+      this.statusFilter = "all";
+      this.yearFilter = "all";
+      this.groupFilter = "all";
+      this.searchQuery = "";
+      this.availOp = "all";
+      this.availVal = null;
+      this.availMax = null;
+      if (this.searchInput) this.searchInput.value = "";
+      if (this.availValInput) this.availValInput.value = "";
+      if (this.availMaxInput) this.availMaxInput.value = "";
+      this.syncUrlTarget();
+      this.syncFilterControlsUi();
+      this.updateView(true);
+    };
+
+    if (this.resetBtn) {
+      this.resetBtn.addEventListener("click", handleResetFilters);
+    }
+    if (this.emptyResetBtn) {
+      this.emptyResetBtn.addEventListener("click", handleResetFilters);
+    }
+
+    this.sortHeaderBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const col = btn.getAttribute("data-sort-col");
+        if (col === "pct") {
+          this.sortOrder = this.sortOrder === "pct-desc" ? "pct-asc" : "pct-desc";
+        } else if (col === "name") {
+          this.sortOrder = "name-asc";
+        } else if (col === "date") {
+          this.sortOrder = this.sortOrder === "date-desc" ? "date-asc" : "date-desc";
+        }
+        this.syncFilterControlsUi();
+        this.updateView(true);
+      });
+    });
+
+    window.addEventListener("popstate", () => {
+      const targetFromUrl = resolveTargetFromUrl();
+      viewState.urlTargetId = targetFromUrl;
+      if (!targetFromUrl) {
+        this.statusFilter = "all";
+        this.yearFilter = "all";
+      } else if (
+        targetFromUrl === "widely" ||
+        targetFromUrl === "newly" ||
+        targetFromUrl === "limited"
+      ) {
+        this.statusFilter = targetFromUrl;
+        this.yearFilter = "all";
+      } else if (/^\d{4}$/.test(targetFromUrl)) {
+        this.yearFilter = targetFromUrl;
+        if (this.statusFilter === "limited") {
+          this.statusFilter = "all";
+        }
+      }
+      this.syncFilterControlsUi();
+      this.updateView(false);
+    });
+  }
+
+  syncUrlTarget() {
+    if (this.yearFilter !== "all") {
+      viewState.urlTargetId = this.yearFilter;
+    } else if (this.statusFilter !== "all") {
+      viewState.urlTargetId = this.statusFilter;
+    } else {
+      viewState.urlTargetId = null;
+    }
+    pushUrlState();
+  }
+
+  hasActiveAvailabilityFilter() {
+    if (this.availOp === "all") return false;
+    if (this.availOp === "between") {
+      return this.availVal !== null || this.availMax !== null;
+    }
+    return this.availVal !== null;
+  }
+
+  matchesAvailabilityFilter(pct) {
+    if (!this.hasActiveAvailabilityFilter()) return true;
+    if (this.availOp === "gte") return pct >= this.availVal;
+    if (this.availOp === "gt") return pct > this.availVal;
+    if (this.availOp === "lte") return pct <= this.availVal;
+    if (this.availOp === "lt") return pct < this.availVal;
+    if (this.availOp === "between") {
+      const a = this.availVal !== null ? this.availVal : 0;
+      const b = this.availMax !== null ? this.availMax : 100;
+      const lo = Math.min(a, b);
+      const hi = Math.max(a, b);
+      return pct >= lo && pct <= hi;
+    }
+    return true;
+  }
+
+  syncFilterControlsUi() {
+    const isExclude = this.webviewMode === "exclude";
+    this.webviewBtns.forEach((btn) => {
+      const isSelected = btn.getAttribute("data-webview-mode") === this.webviewMode;
+      btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
+
+    if (this.pctHeaderEl) {
+      this.pctHeaderEl.textContent = isExclude
+        ? "User Availability (Excl. WebViews)"
+        : "User Availability (Incl. WebViews)";
+    }
+
+    this.statusBtns.forEach((btn) => {
+      const val = btn.getAttribute("data-status-filter");
+      const active = val === this.statusFilter;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+
+    const activePresetKey =
+      !this.hasActiveAvailabilityFilter()
+        ? "all"
+        : this.availOp !== "between" && this.availVal !== null
+        ? `${this.availOp}:${this.availVal}`
+        : "";
+    this.availPresetBtns.forEach((btn) => {
+      const preset = btn.getAttribute("data-avail-preset");
+      const active = preset === activePresetKey;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+
+    if (this.availOpSelect && this.availOpSelect.value !== this.availOp) {
+      this.availOpSelect.value = this.availOp;
+    }
+
+    const isBetween = this.availOp === "between";
+    if (this.availSepEl) {
+      this.availSepEl.hidden = !isBetween;
+    }
+    if (this.availMaxWrap) {
+      this.availMaxWrap.hidden = !isBetween;
+    }
+
+    if (this.yearSelect && this.yearSelect.value !== this.yearFilter) {
+      this.yearSelect.value = this.yearFilter;
+    }
+    if (this.groupSelect && this.groupSelect.value !== this.groupFilter) {
+      this.groupSelect.value = this.groupFilter;
+    }
+    if (this.sortSelect && this.sortSelect.value !== this.sortOrder) {
+      this.sortSelect.value = this.sortOrder;
+    }
+    if (this.searchClearBtn) {
+      this.searchClearBtn.hidden = !this.searchQuery;
+    }
+
+    const hasActiveFeatureFilter =
+      this.statusFilter !== "all" ||
+      this.yearFilter !== "all" ||
+      this.groupFilter !== "all" ||
+      this.hasActiveAvailabilityFilter() ||
+      Boolean(this.searchQuery);
+    if (this.resetBtn) {
+      this.resetBtn.hidden = !hasActiveFeatureFilter;
+    }
+
+    // Update table header sort indicators
+    this.sortHeaderBtns.forEach((btn) => {
+      const col = btn.getAttribute("data-sort-col");
+      const th = btn.closest("th");
+      const indicator = btn.querySelector("[data-sort-indicator]");
+      let isSorted = false;
+      let dir = "descending";
+      let arrow = "↕";
+
+      if (col === "pct" && (this.sortOrder === "pct-desc" || this.sortOrder === "pct-asc")) {
+        isSorted = true;
+        dir = this.sortOrder === "pct-asc" ? "ascending" : "descending";
+        arrow = this.sortOrder === "pct-asc" ? "↑" : "↓";
+      } else if (col === "name" && this.sortOrder === "name-asc") {
+        isSorted = true;
+        dir = "ascending";
+        arrow = "↑";
+      } else if (col === "date" && (this.sortOrder === "date-desc" || this.sortOrder === "date-asc")) {
+        isSorted = true;
+        dir = this.sortOrder === "date-asc" ? "ascending" : "descending";
+        arrow = this.sortOrder === "date-asc" ? "↑" : "↓";
+      }
+
+      btn.classList.toggle("is-sorted", isSorted);
+      if (th) {
+        th.setAttribute("aria-sort", isSorted ? dir : "none");
+      }
+      if (indicator) {
+        indicator.textContent = arrow;
+      }
+    });
+  }
+
+  updateView(announce) {
+    this.cancelPendingRender();
+
+    const isGlobal = !this.locationValue || this.locationValue === "all";
+    const isExcludeWv = this.webviewMode === "exclude";
+    const locMeta = this.locationMeta || viewState.locationMeta;
+
+    if (this.scopeBadgeEl) {
+      if (isGlobal) {
+        this.scopeBadgeEl.hidden = true;
+        this.scopeBadgeEl.textContent = "";
+      } else {
+        this.scopeBadgeEl.hidden = false;
+        this.scopeBadgeEl.textContent = locMeta.name;
+      }
+    }
+
+    // Resolve location-specific feature metrics when a non-Worldwide location is active
+    const isLoadingCountryBreakdown = !isGlobal && !window.BASELINE_COUNTRY_BREAKDOWN;
+    if (isLoadingCountryBreakdown) {
+      ensureCountryBreakdownScriptLoaded();
+    }
+    const breakdownData = isGlobal ? null : getActiveBreakdownData();
+    const customMetricsMap = isGlobal
+      ? null
+      : getFeatureMetricsMapForBreakdown(this.features, breakdownData);
+
+    if (this.subtitleEl) {
+      const scopePhrase = isGlobal
+        ? "global browser compatibility"
+        : `browser compatibility in ${locMeta.name}`;
+      const wvPhrase = isExcludeWv ? "excluding WebViews" : "including WebViews";
+      if (isLoadingCountryBreakdown) {
+        this.subtitleEl.textContent = `Loading regional browser data for ${locMeta.name}… Showing global weights until ready.`;
+      } else {
+        this.subtitleEl.textContent = `Showing ${scopePhrase} (${wvPhrase}) across ${this.features.length} web platform features over the last ${this.bundle.windowDays} days (${this.bundle.startDate} – ${this.bundle.endDate}).`;
+      }
+    }
+
+    const matchingItems = [];
+    let sumPct = 0;
+    let count95 = 0;
+    let count99 = 0;
+
+    for (let i = 0; i < this.features.length; i++) {
+      const f = this.features[i];
+
+      // Check filters first before computing or creating DOM nodes
+      if (this.statusFilter !== "all" && f.statusKind !== this.statusFilter) {
+        continue;
+      }
+      if (this.yearFilter !== "all" && String(f.year) !== this.yearFilter) {
+        continue;
+      }
+      if (this.groupFilter !== "all" && f.group !== this.groupFilter) {
+        continue;
+      }
+      if (this.searchQuery) {
+        if (f._searchText === undefined) {
+          f._searchText = `${f.name || ""} ${f.id || ""} ${f.description || ""} ${f.groupPath || ""}`.toLowerCase();
+        }
+        if (!f._searchText.includes(this.searchQuery)) {
+          continue;
+        }
+      }
+
+      let pct;
+      let androidWv;
+      let iosWv;
+
+      if (isGlobal || !customMetricsMap) {
+        pct = isExcludeWv ? Number(f.pctNoWv) : Number(f.pct);
+        androidWv = Number(f.androidWv || 0);
+        iosWv = Number(f.iosWv || 0);
+      } else {
+        const m = customMetricsMap.get(f.id);
+        pct = m ? (isExcludeWv ? m.pctNoWv : m.pct) : 0;
+        androidWv = m ? m.androidWv : 0;
+        iosWv = m ? m.iosWv : 0;
+      }
+
+      if (!this.matchesAvailabilityFilter(pct)) {
+        continue;
+      }
+
+      matchingItems.push({ feature: f, pct, androidWv, iosWv });
+      sumPct += pct;
+      if (pct >= 95) count95++;
+      if (pct >= 99) count99++;
+    }
+
+    // Sort matching features
+    matchingItems.sort((a, b) => {
+      if (this.sortOrder === "pct-desc") {
+        if (b.pct !== a.pct) {
+          return b.pct - a.pct;
+        }
+        return a.feature.name.localeCompare(b.feature.name);
+      }
+      if (this.sortOrder === "pct-asc") {
+        if (a.pct !== b.pct) {
+          return a.pct - b.pct;
+        }
+        return a.feature.name.localeCompare(b.feature.name);
+      }
+      if (this.sortOrder === "date-desc") {
+        const dA = a.feature.lowDate || "";
+        const dB = b.feature.lowDate || "";
+        if (dA !== dB) {
+          if (!dA) return 1;
+          if (!dB) return -1;
+          return dB.localeCompare(dA);
+        }
+        return a.feature.name.localeCompare(b.feature.name);
+      }
+      if (this.sortOrder === "date-asc") {
+        const dA = a.feature.lowDate || "";
+        const dB = b.feature.lowDate || "";
+        if (dA !== dB) {
+          if (!dA) return 1;
+          if (!dB) return -1;
+          return dA.localeCompare(dB);
+        }
+        return a.feature.name.localeCompare(b.feature.name);
+      }
+      return a.feature.name.localeCompare(b.feature.name);
+    });
+
+    if (this.tbodyEl) {
+      const INITIAL_RENDER_BATCH = 60;
+      const CHUNK_RENDER_SIZE = 150;
+      const initialCount = Math.min(matchingItems.length, INITIAL_RENDER_BATCH);
+      const initialFrag = document.createDocumentFragment();
+      for (let i = 0; i < initialCount; i++) {
+        initialFrag.appendChild(this.applyItemToRow(matchingItems[i], isExcludeWv));
+      }
+      this.tbodyEl.replaceChildren(initialFrag);
+
+      if (matchingItems.length > initialCount) {
+        let nextIndex = initialCount;
+        const appendNextChunk = () => {
+          this.pendingRenderHandle = null;
+          if (!this.tbodyEl) return;
+          const end = Math.min(nextIndex + CHUNK_RENDER_SIZE, matchingItems.length);
+          const chunkFrag = document.createDocumentFragment();
+          for (let i = nextIndex; i < end; i++) {
+            chunkFrag.appendChild(this.applyItemToRow(matchingItems[i], isExcludeWv));
+          }
+          this.tbodyEl.appendChild(chunkFrag);
+          nextIndex = end;
+          if (nextIndex < matchingItems.length) {
+            scheduleNextChunk();
+          }
+        };
+
+        const scheduleNextChunk = () => {
+          if (typeof window.requestIdleCallback === "function") {
+            this.pendingRenderUsingIdle = true;
+            this.pendingRenderHandle = window.requestIdleCallback(appendNextChunk, {
+              timeout: 120,
+            });
+          } else {
+            this.pendingRenderUsingIdle = false;
+            this.pendingRenderHandle = window.requestAnimationFrame(appendNextChunk);
+          }
+        };
+
+        scheduleNextChunk();
+      }
+    }
+
+    const matchCount = matchingItems.length;
+    const meanPct = matchCount > 0 ? round2(sumPct / matchCount) : 0;
+
+    if (this.kpiMatchingCountEl) {
+      this.kpiMatchingCountEl.textContent = String(matchCount);
+    }
+    if (this.kpiMatchingSubEl) {
+      this.kpiMatchingSubEl.textContent = `of ${this.features.length} total features`;
+    }
+    if (this.kpiAvgPctEl) {
+      this.kpiAvgPctEl.textContent = matchCount > 0 ? formatPct(meanPct) : "—";
+    }
+    if (this.kpiAvgSubEl) {
+      this.kpiAvgSubEl.textContent = isExcludeWv
+        ? `Across matching features (Excl. WebViews)`
+        : `Across matching features (Incl. WebViews)`;
+    }
+    if (this.kpi95CountEl) {
+      this.kpi95CountEl.textContent = String(count95);
+    }
+    if (this.kpi95SubEl) {
+      const share95 = matchCount > 0 ? round2((count95 / matchCount) * 100) : 0;
+      this.kpi95SubEl.textContent = `${formatPct(share95)} of matching features`;
+    }
+    if (this.kpi99CountEl) {
+      this.kpi99CountEl.textContent = String(count99);
+    }
+    if (this.kpi99SubEl) {
+      const share99 = matchCount > 0 ? round2((count99 / matchCount) * 100) : 0;
+      this.kpi99SubEl.textContent = `${formatPct(share99)} of matching features`;
+    }
+
+    if (this.emptyStateEl && this.tableWrapEl) {
+      const isEmpty = matchCount === 0;
+      this.emptyStateEl.hidden = !isEmpty;
+      this.tableWrapEl.hidden = isEmpty;
+    }
+
+    if (announce && this.liveRegionEl) {
+      this.liveRegionEl.textContent = `Showing ${matchCount} web platform features for ${locMeta.name}. Mean availability: ${formatPct(meanPct)}.`;
+    }
+  }
+}
+
+/**
+ * Initializes the top-layer App Drawer (`#drawer`) following the Modern Web Guidance
+ * navigation-drawer specification (manual Popover API, CSS scroll-snap, IntersectionObserver
+ * lifecycle management, background `inert` state, and Constructable Stylesheet fallback for
+ * scroll-driven backdrop opacity under strict CSP).
+ */
+function initAppDrawer() {
+  const drawer = document.querySelector("#drawer");
+  if (!drawer) return;
+
+  const scroller = drawer.querySelector(".Drawer-scroller");
+  const sheet = drawer.querySelector(".Drawer-sheet");
+  const openButton = document.querySelector("#drawer-open");
+  const closeButton = document.querySelector("#drawer-close");
+  const appShell = document.querySelector("#app-shell");
+
+  if (!scroller || !sheet || !openButton) return;
+
+  let isDrawerOpen = false;
+  let hasEnteredViewport = false;
+
+  const getScrollBehavior = () =>
+    window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "instant"
+      : "smooth";
+
+  function onDrawerOpened() {
+    isDrawerOpen = true;
+    if (appShell) {
+      appShell.inert = true;
+    }
+    openButton.setAttribute("aria-expanded", "true");
+    sheet.focus();
+  }
+
+  function onDrawerClosed() {
+    const wasOpen = isDrawerOpen;
+    isDrawerOpen = false;
+    hasEnteredViewport = false;
+    try {
+      drawer.hidePopover();
+    } catch {
+      // Popover already hidden
+    }
+    if (appShell) {
+      appShell.inert = false;
+    }
+    openButton.setAttribute("aria-expanded", "false");
+    if (wasOpen) {
+      openButton.focus();
+    }
+  }
+
+  function closeDrawer() {
+    if (!drawer.matches(":popover-open")) return;
+    const behavior = getScrollBehavior();
+    if (behavior === "instant" || sheet.offsetWidth === 0) {
+      onDrawerClosed();
+      return;
+    }
+    scroller.scrollTo({
+      left: sheet.offsetWidth,
+      behavior,
+    });
+  }
+
+  const visibleThreshold = 1 / Math.max(1, window.innerWidth);
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!drawer.matches(":popover-open")) return;
+      const ratio = entries[0].intersectionRatio;
+      if (ratio >= 0.98) {
+        hasEnteredViewport = true;
+        onDrawerOpened();
+      } else if (ratio > visibleThreshold) {
+        hasEnteredViewport = true;
+      } else if (hasEnteredViewport && ratio <= visibleThreshold) {
+        onDrawerClosed();
+      }
+    },
+    {
+      root: drawer,
+      threshold: [visibleThreshold, 0.98, 1],
+    }
+  );
+  observer.observe(sheet);
+
+  openButton.addEventListener("click", () => {
+    hasEnteredViewport = false;
+    drawer.showPopover();
+    // Ensure scroller starts at the closed snap target on the right before scrolling sheet into view
+    if (scroller.scrollLeft === 0 && !isDrawerOpen && sheet.offsetWidth > 0) {
+      scroller.scrollLeft = sheet.offsetWidth;
+    }
+    const behavior = getScrollBehavior();
+    sheet.scrollIntoView({ behavior, block: "nearest", inline: "start" });
+    if (behavior === "instant") {
+      hasEnteredViewport = true;
+      onDrawerOpened();
+    }
+  });
+
+  if (closeButton) {
+    closeButton.addEventListener("click", () => {
+      closeDrawer();
+    });
+  }
+
+  // Clicking on the backdrop area outside `.Drawer-sheet` closes the drawer
+  scroller.addEventListener("click", (e) => {
+    if (e.target === scroller && drawer.matches(":popover-open")) {
+      closeDrawer();
+    }
+  });
+
+  // Escape key closes the manual popover drawer
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && drawer.matches(":popover-open")) {
+      e.preventDefault();
+      closeDrawer();
+    }
+  });
+
+  // Fallback for browsers without CSS scroll-driven animations, using a Constructable Stylesheet
+  // to comply with `style-src 'self'` CSP (no inline style attributes)
+  if (
+    typeof CSS !== "undefined" &&
+    typeof CSS.supports === "function" &&
+    !CSS.supports("animation-timeline: scroll()") &&
+    typeof CSSStyleSheet !== "undefined" &&
+    document.adoptedStyleSheets
+  ) {
+    const fallbackSheet = new CSSStyleSheet();
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, fallbackSheet];
+    scroller.addEventListener(
+      "scroll",
+      () => {
+        const w = sheet.offsetWidth;
+        const progress = w > 0 ? Math.max(0, Math.min(1, 1 - scroller.scrollLeft / w)) : 0;
+        fallbackSheet.replaceSync(`#drawer { --drawer-backdrop: ${progress.toFixed(3)}; }`);
+      },
+      { passive: true }
+    );
+  }
+}
+
 initThemeToggle();
+initAppDrawer();
 
 if (!customElements.get("baseline-location-filter")) {
   customElements.define("baseline-location-filter", BaselineLocationFilter);
@@ -3629,4 +4931,9 @@ if (!customElements.get("baseline-timeseries-chart")) {
 if (!customElements.get("baseline-browser-breakdown")) {
   customElements.define("baseline-browser-breakdown", BaselineBrowserBreakdown);
 }
+
+if (!customElements.get("baseline-features-explorer")) {
+  customElements.define("baseline-features-explorer", BaselineFeaturesExplorer);
+}
+
 

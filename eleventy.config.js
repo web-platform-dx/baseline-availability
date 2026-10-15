@@ -98,6 +98,11 @@ export default function (eleventyConfig) {
     return `${num.toFixed(2)}%`;
   });
 
+  eleventyConfig.addFilter("head", (arr, count = 50) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.slice(0, count);
+  });
+
   // Builds the structured UN M49 region tree + country groups for the location filter dropdown
   eleventyConfig.addFilter("buildLocationHierarchy", (regionSummary, countrySummary) => {
     if (!regionSummary || !countrySummary) {
