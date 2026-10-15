@@ -741,14 +741,31 @@ function resolveTargetFromUrl() {
 }
 
 /**
+ * Reads `?webviews=exclude` (or `include`) from the current URL query string.
+ * @returns {"include" | "exclude"}
+ */
+function resolveWebviewModeFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const raw = (params.get("webviews") || "").trim().toLowerCase();
+    if (raw === "exclude" || raw === "false" || raw === "0" || raw === "no") {
+      return "exclude";
+    }
+  } catch {
+    // Ignore URL parsing errors
+  }
+  return "include";
+}
+
+/**
  * Synchronizes navigation drawer links (`Baseline stats` and `Features`) with the current
- * shared URL query parameters (`country`, `region`, `exclude`, `target`) so switching views
- * preserves the active geographic and Baseline target filter.
+ * shared URL query parameters (`country`, `region`, `exclude`, `target`, `webviews`) so switching views
+ * preserves the active geographic, WebView, and Baseline target filter.
  */
 function syncDrawerLinksWithUrl() {
   try {
     const currentParams = new URLSearchParams(window.location.search);
-    const sharedKeys = ["country", "region", "exclude", "target"];
+    const sharedKeys = ["country", "region", "exclude", "target", "webviews"];
     const sharedParams = new URLSearchParams();
     for (const key of sharedKeys) {
       const val = currentParams.get(key);
@@ -768,8 +785,9 @@ function syncDrawerLinksWithUrl() {
 }
 
 /**
- * Pushes a new browser history entry reflecting the current location (`?country=`, `?region=`, `?exclude=`)
- * and selected Baseline target (`?target=`) filters so browser Back/Forward navigates through filter changes.
+ * Pushes a new browser history entry reflecting the current location (`?country=`, `?region=`, `?exclude=`),
+ * WebView mode (`?webviews=exclude`), and selected Baseline target (`?target=`) filters so browser
+ * Back/Forward and copied section links preserve all active filters.
  */
 function pushUrlState() {
   if (!window.history || typeof window.history.pushState !== "function") {
@@ -781,6 +799,7 @@ function pushUrlState() {
     url.searchParams.delete("region");
     url.searchParams.delete("exclude");
     url.searchParams.delete("target");
+    url.searchParams.delete("webviews");
 
     const locVal = viewState.locationValue || "all";
     const locMeta = viewState.locationMeta || {};
@@ -814,12 +833,17 @@ function pushUrlState() {
       url.searchParams.set("target", viewState.urlTargetId);
     }
 
+    if (viewState.webviewMode === "exclude") {
+      url.searchParams.set("webviews", "exclude");
+    }
+
     const nextHref = url.toString();
     if (nextHref !== window.location.href) {
       window.history.pushState(
         {
           locationValue: viewState.locationValue,
           targetId: viewState.urlTargetId,
+          webviewMode: viewState.webviewMode,
         },
         "",
         nextHref
@@ -830,6 +854,8 @@ function pushUrlState() {
     // Ignore URL update errors in restricted environments
   }
 }
+
+viewState.webviewMode = resolveWebviewModeFromUrl();
 
 const initialUrlTargetId = resolveTargetFromUrl();
 if (initialUrlTargetId) {
@@ -1035,6 +1061,8 @@ class BaselineLocationFilter extends HTMLElement {
       viewState.pinnedTargetId = urlTarget;
       viewState.highlightedTargetId = urlTarget;
       viewState.breakdownTargetId = urlTarget || "widely";
+      viewState.webviewMode = resolveWebviewModeFromUrl();
+      this.syncWebviewButtons();
 
       this.applySelectionFromUrl(true, false);
 
@@ -1093,6 +1121,7 @@ class BaselineLocationFilter extends HTMLElement {
         }
         viewState.webviewMode = mode;
         this.syncWebviewButtons();
+        pushUrlState();
         notifyStateChange("webview-mode");
         window.dispatchEvent(
           new CustomEvent("baseline:webview-mode-change", {
@@ -3004,8 +3033,15 @@ class BaselineBrowserBreakdown extends HTMLElement {
       );
       mBtn.textContent = modeDef.label;
       mBtn.addEventListener("click", () => {
+        if (viewState.webviewMode === modeDef.mode) return;
         viewState.webviewMode = modeDef.mode;
+        pushUrlState();
         notifyStateChange("breakdown");
+        document.dispatchEvent(
+          new CustomEvent("baseline:webview-mode-change", {
+            detail: { webviewMode: viewState.webviewMode }
+          })
+        );
       });
       this.modeButtons.push(mBtn);
       modeGroup.appendChild(mBtn);
@@ -5001,8 +5037,83 @@ function initAppDrawer() {
   }
 }
 
+function initSectionLinkCopyButtons() {
+  const buttons = document.querySelectorAll("button[data-copy-section-link]");
+  const liveRegion = document.querySelector("[data-copy-link-live-region]");
+  const resetTimers = new WeakMap();
+
+  for (const btn of buttons) {
+    btn.addEventListener("click", async () => {
+      const sectionId = btn.getAttribute("data-copy-section-link");
+      if (!sectionId) return;
+
+      // Ensure URL query parameters reflect all active filter state (country, region, exclude, target, webviews)
+      pushUrlState();
+
+      const url = new URL(window.location.href);
+      url.hash = sectionId;
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${url.pathname}${url.search}${url.hash}`
+      );
+
+      const shareUrl = url.toString();
+      let copied = false;
+
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          copied = true;
+        } catch (_err) {
+          copied = false;
+        }
+      }
+
+      if (!copied) {
+        const tempInput = document.createElement("textarea");
+        tempInput.value = shareUrl;
+        tempInput.setAttribute("readonly", "");
+        tempInput.style.position = "fixed";
+        tempInput.style.opacity = "0";
+        tempInput.style.pointerEvents = "none";
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        try {
+          document.execCommand("copy");
+          copied = true;
+        } catch (_err) {
+          copied = false;
+        }
+        tempInput.remove();
+      }
+
+      if (!copied) return;
+
+      btn.setAttribute("data-copied", "true");
+      if (liveRegion) {
+        liveRegion.textContent = "";
+        requestAnimationFrame(() => {
+          liveRegion.textContent = "Copied section link to clipboard.";
+        });
+      }
+
+      const prevTimer = resetTimers.get(btn);
+      if (prevTimer) {
+        window.clearTimeout(prevTimer);
+      }
+      const timer = window.setTimeout(() => {
+        btn.removeAttribute("data-copied");
+        resetTimers.delete(btn);
+      }, 2000);
+      resetTimers.set(btn, timer);
+    });
+  }
+}
+
 initThemeToggle();
 initAppDrawer();
+initSectionLinkCopyButtons();
 
 if (!customElements.get("baseline-location-filter")) {
   customElements.define("baseline-location-filter", BaselineLocationFilter);

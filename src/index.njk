@@ -19,12 +19,31 @@ title: Baseline Availability
 </section>
 
 {% if baseline_summary and baseline_summary.rows and baseline_summary.rows.length > 0 %}
-  <section class="status-card" aria-labelledby="avg-table-heading">
+  <div class="sr-only" aria-live="polite" aria-atomic="true" data-copy-link-live-region></div>
+
+  <section id="average-availability" class="status-card" aria-labelledby="average-availability-heading">
     <baseline-summary-table id="baseline-summary-table">
       <div class="status-header">
         <div class="status-header-main">
-          <h2 id="avg-table-heading" class="status-heading-row">
+          <h2 id="average-availability-heading" class="status-heading-row">
             <span class="status-heading-title">Last {{ baseline_summary.recentWindowDays }} Days Average Availability</span>
+            <button
+              type="button"
+              class="section-link-btn"
+              data-copy-section-link="average-availability"
+              data-section-title="Last {{ baseline_summary.recentWindowDays }} Days Average Availability"
+              aria-label="Copy link to Last {{ baseline_summary.recentWindowDays }} Days Average Availability section"
+              title="Copy link to this section"
+            >
+              <svg class="section-link-icon section-link-icon-chain" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6.75 9.25a3.18 3.18 0 0 0 4.5 0l2-2a3.18 3.18 0 0 0-4.5-4.5l-1.1 1.1"></path>
+                <path d="M9.25 6.75a3.18 3.18 0 0 0-4.5 0l-2 2a3.18 3.18 0 0 0 4.5 4.5l1.1-1.1"></path>
+              </svg>
+              <svg class="section-link-icon section-link-icon-check" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="3.5 8.5 6.5 11.5 12.5 4.5"></polyline>
+              </svg>
+              <span class="section-link-copied-badge" aria-hidden="true">Copied!</span>
+            </button>
             <span class="scope-heading-badge" data-scope-badge>Worldwide</span>
           </h2>
           <p class="section-subtitle" data-summary-subtitle>
@@ -109,11 +128,28 @@ title: Baseline Availability
     </baseline-summary-table>
   </section>
 
-  <section class="status-card chart-card" aria-labelledby="timeseries-heading">
+  <section id="availability-over-time" class="status-card chart-card" aria-labelledby="availability-over-time-heading">
     <div class="status-header">
       <div class="status-header-main">
-        <h2 id="timeseries-heading" class="status-heading-row">
+        <h2 id="availability-over-time-heading" class="status-heading-row">
           <span class="status-heading-title">Baseline Availability Over Time</span>
+          <button
+            type="button"
+            class="section-link-btn"
+            data-copy-section-link="availability-over-time"
+            data-section-title="Baseline Availability Over Time"
+            aria-label="Copy link to Baseline Availability Over Time section"
+            title="Copy link to this section"
+          >
+            <svg class="section-link-icon section-link-icon-chain" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6.75 9.25a3.18 3.18 0 0 0 4.5 0l2-2a3.18 3.18 0 0 0-4.5-4.5l-1.1 1.1"></path>
+              <path d="M9.25 6.75a3.18 3.18 0 0 0-4.5 0l-2 2a3.18 3.18 0 0 0 4.5 4.5l1.1-1.1"></path>
+            </svg>
+            <svg class="section-link-icon section-link-icon-check" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3.5 8.5 6.5 11.5 12.5 4.5"></polyline>
+            </svg>
+            <span class="section-link-copied-badge" aria-hidden="true">Copied!</span>
+          </button>
           <span class="scope-heading-badge" data-scope-badge>Worldwide</span>
         </h2>
         <p class="section-subtitle" data-timeseries-subtitle data-day-count="{{ baseline_summary.dayCount }}">
@@ -128,11 +164,28 @@ title: Baseline Availability
     <baseline-timeseries-chart id="baseline-timeseries-chart"></baseline-timeseries-chart>
   </section>
 
-  <section class="status-card breakdown-card" aria-labelledby="breakdown-heading">
+  <section id="browser-compatibility-breakdown" class="status-card breakdown-card" aria-labelledby="browser-compatibility-breakdown-heading">
     <div class="status-header">
       <div class="status-header-main">
-        <h2 id="breakdown-heading" class="status-heading-row">
+        <h2 id="browser-compatibility-breakdown-heading" class="status-heading-row">
           <span class="status-heading-title">Browser Compatibility Breakdown</span>
+          <button
+            type="button"
+            class="section-link-btn"
+            data-copy-section-link="browser-compatibility-breakdown"
+            data-section-title="Browser Compatibility Breakdown"
+            aria-label="Copy link to Browser Compatibility Breakdown section"
+            title="Copy link to this section"
+          >
+            <svg class="section-link-icon section-link-icon-chain" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6.75 9.25a3.18 3.18 0 0 0 4.5 0l2-2a3.18 3.18 0 0 0-4.5-4.5l-1.1 1.1"></path>
+              <path d="M9.25 6.75a3.18 3.18 0 0 0-4.5 0l-2 2a3.18 3.18 0 0 0 4.5 4.5l1.1-1.1"></path>
+            </svg>
+            <svg class="section-link-icon section-link-icon-check" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3.5 8.5 6.5 11.5 12.5 4.5"></polyline>
+            </svg>
+            <span class="section-link-copied-badge" aria-hidden="true">Copied!</span>
+          </button>
           <span class="scope-heading-badge" data-scope-badge>Worldwide</span>
         </h2>
         <p class="section-subtitle" data-breakdown-subtitle data-window-days="{{ baseline_summary.recentWindowDays }}" data-start-date="{{ baseline_summary.recentStartDate }}" data-end-date="{{ baseline_summary.recentEndDate }}">
