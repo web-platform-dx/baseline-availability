@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Unified top-level filter bar & zero-layout-shift layout**: Moved the **Include WebViews / Exclude WebViews** toggle out of individual card headers and into the shared `<baseline-location-filter>` bar at the top of both pages; placed the location `Reset` button inline inside the combobox field; pre-rendered the default `Worldwide` chip inside a single-row horizontally scrollable chip strip; kept card scope badges (`[data-scope-badge]`) always rendered and section subtitles static; changed the feature `Reset filters` button to toggle `disabled` instead of `hidden`; and added container-query responsive filter rows and mobile stacked table cards (`@container (width < 640px)`) to eliminate layout shifts across desktop and mobile viewports.
 - **Initial load performance & payload size optimizations**: Split route-specific initial scripts so `/features/` only loads `baseline-features-data.js` initially and lazy-loads `baseline-country-breakdown.js` on demand; compacted `baseline-country-breakdown.js` (2.69 MB &rarr; 638 KB) using indexed `(browser, version)` tuples and basis-point integers; deduplicated combobox SVG action icons via `<symbol>`/`<use>`; and server-rendered KPI cards and the first 25 feature rows with progressive client rendering.
 
+### Fixed
+- **GitHub Pages `pathPrefix` resolution for lazy-loaded scripts & icons**: Resolved dynamic asset URLs (`baseline-country-breakdown.js`, `baseline-country-data.js`, and client-rendered Baseline SVG icons) relative to `baseline-components.js`'s own script URL (`resolveAssetUrl`) rather than root-relative `/assets/...` paths, fixing 404s when deployed under `/baseline-availability/`.
+
 ## [2026-10-14]
 
 ### Added

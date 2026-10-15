@@ -9,6 +9,24 @@
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+const COMPONENT_SCRIPT_URL =
+  (document.currentScript && document.currentScript.src) ||
+  document.querySelector('script[src*="baseline-components.js"]')?.src ||
+  new URL("/assets/js/baseline-components.js", window.location.origin).href;
+
+/**
+ * Resolves an asset path relative to the `assets/` directory where `baseline-components.js`
+ * is served (e.g. `resolveAssetUrl("js/baseline-country-breakdown.js")` ->
+ * `https://web-platform-dx.github.io/baseline-availability/assets/js/baseline-country-breakdown.js`),
+ * ensuring dynamic scripts and icons work under any Eleventy `pathPrefix` (such as GitHub Pages).
+ * @param {string} assetSubpath Path under `assets/`, e.g. `"js/baseline-country-breakdown.js"` or `"img/baseline-widely-icon.svg"`
+ * @returns {string}
+ */
+function resolveAssetUrl(assetSubpath) {
+  const cleanSubpath = String(assetSubpath).replace(/^\/+/, "");
+  return new URL(`../${cleanSubpath}`, COMPONENT_SCRIPT_URL).href;
+}
+
 /**
  * Formats a number to 2 decimal places with a "%" suffix.
  * @param {number} value
@@ -384,7 +402,7 @@ function pageHasTimeSeriesComponents() {
 }
 
 /**
- * Lazily loads `/assets/js/baseline-country-data.js` (per-country 90-day time-series)
+ * Lazily loads `assets/js/baseline-country-data.js` (per-country 90-day time-series)
  * only when needed on the Baseline stats page. Never loaded on the Features page.
  */
 function ensureCountryDataScriptLoaded() {
@@ -392,7 +410,7 @@ function ensureCountryDataScriptLoaded() {
   if (window.BASELINE_COUNTRY_DATA || isCountryDataScriptLoading) return;
   isCountryDataScriptLoading = true;
   const script = document.createElement("script");
-  script.src = "/assets/js/baseline-country-data.js";
+  script.src = resolveAssetUrl("js/baseline-country-data.js");
   script.async = true;
   script.addEventListener("error", () => {
     isCountryDataScriptLoading = false;
@@ -401,14 +419,14 @@ function ensureCountryDataScriptLoaded() {
 }
 
 /**
- * Lazily loads `/assets/js/baseline-country-breakdown.js` (per-country 7-day browser breakdown)
+ * Lazily loads `assets/js/baseline-country-breakdown.js` (per-country 7-day browser breakdown)
  * only when the user interacts with the location filter or visits a URL with location parameters.
  */
 function ensureCountryBreakdownScriptLoaded() {
   if (window.BASELINE_COUNTRY_BREAKDOWN || isCountryBreakdownScriptLoading) return;
   isCountryBreakdownScriptLoading = true;
   const script = document.createElement("script");
-  script.src = "/assets/js/baseline-country-breakdown.js";
+  script.src = resolveAssetUrl("js/baseline-country-breakdown.js");
   script.async = true;
   script.addEventListener("error", () => {
     isCountryBreakdownScriptLoading = false;
@@ -723,6 +741,33 @@ function resolveTargetFromUrl() {
 }
 
 /**
+ * Synchronizes navigation drawer links (`Baseline stats` and `Features`) with the current
+ * shared URL query parameters (`country`, `region`, `exclude`, `target`) so switching views
+ * preserves the active geographic and Baseline target filter.
+ */
+function syncDrawerLinksWithUrl() {
+  try {
+    const currentParams = new URLSearchParams(window.location.search);
+    const sharedKeys = ["country", "region", "exclude", "target"];
+    const sharedParams = new URLSearchParams();
+    for (const key of sharedKeys) {
+      const val = currentParams.get(key);
+      if (val) {
+        sharedParams.set(key, val);
+      }
+    }
+    const queryStr = sharedParams.toString();
+    document.querySelectorAll(".Drawer-list a.Drawer-link[href]").forEach((link) => {
+      const linkUrl = new URL(link.getAttribute("href"), window.location.origin);
+      linkUrl.search = queryStr ? `?${queryStr}` : "";
+      link.setAttribute("href", `${linkUrl.pathname}${linkUrl.search}`);
+    });
+  } catch {
+    // Ignore URL update errors
+  }
+}
+
+/**
  * Pushes a new browser history entry reflecting the current location (`?country=`, `?region=`, `?exclude=`)
  * and selected Baseline target (`?target=`) filters so browser Back/Forward navigates through filter changes.
  */
@@ -780,6 +825,7 @@ function pushUrlState() {
         nextHref
       );
     }
+    syncDrawerLinksWithUrl();
   } catch {
     // Ignore URL update errors in restricted environments
   }
@@ -4071,8 +4117,8 @@ class BaselineFeaturesExplorer extends HTMLElement {
       const iconImg = document.createElement("img");
       iconImg.src =
         f.statusKind === "widely"
-          ? "/assets/img/baseline-widely-icon.svg"
-          : "/assets/img/baseline-newly-icon.svg";
+          ? resolveAssetUrl("img/baseline-widely-icon.svg")
+          : resolveAssetUrl("img/baseline-newly-icon.svg");
       iconImg.alt = "";
       iconImg.width = 24;
       iconImg.height = 14;
@@ -4823,6 +4869,9 @@ function initAppDrawer() {
   const appShell = document.querySelector("#app-shell");
 
   if (!scroller || !sheet || !openButton) return;
+
+  syncDrawerLinksWithUrl();
+  window.addEventListener("popstate", syncDrawerLinksWithUrl);
 
   let isDrawerOpen = false;
   let hasEnteredViewport = false;
