@@ -17,22 +17,14 @@ includeFeaturesBundle: true
   <section class="status-card features-card" aria-labelledby="features-heading">
     <baseline-features-explorer id="baseline-features-explorer">
       <div class="status-header">
-        <div>
-          <h2 id="features-heading">
-            <span>Web Platform Features</span>
-            <span class="scope-heading-badge" data-scope-badge hidden></span>
+        <div class="status-header-main">
+          <h2 id="features-heading" class="status-heading-row">
+            <span class="status-heading-title">Web Platform Features</span>
+            <span class="scope-heading-badge" data-scope-badge>Worldwide</span>
           </h2>
           <p class="section-subtitle" data-features-subtitle>
-            Showing global browser compatibility across {{ baseline_features.counts.total }} web platform features over the last {{ baseline_features.windowDays }} days (<code>{{ baseline_features.startDate }}</code> &ndash; <code>{{ baseline_features.endDate }}</code>).
+            Showing browser compatibility (including WebViews) across {{ baseline_features.counts.total }} web platform features over the last {{ baseline_features.windowDays }} days (<code>{{ baseline_features.startDate }}</code> &ndash; <code>{{ baseline_features.endDate }}</code>).
           </p>
-        </div>
-        <div class="metric-toggle-group" role="group" aria-label="WebView traffic filter">
-          <button type="button" class="metric-toggle-btn" data-webview-mode="include" aria-pressed="true" id="btn-features-webview-include" aria-label="Include Android and iOS WebViews">
-            Include WebViews
-          </button>
-          <button type="button" class="metric-toggle-btn" data-webview-mode="exclude" aria-pressed="false" id="btn-features-webview-exclude" aria-label="Exclude Android and iOS WebViews">
-            Exclude WebViews
-          </button>
         </div>
       </div>
 
@@ -207,7 +199,7 @@ includeFeaturesBundle: true
               type="button"
               class="features-reset-btn"
               data-features-reset
-              hidden
+              disabled
               aria-label="Reset feature filters"
             >
               Reset filters

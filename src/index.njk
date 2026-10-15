@@ -22,22 +22,14 @@ title: Baseline Availability
   <section class="status-card" aria-labelledby="avg-table-heading">
     <baseline-summary-table id="baseline-summary-table">
       <div class="status-header">
-        <div>
-          <h2 id="avg-table-heading">
-            <span>Last {{ baseline_summary.recentWindowDays }} Days Average Availability</span>
-            <span class="scope-heading-badge" data-scope-badge hidden></span>
+        <div class="status-header-main">
+          <h2 id="avg-table-heading" class="status-heading-row">
+            <span class="status-heading-title">Last {{ baseline_summary.recentWindowDays }} Days Average Availability</span>
+            <span class="scope-heading-badge" data-scope-badge>Worldwide</span>
           </h2>
           <p class="section-subtitle" data-summary-subtitle>
-            Average global browser compatibility across RUM Archive page loads (activate any target to pin and highlight on the charts below).
+            Average browser compatibility across RUM Archive page loads (activate any target to pin and highlight on the charts below).
           </p>
-        </div>
-        <div class="metric-toggle-group" role="group" aria-label="WebView traffic filter">
-          <button type="button" class="metric-toggle-btn" data-webview-mode="include" aria-pressed="true" id="btn-webview-include" aria-label="Include Android and iOS WebViews">
-            Include WebViews
-          </button>
-          <button type="button" class="metric-toggle-btn" data-webview-mode="exclude" aria-pressed="false" id="btn-webview-exclude" aria-label="Exclude Android and iOS WebViews">
-            Exclude WebViews
-          </button>
         </div>
       </div>
 
@@ -119,13 +111,13 @@ title: Baseline Availability
 
   <section class="status-card chart-card" aria-labelledby="timeseries-heading">
     <div class="status-header">
-      <div>
-        <h2 id="timeseries-heading">
-          <span>Baseline Availability Over Time</span>
-          <span class="scope-heading-badge" data-scope-badge hidden></span>
+      <div class="status-header-main">
+        <h2 id="timeseries-heading" class="status-heading-row">
+          <span class="status-heading-title">Baseline Availability Over Time</span>
+          <span class="scope-heading-badge" data-scope-badge>Worldwide</span>
         </h2>
         <p class="section-subtitle" data-timeseries-subtitle data-day-count="{{ baseline_summary.dayCount }}">
-          Showing {{ baseline_summary.dayCount }} day{% if baseline_summary.dayCount != 1 %}s{% endif %} of global daily availability (up to 3 months). Hover over any date or line to inspect target compatibility.
+          Showing {{ baseline_summary.dayCount }} day{% if baseline_summary.dayCount != 1 %}s{% endif %} of daily availability (up to 3 months). Hover over any date or line to inspect target compatibility.
         </p>
       </div>
       <span class="timestamp">
@@ -138,10 +130,10 @@ title: Baseline Availability
 
   <section class="status-card breakdown-card" aria-labelledby="breakdown-heading">
     <div class="status-header">
-      <div>
-        <h2 id="breakdown-heading">
-          <span>Browser Compatibility Breakdown</span>
-          <span class="scope-heading-badge" data-scope-badge hidden></span>
+      <div class="status-header-main">
+        <h2 id="breakdown-heading" class="status-heading-row">
+          <span class="status-heading-title">Browser Compatibility Breakdown</span>
+          <span class="scope-heading-badge" data-scope-badge>Worldwide</span>
         </h2>
         <p class="section-subtitle" data-breakdown-subtitle data-window-days="{{ baseline_summary.recentWindowDays }}" data-start-date="{{ baseline_summary.recentStartDate }}" data-end-date="{{ baseline_summary.recentEndDate }}">
           Based on the last {{ baseline_summary.recentWindowDays }} days of available data (<code>{{ baseline_summary.recentStartDate }}</code> &ndash; <code>{{ baseline_summary.recentEndDate }}</code>). Select a Baseline target below to inspect compatible and incompatible browser versions.

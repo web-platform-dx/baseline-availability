@@ -5,6 +5,18 @@ Update this changelog whenever a user-facing feature, data calculation change, o
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-10-15]
+
+### Added
+- **App Navigation Drawer**: Added a top-layer navigation drawer (`popover="manual"` with CSS scroll-snap and scroll-driven backdrop animation) in the site header to switch between **Baseline stats** (`/`) and **Features** (`/features/`).
+- **Web Platform Features Explorer (`/features/` & `<baseline-features-explorer>`)**: Added a new view visualizing real-world user availability across all `web-features` entries, precalculated at build time in `scripts/calculate-baseline.js` from the 7-day RUM Archive browser traffic distribution (both including and excluding Android/iOS WebViews).
+- **Feature filtering, search, and sorting**: Added filtering by Baseline status (`All features`, `Widely available`, `Newly available`, `Limited availability`), Baseline year (`2016`–`2026`), feature category (`CSS`, `HTML`, `JavaScript`, `Web APIs`, `HTTP`, `Security`, etc.), text search, and column sorting (by availability %, feature name, or Baseline date), alongside full support for the shared region/country and WebView filters.
+- **User availability threshold & range filter**: Added quick preset chips (`All`, `≥ 99%`, `≥ 95%`, `≥ 90%`, `≥ 80%`, `< 90%`, `< 50%`) and a custom operator/threshold filter (`>=`, `>`, `<=`, `<`, and `Between` min–max%) synced with URL query parameters (`?avail=`, `?min_avail=`, `?max_avail=`).
+
+### Changed
+- **Unified top-level filter bar & zero-layout-shift layout**: Moved the **Include WebViews / Exclude WebViews** toggle out of individual card headers and into the shared `<baseline-location-filter>` bar at the top of both pages; placed the location `Reset` button inline inside the combobox field; pre-rendered the default `Worldwide` chip inside a single-row horizontally scrollable chip strip; kept card scope badges (`[data-scope-badge]`) always rendered and section subtitles static; changed the feature `Reset filters` button to toggle `disabled` instead of `hidden`; and added container-query responsive filter rows and mobile stacked table cards (`@container (width < 640px)`) to eliminate layout shifts across desktop and mobile viewports.
+- **Initial load performance & payload size optimizations**: Split route-specific initial scripts so `/features/` only loads `baseline-features-data.js` initially and lazy-loads `baseline-country-breakdown.js` on demand; compacted `baseline-country-breakdown.js` (2.69 MB &rarr; 638 KB) using indexed `(browser, version)` tuples and basis-point integers; deduplicated combobox SVG action icons via `<symbol>`/`<use>`; and server-rendered KPI cards and the first 25 feature rows with progressive client rendering.
+
 ## [2026-10-14]
 
 ### Added

@@ -1019,6 +1019,43 @@ class BaselineLocationFilter extends HTMLElement {
       }
     };
 
+    this.webviewBtns = Array.from(this.querySelectorAll("button[data-webview-mode]"));
+    this.syncWebviewButtons = () => {
+      this.webviewBtns.forEach((btn) => {
+        const isSelected = btn.getAttribute("data-webview-mode") === viewState.webviewMode;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+      });
+    };
+
+    this.onViewStateChange = () => {
+      this.syncWebviewButtons();
+    };
+
+    this.onWebviewModeEvent = (e) => {
+      const mode = e.detail?.mode;
+      if ((mode === "include" || mode === "exclude") && viewState.webviewMode !== mode) {
+        viewState.webviewMode = mode;
+      }
+      this.syncWebviewButtons();
+    };
+
+    this.webviewBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-webview-mode");
+        if ((mode !== "include" && mode !== "exclude") || mode === viewState.webviewMode) {
+          return;
+        }
+        viewState.webviewMode = mode;
+        this.syncWebviewButtons();
+        notifyStateChange("webview-mode");
+        window.dispatchEvent(
+          new CustomEvent("baseline:webview-mode-change", {
+            detail: { mode },
+          })
+        );
+      });
+    });
+
     this.inputEl.addEventListener("focus", this.onInputFocus);
     this.inputEl.addEventListener("mouseup", this.onInputMouseUp);
     this.inputEl.addEventListener("click", this.onInputClick);
@@ -1034,11 +1071,16 @@ class BaselineLocationFilter extends HTMLElement {
     this.listboxEl.addEventListener("mousemove", this.onListboxMouseMove);
     document.addEventListener("mousedown", this.onDocumentMouseDown);
     if (this.resetBtn) {
+      this.resetBtn.addEventListener("mousedown", (e) => e.preventDefault());
       this.resetBtn.addEventListener("click", this.onResetClick);
     }
     window.addEventListener("popstate", this.onPopState);
     window.addEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.addEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
+    window.addEventListener("baseline-view-state", this.onViewStateChange);
+    window.addEventListener("baseline:webview-mode-change", this.onWebviewModeEvent);
+
+    this.syncWebviewButtons();
 
     if (this.hasLocationParamsInUrl()) {
       preloadCountryBundlesForCurrentPage();
@@ -1071,6 +1113,8 @@ class BaselineLocationFilter extends HTMLElement {
     window.removeEventListener("popstate", this.onPopState);
     window.removeEventListener("baseline-country-data-ready", this.onCountryDataReady);
     window.removeEventListener("baseline-country-breakdown-ready", this.onCountryBreakdownReady);
+    window.removeEventListener("baseline-view-state", this.onViewStateChange);
+    window.removeEventListener("baseline:webview-mode-change", this.onWebviewModeEvent);
   }
 
   getSelectedDisplayLabel() {
@@ -1457,13 +1501,32 @@ class BaselineLocationFilter extends HTMLElement {
   renderActiveChips(includedItems, excludedItems) {
     if (!this.chipsEl) return;
 
+    const fragment = document.createDocumentFragment();
+
     if (includedItems.length === 0 && excludedItems.length === 0) {
-      this.chipsEl.hidden = true;
-      this.chipsEl.replaceChildren();
+      const globalChip = document.createElement("span");
+      globalChip.className = "location-chip location-chip-global";
+
+      const iconWrap = document.createElement("span");
+      iconWrap.className = "location-chip-status-icon";
+      iconWrap.appendChild(this.createStatusIconSvg("include"));
+      globalChip.appendChild(iconWrap);
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "location-chip-label";
+      labelEl.textContent = "Worldwide (All Regions & Countries)";
+      globalChip.appendChild(labelEl);
+
+      const shareEl = document.createElement("span");
+      shareEl.className = "location-chip-share";
+      shareEl.textContent = "100.00%";
+      globalChip.appendChild(shareEl);
+
+      fragment.appendChild(globalChip);
+      this.chipsEl.replaceChildren(fragment);
+      this.chipsEl.hidden = false;
       return;
     }
-
-    const fragment = document.createDocumentFragment();
 
     const buildChip = (item, mode) => {
       const chip = document.createElement("span");
@@ -1727,41 +1790,29 @@ class BaselineLocationFilter extends HTMLElement {
       metaMappedPct.textContent = formatPct(mappedPct);
     }
 
-    // Update breadcrumb summary pill under the dropdown
+    // Update single-line summary pill in the filter bar footer
     if (this.breadcrumbEl) {
       if (value === "all") {
-        this.breadcrumbEl.textContent =
-          "Showing Worldwide traffic (100.00% of global page loads)";
-      } else if (kind === "region") {
+        this.breadcrumbEl.textContent = `100.00% of global traffic • ${formatPct(mappedPct)} mapped`;
+      } else if (kind === "region" || kind === "custom") {
         const countWord = countryCount === 1 ? "1 country" : `${countryCount} countries`;
-        this.breadcrumbEl.textContent = `Region: ${breadcrumb} • ${countWord} • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
-      } else if (kind === "country") {
-        this.breadcrumbEl.textContent = `Country: ${breadcrumb} (${code}) • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
+        this.breadcrumbEl.textContent = `${countWord} • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
       } else {
-        const countWord = countryCount === 1 ? "1 country" : `${countryCount} countries`;
-        this.breadcrumbEl.textContent = `Custom filter: ${breadcrumb} • ${countWord} • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
+        this.breadcrumbEl.textContent = `${code} • ${shareLabel} of global traffic • ${formatPct(mappedPct)} mapped`;
       }
     }
 
-    // Update section heading badges and subtitles across all three cards
+    // Update section heading badges without toggling display:none or rewriting long subtitles
     const scopeBadges = document.querySelectorAll("[data-scope-badge]");
     scopeBadges.forEach((badge) => {
-      if (value === "all") {
-        badge.hidden = true;
-        badge.textContent = "";
-      } else {
-        badge.hidden = false;
-        badge.textContent = kind === "country" ? `${name} (${code})` : name;
-      }
-    });
-
-    const summarySubtitle = document.querySelector("[data-summary-subtitle]");
-    if (summarySubtitle) {
-      summarySubtitle.textContent =
+      badge.hidden = false;
+      badge.textContent =
         value === "all"
-          ? "Average global browser compatibility across RUM Archive page loads (activate any target to pin and highlight on the charts below)."
-          : `Average browser compatibility in ${name} across RUM Archive page loads (activate any target to pin and highlight on the charts below).`;
-    }
+          ? "Worldwide"
+          : kind === "country"
+          ? `${name} (${code})`
+          : name;
+    });
 
     const summaryCaption = document.querySelector("[data-summary-caption]");
     if (summaryCaption) {
@@ -1769,16 +1820,6 @@ class BaselineLocationFilter extends HTMLElement {
         value === "all"
           ? "Last 7 days average Baseline availability by target (Worldwide)"
           : `Last 7 days average Baseline availability by target for ${name}`;
-    }
-
-    const timeseriesSubtitle = document.querySelector("[data-timeseries-subtitle]");
-    if (timeseriesSubtitle) {
-      const dayCount = Number(timeseriesSubtitle.getAttribute("data-day-count") || 7);
-      const dayWord = dayCount === 1 ? "day" : "days";
-      timeseriesSubtitle.textContent =
-        value === "all"
-          ? `Showing ${dayCount} ${dayWord} of global daily availability (up to 3 months). Hover over any date or line to inspect target compatibility.`
-          : `Showing ${dayCount} ${dayWord} of daily availability for ${name}. Hover over any date or line to inspect target compatibility.`;
     }
 
     notifyStateChange("location-filter");
@@ -4516,7 +4557,8 @@ class BaselineFeaturesExplorer extends HTMLElement {
       this.hasActiveAvailabilityFilter() ||
       Boolean(this.searchQuery);
     if (this.resetBtn) {
-      this.resetBtn.hidden = !hasActiveFeatureFilter;
+      this.resetBtn.hidden = false;
+      this.resetBtn.disabled = !hasActiveFeatureFilter;
     }
 
     // Update table header sort indicators
@@ -4559,16 +4601,6 @@ class BaselineFeaturesExplorer extends HTMLElement {
     const isExcludeWv = this.webviewMode === "exclude";
     const locMeta = this.locationMeta || viewState.locationMeta;
 
-    if (this.scopeBadgeEl) {
-      if (isGlobal) {
-        this.scopeBadgeEl.hidden = true;
-        this.scopeBadgeEl.textContent = "";
-      } else {
-        this.scopeBadgeEl.hidden = false;
-        this.scopeBadgeEl.textContent = locMeta.name;
-      }
-    }
-
     // Resolve location-specific feature metrics when a non-Worldwide location is active
     const isLoadingCountryBreakdown = !isGlobal && !window.BASELINE_COUNTRY_BREAKDOWN;
     if (isLoadingCountryBreakdown) {
@@ -4579,16 +4611,23 @@ class BaselineFeaturesExplorer extends HTMLElement {
       ? null
       : getFeatureMetricsMapForBreakdown(this.features, breakdownData);
 
-    if (this.subtitleEl) {
-      const scopePhrase = isGlobal
-        ? "global browser compatibility"
-        : `browser compatibility in ${locMeta.name}`;
-      const wvPhrase = isExcludeWv ? "excluding WebViews" : "including WebViews";
-      if (isLoadingCountryBreakdown) {
-        this.subtitleEl.textContent = `Loading regional browser data for ${locMeta.name}… Showing global weights until ready.`;
+    if (this.scopeBadgeEl) {
+      this.scopeBadgeEl.hidden = false;
+      if (isGlobal) {
+        this.scopeBadgeEl.textContent = "Worldwide";
+      } else if (isLoadingCountryBreakdown) {
+        this.scopeBadgeEl.textContent = `${locMeta.name} (loading…)`;
       } else {
-        this.subtitleEl.textContent = `Showing ${scopePhrase} (${wvPhrase}) across ${this.features.length} web platform features over the last ${this.bundle.windowDays} days (${this.bundle.startDate} – ${this.bundle.endDate}).`;
+        this.scopeBadgeEl.textContent =
+          locMeta.kind === "country" && locMeta.code
+            ? `${locMeta.name} (${locMeta.code})`
+            : locMeta.name;
       }
+    }
+
+    if (this.subtitleEl) {
+      const wvPhrase = isExcludeWv ? "excluding WebViews" : "including WebViews";
+      this.subtitleEl.textContent = `Showing browser compatibility (${wvPhrase}) across ${this.features.length} web platform features over the last ${this.bundle.windowDays} days (${this.bundle.startDate} – ${this.bundle.endDate}).`;
     }
 
     const matchingItems = [];
