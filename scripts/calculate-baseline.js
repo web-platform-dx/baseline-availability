@@ -173,29 +173,68 @@ const IOS_WEBVIEW_FAMILIES = new Set([
   "Mobile Safari Webview",
 ]);
 
-const BLINK_BROWSER_SHORTS = new Set([
+const CORE_BLINK_SHORTS = new Set([
   "c",
   "ca",
   "e",
   "wva",
+]);
+
+const MOBILE_BLINK_SHORTS = new Set([
   "sa",
   "oa",
-  "o",
   "u",
   "y",
   "ysa",
   "fb",
   "ia",
+  "slk",
+  "snp",
+  "puf",
+]);
+
+const DESKTOP_BLINK_SHORTS = new Set([
+  "o",
   "cd",
   "cr",
   "stv",
-  "slk",
   "yd",
   "uc",
-  "puf",
   "brv",
   "cc",
+  "tv",
 ]);
+
+const NON_CORE_BLINK_SHORTS = new Set([
+  ...MOBILE_BLINK_SHORTS,
+  ...DESKTOP_BLINK_SHORTS,
+]);
+
+const BLINK_BROWSER_SHORTS = new Set([
+  ...CORE_BLINK_SHORTS,
+  ...NON_CORE_BLINK_SHORTS,
+]);
+
+/**
+ * Checks whether `value` is a valid numeric version within a plausible rollout range
+ * of `maxKnownVersion` (preventing AppleWebKit build numbers like 534/605 or corrupted
+ * strings like 98492 from being treated as Blink/Gecko versions).
+ * @param {unknown} value
+ * @param {string | undefined} maxKnownVersion
+ * @returns {boolean}
+ */
+function isValidEngineVersion(value, maxKnownVersion) {
+  if (!isValidVersion(value)) return false;
+  const maj = Number(getMajorVersion(String(value)));
+  if (Number.isNaN(maj) || maj < 1) return false;
+  if (maxKnownVersion) {
+    const maxMaj = Number(getMajorVersion(maxKnownVersion));
+    if (!Number.isNaN(maxMaj) && maj > maxMaj + 25) {
+      return false;
+    }
+  }
+  return true;
+}
 
 /**
  * Resolves a downstream browser version string (when `USERAGENTENGINEVERSION` is absent)
@@ -203,7 +242,7 @@ const BLINK_BROWSER_SHORTS = new Set([
  * @param {string} ua
  * @param {unknown} uav
  * @param {ReturnType<typeof buildBbmLookups>} lookups
- * @returns {{ browser: string, version: string } | null}
+ * @returns {{ browser: string, version: string, ua: string } | null}
  */
 function resolveDownstreamBrowserVersion(ua, uav, lookups) {
   if (!Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua) || !isValidVersion(uav)) {
@@ -213,10 +252,10 @@ function resolveDownstreamBrowserVersion(ua, uav, lookups) {
   const knownSet = lookups.knownVersionsByBrowser[bbmBrowser];
   const uavStr = String(uav);
   if (knownSet?.has(uavStr)) {
-    return { browser: bbmBrowser, version: uavStr };
+    return { browser: bbmBrowser, version: uavStr, ua };
   }
   if (knownSet?.has(`${uavStr}.0`)) {
-    return { browser: bbmBrowser, version: `${uavStr}.0` };
+    return { browser: bbmBrowser, version: `${uavStr}.0`, ua };
   }
   const maxVer = lookups.maxVersionByBrowser[bbmBrowser];
   if (maxVer) {
@@ -224,7 +263,7 @@ function resolveDownstreamBrowserVersion(ua, uav, lookups) {
     const maxMaj = Number(getMajorVersion(maxVer));
     if (compareVersions(uavStr, maxVer) > 0 && uavMaj <= maxMaj + 25) {
       const normalizedVer = maxVer.endsWith(".0") && !uavStr.includes(".") ? `${uavStr}.0` : uavStr;
-      return { browser: bbmBrowser, version: normalizedVer };
+      return { browser: bbmBrowser, version: normalizedVer, ua };
     }
   }
   return null;
@@ -244,34 +283,35 @@ function getWebviewType(row, colIdx) {
 }
 
 /**
- * Resolves a daily aggregate row to a `baseline-browser-mapping` browser ID and version.
+ * Resolves a daily aggregate row to a `baseline-browser-mapping` browser ID and version,
+ * while preserving the real browser identity (`iosApp` or `blinkApp` / `ua`) from `src/_data/browsers.json`.
  *
  * Rules:
  * 1. iOS (`OS === "iOS"`):
- *    - If `USERAGENTFAMILY` is Mobile Safari (`"si"`), map to `safari_ios` using `USERAGENTVERSION`
- *      (with fallback to `OSVERSION` if `USERAGENTVERSION` is missing or not a Safari version).
- *    - If `USERAGENTFAMILY` is not Mobile Safari, map to `safari_ios` using `OSVERSION` (and record
- *      `iosApp` so the browser breakdown aggregates by app name and iOS version).
+ *    - If `USERAGENTFAMILY` is Mobile Safari (`"si"`) or Safari (`"s"`), map to `safari_ios` using
+ *      `USERAGENTVERSION` (with fallback to `OSVERSION` if `USERAGENTVERSION` is missing or not a Safari version).
+ *    - For all other `USERAGENTFAMILY` values on iOS, map to `safari_ios` using `OSVERSION` and
+ *      record `iosApp` so the browser breakdown displays `"[Browser name] on iOS XX.X"`.
  *    - If the required version is unavailable or invalid, return `null` (recorded as unmapped).
- * 2. Android (`OS === "Android OS"`):
- *    - Chrome Mobile Webview (`"wva"`) maps to `webview_android` and all other Blink browsers map to
- *      `chrome_android` using their engine version (`USERAGENTENGINEVERSION`), or via downstream
- *      browser version (`DOWNSTREAM_SHORT_TO_BBM`) when `USERAGENTENGINEVERSION` is absent, or
- *      `USERAGENTVERSION` for Chromium-versioned families.
- *    - Gecko browsers map to `firefox_android` using their engine version (`USERAGENTENGINEVERSION`
- *      or `USERAGENTVERSION`).
- * 3. Other OSes (Desktop / etc.):
- *    - WebKit / Safari rows map to `safari` using `USERAGENTVERSION` (or `OSVERSION` >= 26 on macOS,
- *      or valid iOS `OSVERSION` when `OS` is empty and `USERAGENTENGINEVERSION` >= 600).
- *      If a row has a Blink/Gecko `USERAGENTFAMILY` with `WebKit` engine, it falls through.
- *    - Blink rows map to `edge` (`"e"`), `chrome_android` (`"ca"`), `webview_android` (`"wva"`),
- *      downstream browser (`DOWNSTREAM_SHORT_TO_BBM`), or `chrome`.
- *    - Gecko rows map to `firefox` (or `firefox_android` for `"fa"`).
+ * 2. Internet Explorer (`"ie"`):
+ *    - Legacy browser outside the Baseline browser set; always returns `null` (unmapped).
+ * 3. Non-iOS WebKit / Safari rows:
+ *    - Maps macOS / desktop Safari (`"s"`) to `safari` and Mobile Safari / WebView (`"si"`, `"siw"`) to `safari_ios`.
+ * 4. Blink rows (`USERAGENTENGINE === "Blink"` or empty engine with a known Blink browser family):
+ *    - Core families (`"c"`, `"ca"`, `"e"`, `"wva"`) map to `chrome`, `chrome_android`, `edge`, or `webview_android`.
+ *    - Downstream BBM families (`DOWNSTREAM_SHORT_TO_BBM`) without `USERAGENTENGINEVERSION` resolve via
+ *      `resolveDownstreamBrowserVersion` (retaining `ua`).
+ *    - All other Blink browser rows (including `"puf"`, `"brv"`, `"cc"`, `"sa"`, `"oa"`, `"o"`, `"u"`,
+ *      `"ia"`, `"fb"`, `"y"`, `"ysa"`, `"cd"`, `"cr"`, `"stv"`, `"slk"`, `"yd"`, `"uc"`, `"snp"`, `"tv"`)
+ *      resolve against `chrome_android` or `chrome` using their Blink version while recording `blinkApp: ua`
+ *      so their real browser name from `browsers.json` is preserved in the breakdown.
+ * 5. Gecko rows (`USERAGENTENGINE === "Gecko"` or Firefox families `"f"`, `"fa"`):
+ *    - Maps to `firefox` or `firefox_android`.
  *
  * @param {unknown[]} row
  * @param {Record<string, number>} colIdx
  * @param {ReturnType<typeof buildBbmLookups>} lookups
- * @returns {{ browser: string, version: string, iosApp?: string } | null}
+ * @returns {{ browser: string, version: string, iosApp?: string, blinkApp?: string, ua?: string } | null}
  */
 function resolveRowToBaselineBrowser(row, colIdx, lookups) {
   const ua = String(row[colIdx.USERAGENTFAMILY] ?? "");
@@ -281,9 +321,18 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
   const os = String(row[colIdx.OS] ?? "");
   const osv = row[colIdx.OSVERSION];
 
-  // 1. All iOS rows map to safari_ios: Mobile Safari via UAVERSION (with OSVERSION fallback), all others via OSVERSION
+  if (ua === "ie" || ua === "IE") {
+    return null;
+  }
+
+  const isBlink = eng === "Blink";
+  const isGecko = eng === "Gecko";
+  const isWebKit = eng === "WebKit" || eng === "Web Kit";
+
+  // 1. All iOS rows map to safari_ios: Mobile Safari / Safari via UAVERSION (with OSVERSION fallback), all others via OSVERSION
   if (os === "iOS") {
-    const isMobileSafari = !ua || ua === "si" || ua === "Mobile Safari";
+    const isMobileSafari =
+      !ua || ua === "si" || ua === "Mobile Safari" || ua === "s" || ua === "Safari";
     if (
       isMobileSafari &&
       isValidVersion(uav) &&
@@ -299,52 +348,23 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
     return null;
   }
 
-  const isBlink = eng === "Blink";
-  const isGecko = eng === "Gecko";
-  const isWebKit = eng === "WebKit" || eng === "Web Kit";
+  const maxChromeVer = lookups.maxVersionByBrowser.chrome;
+  const maxFirefoxVer = lookups.maxVersionByBrowser.firefox;
 
-  // 2. Android OS rows: map Blink to chrome_android (or webview_android for wva, or downstream BBM browser when ENGV is null) and Gecko to firefox_android
-  if (os === "Android OS") {
-    if (isBlink || BLINK_BROWSER_SHORTS.has(ua)) {
-      const targetBrowser = ANDROID_WEBVIEW_FAMILIES.has(ua) ? "webview_android" : "chrome_android";
-      if (isValidVersion(engv)) {
-        return { browser: targetBrowser, version: String(engv) };
-      }
-
-      if (Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua)) {
-        return resolveDownstreamBrowserVersion(ua, uav, lookups);
-      }
-
-      if (isValidVersion(uav)) {
-        return { browser: targetBrowser, version: String(uav) };
-      }
-
-      return null;
-    }
-
-    if (isGecko || ua === "f" || ua === "fa") {
-      const geckoVersion =
-        isGecko && isValidVersion(engv)
-          ? String(engv)
-          : isValidVersion(uav)
-            ? String(uav)
-            : null;
-
-      if (geckoVersion) {
-        return { browser: "firefox_android", version: geckoVersion };
-      }
-    }
-
-    return null;
-  }
-
-  // 3. Non-iOS WebKit / Safari rows (e.g. macOS Safari, or empty-OS AppleWebKit/600+)
-  if (isWebKit || ua === "s" || ua === "si" || ua === "siw") {
+  // 2. Non-iOS WebKit / Safari rows (e.g. macOS Safari, or empty-OS AppleWebKit/600+)
+  if (isWebKit || (!eng && (ua === "s" || ua === "si" || ua === "siw"))) {
     const isMacSafari = os === "Mac OS X" || ua === "s";
     const targetBrowser = isMacSafari ? "safari" : "safari_ios";
+    const iosApp = !isMacSafari && ua && ua !== "si" && ua !== "Mobile Safari" ? ua : undefined;
 
-    if (isValidVersion(uav) && lookups.safariMajorVersions.has(getMajorVersion(uav))) {
-      return { browser: targetBrowser, version: String(uav) };
+    if (
+      (ua === "s" || ua === "si" || ua === "siw" || !ua) &&
+      isValidVersion(uav) &&
+      lookups.safariMajorVersions.has(getMajorVersion(uav))
+    ) {
+      return iosApp
+        ? { browser: targetBrowser, version: String(uav), iosApp }
+        : { browser: targetBrowser, version: String(uav) };
     }
 
     if (isValidVersion(osv) && lookups.safariMajorVersions.has(getMajorVersion(osv))) {
@@ -359,51 +379,79 @@ function resolveRowToBaselineBrowser(row, colIdx, lookups) {
         Number(getMajorVersion(engv)) >= 600 &&
         osvMajor >= 10
       ) {
-        return { browser: "safari_ios", version: String(osv) };
+        return iosApp
+          ? { browser: "safari_ios", version: String(osv), iosApp }
+          : { browser: "safari_ios", version: String(osv) };
       }
-    }
-
-    // Fall through if the row has a known Blink or Gecko family/engine (e.g. UA="c" with ENG="WebKit")
-    if (!isBlink && !BLINK_BROWSER_SHORTS.has(ua) && !isGecko && ua !== "f" && ua !== "fa") {
-      return null;
-    }
-  }
-
-  // 4. Non-Android Blink rows
-  if (isBlink || BLINK_BROWSER_SHORTS.has(ua)) {
-    if (!(isBlink && isValidVersion(engv)) && Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua)) {
-      return resolveDownstreamBrowserVersion(ua, uav, lookups);
-    }
-
-    const blinkVersion =
-      isBlink && isValidVersion(engv)
-        ? String(engv)
-        : isValidVersion(uav)
-          ? String(uav)
-          : null;
-
-    if (blinkVersion) {
-      if (ua === "e") return { browser: "edge", version: blinkVersion };
-      if (ua === "wva") return { browser: "webview_android", version: blinkVersion };
-      if (ua === "ca") return { browser: "chrome_android", version: blinkVersion };
-      return { browser: "chrome", version: blinkVersion };
     }
 
     return null;
   }
 
-  // 5. Non-Android Gecko rows
-  if (isGecko || ua === "f" || ua === "fa") {
-    const geckoVersion =
-      isGecko && isValidVersion(engv)
+  // 3. Non-iOS Blink rows (when engine is Blink, or engine is empty for a known Blink browser family)
+  if (isBlink || (!eng && BLINK_BROWSER_SHORTS.has(ua))) {
+    if (
+      !(isBlink && isValidEngineVersion(engv, maxChromeVer)) &&
+      Object.hasOwn(DOWNSTREAM_SHORT_TO_BBM, ua)
+    ) {
+      return resolveDownstreamBrowserVersion(ua, uav, lookups);
+    }
+
+    const blinkVersion =
+      isBlink && isValidEngineVersion(engv, maxChromeVer)
         ? String(engv)
-        : isValidVersion(uav)
+        : isValidEngineVersion(uav, maxChromeVer)
+          ? String(uav)
+          : null;
+
+    if (blinkVersion) {
+      if (ua === "e") return { browser: "edge", version: blinkVersion };
+      if (ANDROID_WEBVIEW_FAMILIES.has(ua)) {
+        return { browser: "webview_android", version: blinkVersion };
+      }
+      if (ua === "ca") return { browser: "chrome_android", version: blinkVersion };
+      if (!ua || ua === "c") {
+        return {
+          browser: os === "Android OS" ? "chrome_android" : "chrome",
+          version: blinkVersion,
+        };
+      }
+      if (ua === "f" || ua === "fa" || ua === "s" || ua === "si" || ua === "siw") {
+        return null;
+      }
+      const targetBrowser =
+        MOBILE_BLINK_SHORTS.has(ua) || os === "Android OS" ? "chrome_android" : "chrome";
+      const canonicalBrowser = MOBILE_BLINK_SHORTS.has(ua)
+        ? "chrome_android"
+        : DESKTOP_BLINK_SHORTS.has(ua)
+          ? "chrome"
+          : targetBrowser;
+      return {
+        browser: canonicalBrowser,
+        version: blinkVersion,
+        blinkApp: ua,
+        ua,
+      };
+    }
+
+    return null;
+  }
+
+  // 4. Non-iOS Gecko rows (when engine is Gecko, or engine is empty for Firefox families)
+  if (isGecko || (!eng && (ua === "f" || ua === "fa"))) {
+    if (ua && ua !== "f" && ua !== "fa") {
+      return null;
+    }
+    const geckoVersion =
+      isGecko && isValidEngineVersion(engv, maxFirefoxVer)
+        ? String(engv)
+        : isValidEngineVersion(uav, maxFirefoxVer)
           ? String(uav)
           : null;
 
     if (geckoVersion) {
       return {
-        browser: ua === "fa" ? "firefox_android" : "firefox",
+        browser: os === "Android OS" || ua === "fa" ? "firefox_android" : "firefox",
         version: geckoVersion,
       };
     }
@@ -785,12 +833,12 @@ const BBM_BROWSER_NAMES = {
   webview_android: "WebView Android",
   samsunginternet_android: "Samsung Internet",
   opera: "Opera",
-  opera_android: "Opera Android",
-  uc_android: "UC Browser Mobile",
-  ya_android: "Yandex Browser Mobile",
+  opera_android: "Opera Mobile",
+  uc_android: "UCBrowser Mobile",
+  ya_android: "Yandex Mobile",
   qq_android: "QQ Browser Mobile",
-  facebook_android: "Facebook for Android",
-  instagram_android: "Instagram for Android",
+  facebook_android: "Facebook",
+  instagram_android: "Instagram",
   kai_os: "KaiOS",
 };
 
@@ -814,6 +862,35 @@ const DOWNSTREAM_BBM_BROWSERS = new Set([
  */
 function round4(value) {
   return Math.round(value * 10000) / 10000;
+}
+
+/**
+ * Rounds a browser traffic share percentage to 4 decimal places for values >= 0.0001%,
+ * and to 2 significant digits for positive values < 0.0001% so sub-0.0001% browsers
+ * with non-zero traffic are never rounded to 0 and dropped from the UI.
+ * @param {number} value
+ * @returns {number}
+ */
+function roundShare(value) {
+  if (!(value > 0)) return 0;
+  if (value >= 0.0001) return Math.round(value * 10000) / 10000;
+  return Number(value.toPrecision(2));
+}
+
+/**
+ * Builds the breakdown row key for a resolved browser row.
+ * @param {{ browser: string, iosApp?: string, blinkApp?: string, ua?: string }} resolved
+ * @returns {string}
+ */
+function getBreakdownRowKey(resolved) {
+  if (resolved.iosApp) {
+    return `ios:${resolved.iosApp}`;
+  }
+  if (resolved.blinkApp) {
+    const prefix = resolved.browser === "chrome_android" ? "blinka:" : "blink:";
+    return `${prefix}${resolved.blinkApp}`;
+  }
+  return resolved.browser;
 }
 
 /**
@@ -878,10 +955,10 @@ export async function writeBrowserBreakdownBundle() {
 
   let totalPageLoads = 0;
   let mappedPageLoads = 0;
-  /** @type {Map<string, { browser: string, rowKey: string, iosApp: string | null, version: string, pageLoads: number }>} */
+  /** @type {Map<string, { browser: string, rowKey: string, iosApp: string | null, blinkApp: string | null, ua: string | null, version: string, pageLoads: number }>} */
   const countsByBrowserVer = new Map();
   /** @type {Map<string, string>} */
-  const iosAppNames = new Map();
+  const customBrowserNames = new Map();
 
   for (const fileName of recentFiles) {
     const inputPath = resolveSafeFilePath(AGGREGATES_DIR, fileName);
@@ -906,9 +983,13 @@ export async function writeBrowserBreakdownBundle() {
 
       mappedPageLoads += count;
       const iosApp = resolved.iosApp || null;
-      const rowKey = iosApp ? `ios:${iosApp}` : resolved.browser;
+      const blinkApp = resolved.blinkApp || null;
+      const uaCode = resolved.ua || iosApp || blinkApp || null;
+      const rowKey = getBreakdownRowKey(resolved);
       if (iosApp) {
-        iosAppNames.set(rowKey, lookups.shortToFamily[iosApp] || iosApp);
+        customBrowserNames.set(rowKey, lookups.shortToFamily[iosApp] || iosApp);
+      } else if (blinkApp) {
+        customBrowserNames.set(rowKey, lookups.shortToFamily[blinkApp] || blinkApp);
       }
       const key = `${rowKey}|${resolved.version}`;
       const existing = countsByBrowserVer.get(key);
@@ -919,6 +1000,8 @@ export async function writeBrowserBreakdownBundle() {
           browser: resolved.browser,
           rowKey,
           iosApp,
+          blinkApp,
+          ua: uaCode,
           version: resolved.version,
           pageLoads: count,
         });
@@ -967,8 +1050,48 @@ export async function writeBrowserBreakdownBundle() {
     (a, b) => b.pageLoads - a.pageLoads
   );
   const browsers = sortedCounts.map((item) => {
-    const { browser, iosApp, version, pageLoads } = item;
+    const { browser, iosApp, blinkApp, ua, version, pageLoads } = item;
+
+    if (blinkApp) {
+      const engineReleaseDate =
+        lookups.versionMetaByBrowser.chrome?.[version]?.releaseDate ||
+        lookups.versionMetaByBrowser.chrome_android?.[version]?.releaseDate ||
+        null;
+      const name = lookups.shortToFamily[blinkApp] || blinkApp;
+      return {
+        browser,
+        name,
+        version,
+        isDownstream: true,
+        releaseDate: null,
+        engine: "Blink",
+        engineVersion: version,
+        engineReleaseDate,
+        pageLoads,
+        pct: mappedPageLoads > 0 ? roundShare((pageLoads / mappedPageLoads) * 100) : 0,
+        pctTotal: totalPageLoads > 0 ? roundShare((pageLoads / totalPageLoads) * 100) : 0,
+      };
+    }
+
     const meta = lookups.versionMetaByBrowser[browser]?.[version] || null;
+    if (iosApp) {
+      const name = lookups.shortToFamily[iosApp] || iosApp;
+      return {
+        browser,
+        name,
+        version,
+        onIos: true,
+        isDownstream: true,
+        releaseDate: null,
+        engine: "WebKit",
+        engineVersion: version,
+        engineReleaseDate: meta?.releaseDate || null,
+        pageLoads,
+        pct: mappedPageLoads > 0 ? roundShare((pageLoads / mappedPageLoads) * 100) : 0,
+        pctTotal: totalPageLoads > 0 ? roundShare((pageLoads / totalPageLoads) * 100) : 0,
+      };
+    }
+
     const isDownstream = DOWNSTREAM_BBM_BROWSERS.has(browser);
     const maxVer = lookups.maxVersionByBrowser[browser];
     const fallbackMeta =
@@ -1001,23 +1124,23 @@ export async function writeBrowserBreakdownBundle() {
       }
     }
 
-    const name = iosApp
-      ? lookups.shortToFamily[iosApp] || iosApp
-      : BBM_BROWSER_NAMES[browser] || browser;
+    const name =
+      ua && lookups.shortToFamily[ua]
+        ? lookups.shortToFamily[ua]
+        : BBM_BROWSER_NAMES[browser] || browser;
 
     return {
       browser,
       name,
       version,
-      ...(iosApp ? { onIos: true } : {}),
       isDownstream,
       releaseDate,
       engine,
       engineVersion,
       engineReleaseDate,
       pageLoads,
-      pct: mappedPageLoads > 0 ? round4((pageLoads / mappedPageLoads) * 100) : 0,
-      pctTotal: totalPageLoads > 0 ? round4((pageLoads / totalPageLoads) * 100) : 0,
+      pct: mappedPageLoads > 0 ? roundShare((pageLoads / mappedPageLoads) * 100) : 0,
+      pctTotal: totalPageLoads > 0 ? roundShare((pageLoads / totalPageLoads) * 100) : 0,
     };
   });
 
@@ -1047,7 +1170,7 @@ export async function writeBrowserBreakdownBundle() {
     m: breakdownPayload.mappedPercentage,
     names: {
       ...BBM_BROWSER_NAMES,
-      ...Object.fromEntries(iosAppNames),
+      ...Object.fromEntries(customBrowserNames),
     },
     targets: targetsList,
     minMaps: targetMinMaps,
@@ -1066,7 +1189,7 @@ export async function writeBrowserBreakdownBundle() {
 
   const breakdownJs =
     `(()=>{const D=${JSON.stringify(compactClientData)};` +
-    `const browsers=D.rows.map(r=>{const onIos=r[0].startsWith("ios:"),b=onIos?"safari_ios":r[0];return{browser:b,name:D.names[r[0]]||r[0],version:r[1],onIos,pct:r[2],pctTotal:r[3],releaseDate:r[4],engine:r[5],engineVersion:r[6],engineReleaseDate:r[7],isDownstream:Boolean(r[5])}});` +
+    `const browsers=D.rows.map(r=>{const rk=r[0],onIos=rk.startsWith("ios:"),b=onIos?"safari_ios":rk.startsWith("blinka:")?"chrome_android":rk.startsWith("blink:")?"chrome":rk;return{browser:b,name:D.names[rk]||rk,version:r[1],onIos,pct:r[2],pctTotal:r[3],releaseDate:r[4],engine:r[5],engineVersion:r[6],engineReleaseDate:r[7],isDownstream:Boolean(r[5])}});` +
     `window.BASELINE_BROWSER_BREAKDOWN={windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:D.m,targets:D.targets,targetMinMaps:D.minMaps,browsers};` +
     `window.dispatchEvent(new CustomEvent("baseline-breakdown-ready",{detail:window.BASELINE_BROWSER_BREAKDOWN}))})();\n`;
 
@@ -1156,17 +1279,16 @@ export async function writeFeaturesBundle(breakdownPayload) {
       nonWvMappedPageLoads += loads;
     }
 
-    const coreBrowser =
-      b.browser === "opera"
+    const coreBrowser = CORE_FEATURE_BROWSERS.includes(b.browser)
+      ? b.browser
+      : b.browser === "opera"
         ? "chrome"
         : b.browser === "kai_os"
           ? "firefox_android"
-          : b.isDownstream
-            ? "chrome_android"
-            : b.browser;
-    const effectiveVersion = b.isDownstream
-      ? b.engineVersion || (b.browser === "webview_android" ? b.version : null)
-      : b.version;
+          : "chrome_android";
+    const effectiveVersion = CORE_FEATURE_BROWSERS.includes(b.browser)
+      ? b.version
+      : b.engineVersion || (b.browser === "webview_android" ? b.version : null);
     if (!effectiveVersion) continue;
 
     let coreMap = byCoreBrowser.get(coreBrowser);
@@ -2515,13 +2637,13 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
 
   const effectiveLookups = lookups || buildBbmLookups();
 
-  /** @type {Map<string, { totalPageLoads: number, mappedPageLoads: number, byBrowserVer: Map<string, { browser: string, rowKey: string, iosApp: string | null, version: string, pageLoads: number }> }>} */
+  /** @type {Map<string, { totalPageLoads: number, mappedPageLoads: number, byBrowserVer: Map<string, { browser: string, rowKey: string, iosApp: string | null, blinkApp: string | null, version: string, pageLoads: number }> }>} */
   const byCountry = new Map();
   /** @type {Map<string, { browser: string, version: string }>} */
   const allBrowserVers = new Map();
   /** @type {Map<string, string>} */
-  const iosAppNames = new Map();
-  /** @type {Map<string, { browser: string, version: string, iosApp?: string } | null>} */
+  const customBrowserNames = new Map();
+  /** @type {Map<string, { browser: string, version: string, iosApp?: string, blinkApp?: string } | null>} */
   const uaResolveCache = new Map();
 
   for (const fileName of recentFiles) {
@@ -2572,9 +2694,12 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
 
       cBucket.mappedPageLoads += count;
       const iosApp = resolved.iosApp || null;
-      const rowKey = iosApp ? `ios:${iosApp}` : resolved.browser;
+      const blinkApp = resolved.blinkApp || null;
+      const rowKey = getBreakdownRowKey(resolved);
       if (iosApp) {
-        iosAppNames.set(rowKey, effectiveLookups.shortToFamily[iosApp] || iosApp);
+        customBrowserNames.set(rowKey, effectiveLookups.shortToFamily[iosApp] || iosApp);
+      } else if (blinkApp) {
+        customBrowserNames.set(rowKey, effectiveLookups.shortToFamily[blinkApp] || blinkApp);
       }
       const metaKey = `${resolved.browser}|${resolved.version}`;
       if (!allBrowserVers.has(metaKey)) {
@@ -2590,6 +2715,7 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
           browser: resolved.browser,
           rowKey,
           iosApp,
+          blinkApp,
           version: resolved.version,
           pageLoads: count,
         });
@@ -2718,11 +2844,15 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
             name: effectiveLookups.shortToFamily[item.iosApp] || item.iosApp,
             onIos: true,
           }
-        : {}),
+        : item.blinkApp
+          ? {
+              name: effectiveLookups.shortToFamily[item.blinkApp] || item.blinkApp,
+            }
+          : {}),
       version: item.version,
       pageLoads: item.pageLoads,
-      pct: mappedPageLoads > 0 ? round4((item.pageLoads / mappedPageLoads) * 100) : 0,
-      pctTotal: totalPageLoads > 0 ? round4((item.pageLoads / totalPageLoads) * 100) : 0,
+      pct: mappedPageLoads > 0 ? roundShare((item.pageLoads / mappedPageLoads) * 100) : 0,
+      pctTotal: totalPageLoads > 0 ? roundShare((item.pageLoads / totalPageLoads) * 100) : 0,
     }));
 
     countries[code] = {
@@ -2748,7 +2878,7 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
         bvIndexByKey.set(catKey, bvIdx);
         bvCatalog.push([rk, b.version]);
       }
-      packedRows.push(bvIdx, Math.round(b.pct * 10000));
+      packedRows.push(bvIdx, b.pct > 0 ? Math.max(1, Math.round(b.pct * 1e6)) : 0);
     }
 
     compactCountries[code] = {
@@ -2794,7 +2924,7 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
     e: endDate,
     names: {
       ...BBM_BROWSER_NAMES,
-      ...Object.fromEntries(iosAppNames),
+      ...Object.fromEntries(customBrowserNames),
     },
     targets: targetsList,
     minMaps: targetMinMaps,
@@ -2804,10 +2934,10 @@ export async function writeCountryBrowserBreakdownBundle(lookups) {
   };
 
   const countryBreakdownJs =
-    `(()=>{const D=${JSON.stringify(compactClientPayload)},cache={};` +
+    `(()=>{const D=${JSON.stringify(compactClientPayload)},cache={},rs=v=>v<=0?0:v>=1e-4?Math.round(v*1e4)/1e4:Number(v.toPrecision(2));` +
     `function getCountryBreakdown(code){if(cache[code])return cache[code];const C=D.c[code];if(!C)return null;` +
-    `const browsers=[],R=C.r,mFactor=C.m/100;for(let i=0;i<R.length;i+=2){const bv=D.bv[R[i]],pct=R[i+1]/1e4,pctTotal=Math.round(pct*mFactor*1e4)/1e4,rk=bv[0],ver=bv[1],onIos=rk.startsWith("ios:"),b=onIos?"safari_ios":rk,m=D.meta[b+"|"+ver]||[null,null,null,null];` +
-    `browsers.push({browser:b,name:D.names[rk]||rk,version:ver,onIos,pct,pctTotal,releaseDate:m[0],engine:m[1],engineVersion:m[2],engineReleaseDate:m[3],isDownstream:Boolean(m[1])})}` +
+    `const browsers=[],R=C.r,mFactor=C.m/100;for(let i=0;i<R.length;i+=2){const bv=D.bv[R[i]],pct=rs(R[i+1]/1e6),pctTotal=rs(pct*mFactor),rk=bv[0],ver=bv[1],onIos=rk.startsWith("ios:"),isBlink=rk.startsWith("blinka:")||rk.startsWith("blink:"),b=onIos?"safari_ios":rk.startsWith("blinka:")?"chrome_android":rk.startsWith("blink:")?"chrome":rk,m=D.meta[b+"|"+ver]||[null,null,null,null],rel=onIos||isBlink?null:m[0],eng=onIos?"WebKit":isBlink?"Blink":m[1],engVer=onIos||isBlink?ver:m[2],engRel=onIos||isBlink?m[0]:m[3];` +
+    `browsers.push({browser:b,name:D.names[rk]||rk,version:ver,onIos,pct,pctTotal,releaseDate:rel,engine:eng,engineVersion:engVer,engineReleaseDate:engRel,isDownstream:Boolean(eng)})}` +
     `return(cache[code]={code,share:C.s,windowDays:D.w,startDate:D.s,endDate:D.e,mappedPercentage:C.m,targets:D.targets,targetMinMaps:D.minMaps,browsers})}` +
     `window.BASELINE_COUNTRY_BREAKDOWN={windowDays:D.w,startDate:D.s,endDate:D.e,targets:D.targets,targetMinMaps:D.minMaps,getCountry:getCountryBreakdown};` +
     `window.dispatchEvent(new CustomEvent("baseline-country-breakdown-ready",{detail:window.BASELINE_COUNTRY_BREAKDOWN}))})();\n`;

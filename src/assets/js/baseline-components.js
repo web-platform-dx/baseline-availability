@@ -132,6 +132,12 @@ function round4(val) {
   return Math.round(val * 10000) / 10000;
 }
 
+function roundShare(val) {
+  if (!Number.isFinite(val) || val <= 0) return 0;
+  if (val >= 0.0001) return Math.round(val * 10000) / 10000;
+  return Number(val.toPrecision(2));
+}
+
 function meanRound2(arr) {
   if (!arr || arr.length === 0) return 0;
   return round2(arr.reduce((a, b) => a + b, 0) / arr.length);
@@ -229,7 +235,7 @@ function ensureNonWebviewBreakdown(breakdownData) {
       b.pctNoWv = 0;
     } else {
       b.pctNoWv =
-        nonWvPctSum > 0 ? round4((Number(b.pct || 0) / nonWvPctSum) * 100) : 0;
+        nonWvPctSum > 0 ? roundShare((Number(b.pct || 0) / nonWvPctSum) * 100) : 0;
     }
   }
 
@@ -518,7 +524,7 @@ function computeRegionBreakdownData(cacheKey, meta) {
     mappedWeight += mW;
 
     for (const b of entry.breakdown.browsers || []) {
-      const bvKey = `${b.browser}|${b.onIos ? b.name : ""}|${b.version}`;
+      const bvKey = `${b.browser}|${b.name}|${b.onIos ? "1" : "0"}|${b.version}`;
       const bWeight = w * (Number(b.pctTotal || 0) / 100);
       const existing = byBrowserVer.get(bvKey);
       if (existing) {
@@ -552,8 +558,8 @@ function computeRegionBreakdownData(cacheKey, meta) {
       engineVersion: item.engineVersion,
       engineReleaseDate: item.engineReleaseDate,
       isDownstream: item.isDownstream,
-      pct: mappedWeight > 0 ? round4((item.weight / mappedWeight) * 100) : 0,
-      pctTotal: totalWeight > 0 ? round4((item.weight / totalWeight) * 100) : 0,
+      pct: mappedWeight > 0 ? roundShare((item.weight / mappedWeight) * 100) : 0,
+      pctTotal: totalWeight > 0 ? roundShare((item.weight / totalWeight) * 100) : 0,
     }));
 
   const result = ensureNonWebviewBreakdown({
@@ -3306,7 +3312,7 @@ class BaselineBrowserBreakdown extends HTMLElement {
 
   formatBrowserLabel(b) {
     if (b.onIos) {
-      return `${b.name} (on iOS ${b.version})`;
+      return `${b.name} on iOS ${b.version}`;
     }
     return `${b.name} ${b.version}`;
   }
