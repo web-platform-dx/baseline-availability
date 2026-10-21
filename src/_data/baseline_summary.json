@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-21T10:53:49.040Z",
-  "dayCount": 13,
+  "generatedAt": "2026-10-21T11:32:48.506Z",
+  "dayCount": 22,
   "startDate": "2026-09-28",
-  "endDate": "2026-10-10",
+  "endDate": "2026-10-19",
   "recentWindowDays": 7,
-  "recentStartDate": "2026-10-04",
-  "recentEndDate": "2026-10-10",
-  "avgMappedPercentage": 89.37,
-  "bundleSizeBytes": 3398,
+  "recentStartDate": "2026-10-13",
+  "recentEndDate": "2026-10-19",
+  "avgMappedPercentage": 93.02,
+  "bundleSizeBytes": 5112,
   "rows": [
     {
       "id": "widely",
@@ -15,12 +15,12 @@
       "label": "Widely available",
       "kind": "widely",
       "year": null,
-      "avgPercentage": 90.04,
-      "avgPercentageOfTotal": 80.47,
-      "avgAndroidWebviewPercentage": 8.11,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 89.05,
-      "delta7": -0.77
+      "avgPercentage": 89.61,
+      "avgPercentageOfTotal": 83.34,
+      "avgAndroidWebviewPercentage": 7.73,
+      "avgIosWebviewPercentage": 0.61,
+      "latestPercentage": 89.3,
+      "delta7": -1.16
     },
     {
       "id": "newly",
@@ -28,12 +28,12 @@
       "label": "Newly available",
       "kind": "newly",
       "year": null,
-      "avgPercentage": 53.85,
-      "avgPercentageOfTotal": 48.13,
-      "avgAndroidWebviewPercentage": 12.33,
+      "avgPercentage": 53.05,
+      "avgPercentageOfTotal": 49.28,
+      "avgAndroidWebviewPercentage": 11.73,
       "avgIosWebviewPercentage": 0,
-      "latestPercentage": 52.22,
-      "delta7": 0.56
+      "latestPercentage": 52.43,
+      "delta7": -2.92
     },
     {
       "id": "2026",
@@ -41,12 +41,12 @@
       "label": "Baseline 2026",
       "kind": "year",
       "year": 2026,
-      "avgPercentage": 53.85,
-      "avgPercentageOfTotal": 48.13,
-      "avgAndroidWebviewPercentage": 12.33,
+      "avgPercentage": 53.05,
+      "avgPercentageOfTotal": 49.28,
+      "avgAndroidWebviewPercentage": 11.73,
       "avgIosWebviewPercentage": 0,
-      "latestPercentage": 52.22,
-      "delta7": 0.56
+      "latestPercentage": 52.43,
+      "delta7": -2.92
     },
     {
       "id": "2025",
@@ -54,12 +54,12 @@
       "label": "Baseline 2025",
       "kind": "year",
       "year": 2025,
-      "avgPercentage": 80.49,
-      "avgPercentageOfTotal": 71.93,
-      "avgAndroidWebviewPercentage": 8.65,
+      "avgPercentage": 79.02,
+      "avgPercentageOfTotal": 73.46,
+      "avgAndroidWebviewPercentage": 8.36,
       "avgIosWebviewPercentage": 0,
-      "latestPercentage": 78.83,
-      "delta7": -1.21
+      "latestPercentage": 78.04,
+      "delta7": -2.78
     },
     {
       "id": "2024",
@@ -67,12 +67,12 @@
       "label": "Baseline 2024",
       "kind": "year",
       "year": 2024,
-      "avgPercentage": 87.72,
-      "avgPercentageOfTotal": 78.39,
-      "avgAndroidWebviewPercentage": 8.28,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 86.69,
-      "delta7": -0.6
+      "avgPercentage": 87.51,
+      "avgPercentageOfTotal": 81.39,
+      "avgAndroidWebviewPercentage": 7.88,
+      "avgIosWebviewPercentage": 0.62,
+      "latestPercentage": 87.72,
+      "delta7": -0.46
     },
     {
       "id": "2023",
@@ -80,12 +80,12 @@
       "label": "Baseline 2023",
       "kind": "year",
       "year": 2023,
-      "avgPercentage": 91.61,
-      "avgPercentageOfTotal": 81.87,
-      "avgAndroidWebviewPercentage": 7.98,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 90.94,
-      "delta7": -0.35
+      "avgPercentage": 91.4,
+      "avgPercentageOfTotal": 85.02,
+      "avgAndroidWebviewPercentage": 7.59,
+      "avgIosWebviewPercentage": 0.6,
+      "latestPercentage": 91.47,
+      "delta7": -0.24
     },
     {
       "id": "2022",
@@ -93,12 +93,12 @@
       "label": "Baseline 2022",
       "kind": "year",
       "year": 2022,
-      "avgPercentage": 96.14,
-      "avgPercentageOfTotal": 85.92,
-      "avgAndroidWebviewPercentage": 7.88,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 95.89,
-      "delta7": 0.02
+      "avgPercentage": 95.93,
+      "avgPercentageOfTotal": 89.23,
+      "avgAndroidWebviewPercentage": 7.49,
+      "avgIosWebviewPercentage": 0.58,
+      "latestPercentage": 96.02,
+      "delta7": 0.17
     },
     {
       "id": "2021",
@@ -106,12 +106,12 @@
       "label": "Baseline 2021",
       "kind": "year",
       "year": 2021,
-      "avgPercentage": 98.59,
-      "avgPercentageOfTotal": 88.11,
-      "avgAndroidWebviewPercentage": 8.21,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 98.36,
-      "delta7": -0.26
+      "avgPercentage": 98.13,
+      "avgPercentageOfTotal": 91.28,
+      "avgAndroidWebviewPercentage": 7.66,
+      "avgIosWebviewPercentage": 0.57,
+      "latestPercentage": 98.2,
+      "delta7": 0.09
     },
     {
       "id": "2020",
@@ -119,12 +119,12 @@
       "label": "Baseline 2020",
       "kind": "year",
       "year": 2020,
-      "avgPercentage": 99.16,
-      "avgPercentageOfTotal": 88.62,
-      "avgAndroidWebviewPercentage": 8.22,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 98.96,
-      "delta7": -0.27
+      "avgPercentage": 98.69,
+      "avgPercentageOfTotal": 91.8,
+      "avgAndroidWebviewPercentage": 7.67,
+      "avgIosWebviewPercentage": 0.57,
+      "latestPercentage": 98.74,
+      "delta7": 0.08
     },
     {
       "id": "2019",
@@ -132,12 +132,12 @@
       "label": "Baseline 2019",
       "kind": "year",
       "year": 2019,
-      "avgPercentage": 99.74,
-      "avgPercentageOfTotal": 89.14,
-      "avgAndroidWebviewPercentage": 8.23,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 99.71,
-      "delta7": -0.03
+      "avgPercentage": 99.76,
+      "avgPercentageOfTotal": 92.79,
+      "avgAndroidWebviewPercentage": 8.07,
+      "avgIosWebviewPercentage": 0.56,
+      "latestPercentage": 99.76,
+      "delta7": 0
     },
     {
       "id": "2018",
@@ -145,11 +145,11 @@
       "label": "Baseline 2018",
       "kind": "year",
       "year": 2018,
-      "avgPercentage": 99.76,
-      "avgPercentageOfTotal": 89.16,
-      "avgAndroidWebviewPercentage": 8.23,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 99.75,
+      "avgPercentage": 99.8,
+      "avgPercentageOfTotal": 92.83,
+      "avgAndroidWebviewPercentage": 8.07,
+      "avgIosWebviewPercentage": 0.57,
+      "latestPercentage": 99.79,
       "delta7": 0
     },
     {
@@ -158,12 +158,12 @@
       "label": "Baseline 2017",
       "kind": "year",
       "year": 2017,
-      "avgPercentage": 99.79,
-      "avgPercentageOfTotal": 89.18,
-      "avgAndroidWebviewPercentage": 8.23,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 99.79,
-      "delta7": 0.01
+      "avgPercentage": 99.85,
+      "avgPercentageOfTotal": 92.88,
+      "avgAndroidWebviewPercentage": 8.06,
+      "avgIosWebviewPercentage": 0.56,
+      "latestPercentage": 99.84,
+      "delta7": 0
     },
     {
       "id": "2016",
@@ -171,12 +171,12 @@
       "label": "Baseline 2016",
       "kind": "year",
       "year": 2016,
-      "avgPercentage": 99.85,
-      "avgPercentageOfTotal": 89.25,
-      "avgAndroidWebviewPercentage": 8.23,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 99.86,
-      "delta7": 0.02
+      "avgPercentage": 99.9,
+      "avgPercentageOfTotal": 92.92,
+      "avgAndroidWebviewPercentage": 8.07,
+      "avgIosWebviewPercentage": 0.56,
+      "latestPercentage": 99.89,
+      "delta7": 0
     },
     {
       "id": "2015",
@@ -184,12 +184,12 @@
       "label": "Baseline 2015",
       "kind": "year",
       "year": 2015,
-      "avgPercentage": 99.94,
-      "avgPercentageOfTotal": 89.31,
-      "avgAndroidWebviewPercentage": 8.23,
-      "avgIosWebviewPercentage": 0,
-      "latestPercentage": 99.93,
-      "delta7": 0
+      "avgPercentage": 99.95,
+      "avgPercentageOfTotal": 92.97,
+      "avgAndroidWebviewPercentage": 8.06,
+      "avgIosWebviewPercentage": 0.56,
+      "latestPercentage": 99.94,
+      "delta7": -0.01
     }
   ]
 }
