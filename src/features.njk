@@ -1,14 +1,14 @@
 ---
 layout: layouts/base.njk
 title: Features — Baseline Availability
-description: Explore real-world browser support percentages for individual web platform features from the web-features catalog based on Cloudflare RUM Archive data.
+description: Explore real-world browser support percentages for individual web platform features from the web-features catalog based on Cloudflare BEACON RUM Archive data.
 includeFeaturesBundle: true
 ---
 
 <section class="hero-section" aria-labelledby="page-main-heading">
   <h1 id="page-main-heading" class="sr-only">Web Platform Features Availability</h1>
   <p class="lead">
-    Real-world user availability for individual web platform features from the <a href="https://github.com/web-platform-dx/web-features" rel="noopener noreferrer" target="_blank"><code>web-features</code><span class="sr-only"> (opens in a new tab)</span></a> catalog, precalculated against Cloudflare RUM Archive traffic.
+    Real-world user availability for individual web platform features from the <a href="https://github.com/web-platform-dx/web-features" rel="noopener noreferrer" target="_blank"><code>web-features</code><span class="sr-only"> (opens in a new tab)</span></a> catalog, precalculated against Cloudflare BEACON RUM Archive traffic.
   </p>
   {% include "partials/hero-location-filter.njk" %}
 </section>
@@ -229,6 +229,18 @@ includeFeaturesBundle: true
 
       <div class="sr-only" aria-live="polite" aria-atomic="true" data-features-live-region></div>
 
+      <svg class="sr-only" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+          <symbol id="icon-copy-link-chain" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.75 9.25a3.18 3.18 0 0 0 4.5 0l2-2a3.18 3.18 0 0 0-4.5-4.5l-1.1 1.1"></path>
+            <path d="M9.25 6.75a3.18 3.18 0 0 0-4.5 0l-2 2a3.18 3.18 0 0 0 4.5 4.5l1.1-1.1"></path>
+          </symbol>
+          <symbol id="icon-copy-link-check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3.5 8.5 6.5 11.5 12.5 4.5"></polyline>
+          </symbol>
+        </defs>
+      </svg>
+
       {% set coreBrowserCols = [
         { id: "chrome", short: "Chrome" },
         { id: "chrome_android", short: "Chrome And." },
@@ -241,7 +253,7 @@ includeFeaturesBundle: true
       <div class="table-wrapper features-table-wrapper">
         <table class="data-table features-table" id="baseline-features-table">
           <caption class="sr-only" data-features-caption>
-            Web platform features availability across RUM Archive browser traffic
+            Web platform features availability across Cloudflare BEACON RUM Archive browser traffic
           </caption>
           <thead>
             <tr>
@@ -271,6 +283,18 @@ includeFeaturesBundle: true
                 <th scope="row" class="feature-name-cell">
                   <div class="feature-title-row">
                     <span class="feature-name-text">{{ f.name }}</span>
+                    <button
+                      type="button"
+                      class="section-link-btn feature-link-btn"
+                      data-copy-feature-link="{{ f.id }}"
+                      data-feature-name="{{ f.name }}"
+                      aria-label="Copy link to {{ f.name }}"
+                      title="Copy link to {{ f.name }}"
+                    >
+                      <svg class="section-link-icon section-link-icon-chain" width="14" height="14" aria-hidden="true"><use href="#icon-copy-link-chain"></use></svg>
+                      <svg class="section-link-icon section-link-icon-check" width="14" height="14" aria-hidden="true"><use href="#icon-copy-link-check"></use></svg>
+                      <span class="section-link-copied-badge" aria-hidden="true">Copied!</span>
+                    </button>
                     <code class="feature-id-badge">{{ f.id }}</code>
                     {%- if f.groupPath or f.groupName %}
                       <span class="feature-group-badge">{{ f.groupPath or f.groupName }}</span>

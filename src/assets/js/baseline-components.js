@@ -111,6 +111,16 @@ const viewState = {
     includedItems: [],
     excludedItems: [],
   },
+  featureFilters: {
+    q: "",
+    status: "all",
+    year: "all",
+    group: "all",
+    availOp: "all",
+    availVal: null,
+    availMax: null,
+    sort: "pct-desc",
+  },
 };
 
 function notifyStateChange(source) {
@@ -772,6 +782,20 @@ function syncDrawerLinksWithUrl() {
   try {
     const currentParams = new URLSearchParams(window.location.search);
     const sharedKeys = ["country", "region", "exclude", "target", "webviews"];
+    const featureKeys = [
+      "q",
+      "search",
+      "feature",
+      "filter",
+      "status",
+      "year",
+      "group",
+      "category",
+      "avail",
+      "min_avail",
+      "max_avail",
+      "sort",
+    ];
     const sharedParams = new URLSearchParams();
     for (const key of sharedKeys) {
       const val = currentParams.get(key);
@@ -779,9 +803,17 @@ function syncDrawerLinksWithUrl() {
         sharedParams.set(key, val);
       }
     }
-    const queryStr = sharedParams.toString();
+    const featuresParams = new URLSearchParams(sharedParams);
+    for (const key of featureKeys) {
+      const val = currentParams.get(key);
+      if (val) {
+        featuresParams.set(key, val);
+      }
+    }
     document.querySelectorAll(".Drawer-list a.Drawer-link[href]").forEach((link) => {
       const linkUrl = new URL(link.getAttribute("href"), window.location.origin);
+      const isFeaturesLink = linkUrl.pathname.includes("/features");
+      const queryStr = (isFeaturesLink ? featuresParams : sharedParams).toString();
       linkUrl.search = queryStr ? `?${queryStr}` : "";
       link.setAttribute("href", `${linkUrl.pathname}${linkUrl.search}`);
     });
@@ -791,69 +823,135 @@ function syncDrawerLinksWithUrl() {
 }
 
 /**
- * Pushes a new browser history entry reflecting the current location (`?country=`, `?region=`, `?exclude=`),
- * WebView mode (`?webviews=exclude`), and selected Baseline target (`?target=`) filters so browser
- * Back/Forward and copied section links preserve all active filters.
+ * Builds a `URL` object for the current page reflecting all active filters in `viewState`:
+ * location (`?country=`, `?region=`, `?exclude=`), WebView mode (`?webviews=exclude`),
+ * selected Baseline target (`?target=`), and Features view filters (`?q=`, `?status=`,
+ * `?group=`, `?avail=`, `?min_avail=`, `?max_avail=`, `?sort=`).
+ * @param {{ qOverride?: string, clearHash?: boolean }} [options]
+ * @returns {URL}
  */
-function pushUrlState() {
+function buildUrlWithActiveState(options = {}) {
+  const url = new URL(window.location.href);
+  if (options.clearHash) {
+    url.hash = "";
+  }
+  url.searchParams.delete("country");
+  url.searchParams.delete("region");
+  url.searchParams.delete("exclude");
+  url.searchParams.delete("target");
+  url.searchParams.delete("webviews");
+
+  const locVal = viewState.locationValue || "all";
+  const locMeta = viewState.locationMeta || {};
+  if (locVal !== "all") {
+    const incItems = Array.isArray(locMeta.includedItems) ? locMeta.includedItems : [];
+    const excItems = Array.isArray(locMeta.excludedItems) ? locMeta.excludedItems : [];
+
+    const incCountries = incItems
+      .filter((it) => it.kind === "country" && it.code)
+      .map((it) => it.code);
+    const incRegions = incItems
+      .filter((it) => it.kind === "region")
+      .map((it) => slugifyLocationName(it.name) || it.code)
+      .filter(Boolean);
+    const excTokens = excItems
+      .map((it) => (it.kind === "country" ? it.code : slugifyLocationName(it.name) || it.code))
+      .filter(Boolean);
+
+    if (incCountries.length > 0) {
+      url.searchParams.set("country", incCountries.join(","));
+    }
+    if (incRegions.length > 0) {
+      url.searchParams.set("region", incRegions.join(","));
+    }
+    if (excTokens.length > 0) {
+      url.searchParams.set("exclude", excTokens.join(","));
+    }
+  }
+
+  if (viewState.urlTargetId) {
+    url.searchParams.set("target", viewState.urlTargetId);
+  }
+
+  if (viewState.webviewMode === "exclude") {
+    url.searchParams.set("webviews", "exclude");
+  }
+
+  if (document.querySelector("baseline-features-explorer")) {
+    url.searchParams.delete("q");
+    url.searchParams.delete("search");
+    url.searchParams.delete("feature");
+    url.searchParams.delete("filter");
+    url.searchParams.delete("status");
+    url.searchParams.delete("year");
+    url.searchParams.delete("group");
+    url.searchParams.delete("category");
+    url.searchParams.delete("avail");
+    url.searchParams.delete("min_avail");
+    url.searchParams.delete("max_avail");
+    url.searchParams.delete("sort");
+
+    const ff = viewState.featureFilters || {};
+    const qVal =
+      typeof options.qOverride === "string" ? options.qOverride : ff.q || "";
+    if (qVal) {
+      url.searchParams.set("q", qVal);
+    }
+    if (ff.status && ff.status !== "all" && ff.year && ff.year !== "all") {
+      url.searchParams.set("status", ff.status);
+    }
+    if (ff.group && ff.group !== "all") {
+      url.searchParams.set("group", ff.group);
+    }
+    if (ff.availOp && ff.availOp !== "all") {
+      if (ff.availOp === "between") {
+        if (ff.availVal !== null && ff.availVal !== undefined) {
+          url.searchParams.set("min_avail", String(ff.availVal));
+        }
+        if (ff.availMax !== null && ff.availMax !== undefined) {
+          url.searchParams.set("max_avail", String(ff.availMax));
+        }
+      } else if (ff.availVal !== null && ff.availVal !== undefined) {
+        url.searchParams.set("avail", `${ff.availOp}:${ff.availVal}`);
+      }
+    }
+    if (ff.sort && ff.sort !== "pct-desc") {
+      url.searchParams.set("sort", ff.sort);
+    }
+  } else if (typeof options.qOverride === "string" && options.qOverride) {
+    url.searchParams.set("q", options.qOverride);
+  }
+
+  return url;
+}
+
+/**
+ * Pushes (or replaces) a browser history entry reflecting the current location (`?country=`, `?region=`, `?exclude=`),
+ * WebView mode (`?webviews=exclude`), selected Baseline target (`?target=`), and Features view filters
+ * (`?q=`, `?status=`, `?group=`, `?avail=`, `?min_avail=`, `?max_avail=`, `?sort=`) so browser
+ * Back/Forward and shared/copied links preserve all active filters.
+ * @param {{ replace?: boolean }} [options]
+ */
+function pushUrlState(options = {}) {
   if (!window.history || typeof window.history.pushState !== "function") {
     return;
   }
+  const replace = Boolean(options && options.replace);
   try {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("country");
-    url.searchParams.delete("region");
-    url.searchParams.delete("exclude");
-    url.searchParams.delete("target");
-    url.searchParams.delete("webviews");
-
-    const locVal = viewState.locationValue || "all";
-    const locMeta = viewState.locationMeta || {};
-    if (locVal !== "all") {
-      const incItems = Array.isArray(locMeta.includedItems) ? locMeta.includedItems : [];
-      const excItems = Array.isArray(locMeta.excludedItems) ? locMeta.excludedItems : [];
-
-      const incCountries = incItems
-        .filter((it) => it.kind === "country" && it.code)
-        .map((it) => it.code);
-      const incRegions = incItems
-        .filter((it) => it.kind === "region")
-        .map((it) => slugifyLocationName(it.name) || it.code)
-        .filter(Boolean);
-      const excTokens = excItems
-        .map((it) => (it.kind === "country" ? it.code : slugifyLocationName(it.name) || it.code))
-        .filter(Boolean);
-
-      if (incCountries.length > 0) {
-        url.searchParams.set("country", incCountries.join(","));
-      }
-      if (incRegions.length > 0) {
-        url.searchParams.set("region", incRegions.join(","));
-      }
-      if (excTokens.length > 0) {
-        url.searchParams.set("exclude", excTokens.join(","));
-      }
-    }
-
-    if (viewState.urlTargetId) {
-      url.searchParams.set("target", viewState.urlTargetId);
-    }
-
-    if (viewState.webviewMode === "exclude") {
-      url.searchParams.set("webviews", "exclude");
-    }
-
+    const url = buildUrlWithActiveState();
     const nextHref = url.toString();
     if (nextHref !== window.location.href) {
-      window.history.pushState(
-        {
-          locationValue: viewState.locationValue,
-          targetId: viewState.urlTargetId,
-          webviewMode: viewState.webviewMode,
-        },
-        "",
-        nextHref
-      );
+      const stateObj = {
+        locationValue: viewState.locationValue,
+        targetId: viewState.urlTargetId,
+        webviewMode: viewState.webviewMode,
+        featureFilters: viewState.featureFilters ? { ...viewState.featureFilters } : undefined,
+      };
+      if (replace && typeof window.history.replaceState === "function") {
+        window.history.replaceState(stateObj, "", nextHref);
+      } else {
+        window.history.pushState(stateObj, "", nextHref);
+      }
     }
     syncDrawerLinksWithUrl();
   } catch {
@@ -3992,27 +4090,20 @@ class BaselineFeaturesExplorer extends HTMLElement {
     this.locationValue = viewState.locationValue || "all";
     this.locationMeta = viewState.locationMeta;
 
-    // Initialize filters from URL ?target= if present
+    // Initialize filters (populated from URL in applyFiltersFromUrl)
     this.statusFilter = "all";
     this.yearFilter = "all";
     this.groupFilter = "all";
+    this.searchRaw = "";
     this.searchQuery = "";
     this.sortOrder = "pct-desc";
     this.availOp = "all";
     this.availVal = null;
     this.availMax = null;
-
-    if (viewState.urlTargetId) {
-      if (
-        viewState.urlTargetId === "widely" ||
-        viewState.urlTargetId === "newly" ||
-        viewState.urlTargetId === "limited"
-      ) {
-        this.statusFilter = viewState.urlTargetId;
-      } else if (/^\d{4}$/.test(viewState.urlTargetId)) {
-        this.yearFilter = viewState.urlTargetId;
-      }
-    }
+    this._searchTypingActive = false;
+    this._searchTypingTimer = null;
+    this._availTypingActive = false;
+    this._availTypingTimer = null;
 
     this.scopeBadgeEl = this.querySelector("[data-scope-badge]");
     this.subtitleEl = this.querySelector("[data-features-subtitle]");
@@ -4055,6 +4146,7 @@ class BaselineFeaturesExplorer extends HTMLElement {
     this.pendingRenderHandle = null;
     this.pendingRenderUsingIdle = false;
 
+    this.applyFiltersFromUrl();
     this.bindEvents();
     this.syncFilterControlsUi();
     this.updateView(false);
@@ -4091,6 +4183,69 @@ class BaselineFeaturesExplorer extends HTMLElement {
     nameSpan.className = "feature-name-text";
     nameSpan.textContent = f.name;
     titleRow.appendChild(nameSpan);
+
+    const copyLinkBtn = document.createElement("button");
+    copyLinkBtn.type = "button";
+    copyLinkBtn.className = "section-link-btn feature-link-btn";
+    copyLinkBtn.setAttribute("data-copy-feature-link", f.id);
+    copyLinkBtn.setAttribute("data-feature-name", f.name);
+    copyLinkBtn.setAttribute("aria-label", `Copy link to ${f.name}`);
+    copyLinkBtn.setAttribute("title", `Copy link to ${f.name}`);
+
+    const chainSvg = createSvgEl("svg", {
+      class: "section-link-icon section-link-icon-chain",
+      viewBox: "0 0 16 16",
+      width: 14,
+      height: 14,
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "1.75",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "aria-hidden": "true",
+    });
+    if (document.getElementById("icon-copy-link-chain")) {
+      chainSvg.appendChild(createSvgEl("use", { href: "#icon-copy-link-chain" }));
+    } else {
+      chainSvg.appendChild(
+        createSvgEl("path", {
+          d: "M6.75 9.25a3.18 3.18 0 0 0 4.5 0l2-2a3.18 3.18 0 0 0-4.5-4.5l-1.1 1.1",
+        })
+      );
+      chainSvg.appendChild(
+        createSvgEl("path", {
+          d: "M9.25 6.75a3.18 3.18 0 0 0-4.5 0l-2 2a3.18 3.18 0 0 0 4.5 4.5l1.1-1.1",
+        })
+      );
+    }
+    copyLinkBtn.appendChild(chainSvg);
+
+    const checkSvg = createSvgEl("svg", {
+      class: "section-link-icon section-link-icon-check",
+      viewBox: "0 0 16 16",
+      width: 14,
+      height: 14,
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "aria-hidden": "true",
+    });
+    if (document.getElementById("icon-copy-link-check")) {
+      checkSvg.appendChild(createSvgEl("use", { href: "#icon-copy-link-check" }));
+    } else {
+      checkSvg.appendChild(createSvgEl("polyline", { points: "3.5 8.5 6.5 11.5 12.5 4.5" }));
+    }
+    copyLinkBtn.appendChild(checkSvg);
+
+    const copiedBadge = document.createElement("span");
+    copiedBadge.className = "section-link-copied-badge";
+    copiedBadge.setAttribute("aria-hidden", "true");
+    copiedBadge.textContent = "Copied!";
+    copyLinkBtn.appendChild(copiedBadge);
+
+    titleRow.appendChild(copyLinkBtn);
 
     const idCode = document.createElement("code");
     idCode.className = "feature-id-badge";
@@ -4325,7 +4480,7 @@ class BaselineFeaturesExplorer extends HTMLElement {
           // "limited" features don't have a Baseline year
           this.yearFilter = "all";
         }
-        this.syncUrlTarget();
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
       });
@@ -4358,6 +4513,7 @@ class BaselineFeaturesExplorer extends HTMLElement {
             if (this.availMaxInput) this.availMaxInput.value = "";
           }
         }
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
       });
@@ -4394,10 +4550,24 @@ class BaselineFeaturesExplorer extends HTMLElement {
             }
           }
         }
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
       });
     }
+
+    const triggerAvailInputUrlSync = () => {
+      const shouldReplace = Boolean(this._availTypingActive);
+      this._availTypingActive = true;
+      if (this._availTypingTimer) {
+        window.clearTimeout(this._availTypingTimer);
+      }
+      this._availTypingTimer = window.setTimeout(() => {
+        this._availTypingActive = false;
+        this._availTypingTimer = null;
+      }, 800);
+      this.syncUrlState({ replace: shouldReplace });
+    };
 
     if (this.availValInput) {
       this.availValInput.addEventListener("input", () => {
@@ -4416,8 +4586,12 @@ class BaselineFeaturesExplorer extends HTMLElement {
             }
           }
         }
+        triggerAvailInputUrlSync();
         this.syncFilterControlsUi();
         this.updateView(true);
+      });
+      this.availValInput.addEventListener("blur", () => {
+        this._availTypingActive = false;
       });
     }
 
@@ -4432,8 +4606,12 @@ class BaselineFeaturesExplorer extends HTMLElement {
             this.availMax = Math.min(100, Math.max(0, parsed));
           }
         }
+        triggerAvailInputUrlSync();
         this.syncFilterControlsUi();
         this.updateView(true);
+      });
+      this.availMaxInput.addEventListener("blur", () => {
+        this._availTypingActive = false;
       });
     }
 
@@ -4443,7 +4621,7 @@ class BaselineFeaturesExplorer extends HTMLElement {
         if (this.yearFilter !== "all" && this.statusFilter === "limited") {
           this.statusFilter = "all";
         }
-        this.syncUrlTarget();
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
       });
@@ -4452,6 +4630,7 @@ class BaselineFeaturesExplorer extends HTMLElement {
     if (this.groupSelect) {
       this.groupSelect.addEventListener("change", () => {
         this.groupFilter = this.groupSelect.value || "all";
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
       });
@@ -4460,6 +4639,7 @@ class BaselineFeaturesExplorer extends HTMLElement {
     if (this.sortSelect) {
       this.sortSelect.addEventListener("change", () => {
         this.sortOrder = this.sortSelect.value || "pct-desc";
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
       });
@@ -4467,16 +4647,48 @@ class BaselineFeaturesExplorer extends HTMLElement {
 
     if (this.searchInput) {
       this.searchInput.addEventListener("input", () => {
-        this.searchQuery = (this.searchInput.value || "").trim().toLowerCase();
+        this.searchRaw = (this.searchInput.value || "").trim();
+        this.searchQuery = this.searchRaw.toLowerCase();
+        const shouldReplace = Boolean(this._searchTypingActive);
+        this._searchTypingActive = true;
+        if (this._searchTypingTimer) {
+          window.clearTimeout(this._searchTypingTimer);
+        }
+        this._searchTypingTimer = window.setTimeout(() => {
+          this._searchTypingActive = false;
+          this._searchTypingTimer = null;
+        }, 800);
+        this.syncUrlState({ replace: shouldReplace });
         this.syncFilterControlsUi();
         this.updateView(true);
+      });
+      this.searchInput.addEventListener("change", () => {
+        this._searchTypingActive = false;
+        if (this._searchTypingTimer) {
+          window.clearTimeout(this._searchTypingTimer);
+          this._searchTypingTimer = null;
+        }
+      });
+      this.searchInput.addEventListener("blur", () => {
+        this._searchTypingActive = false;
+        if (this._searchTypingTimer) {
+          window.clearTimeout(this._searchTypingTimer);
+          this._searchTypingTimer = null;
+        }
       });
     }
 
     if (this.searchClearBtn && this.searchInput) {
       this.searchClearBtn.addEventListener("click", () => {
+        this._searchTypingActive = false;
+        if (this._searchTypingTimer) {
+          window.clearTimeout(this._searchTypingTimer);
+          this._searchTypingTimer = null;
+        }
         this.searchInput.value = "";
+        this.searchRaw = "";
         this.searchQuery = "";
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
         this.searchInput.focus();
@@ -4484,9 +4696,20 @@ class BaselineFeaturesExplorer extends HTMLElement {
     }
 
     const handleResetFilters = () => {
+      this._searchTypingActive = false;
+      if (this._searchTypingTimer) {
+        window.clearTimeout(this._searchTypingTimer);
+        this._searchTypingTimer = null;
+      }
+      this._availTypingActive = false;
+      if (this._availTypingTimer) {
+        window.clearTimeout(this._availTypingTimer);
+        this._availTypingTimer = null;
+      }
       this.statusFilter = "all";
       this.yearFilter = "all";
       this.groupFilter = "all";
+      this.searchRaw = "";
       this.searchQuery = "";
       this.availOp = "all";
       this.availVal = null;
@@ -4494,7 +4717,7 @@ class BaselineFeaturesExplorer extends HTMLElement {
       if (this.searchInput) this.searchInput.value = "";
       if (this.availValInput) this.availValInput.value = "";
       if (this.availMaxInput) this.availMaxInput.value = "";
-      this.syncUrlTarget();
+      this.syncUrlState();
       this.syncFilterControlsUi();
       this.updateView(true);
     };
@@ -4516,36 +4739,155 @@ class BaselineFeaturesExplorer extends HTMLElement {
         } else if (col === "date") {
           this.sortOrder = this.sortOrder === "date-desc" ? "date-asc" : "date-desc";
         }
+        this.syncUrlState();
         this.syncFilterControlsUi();
         this.updateView(true);
       });
     });
 
     window.addEventListener("popstate", () => {
-      const targetFromUrl = resolveTargetFromUrl();
-      viewState.urlTargetId = targetFromUrl;
-      if (!targetFromUrl) {
-        this.statusFilter = "all";
-        this.yearFilter = "all";
-      } else if (
-        targetFromUrl === "widely" ||
-        targetFromUrl === "newly" ||
-        targetFromUrl === "limited"
-      ) {
-        this.statusFilter = targetFromUrl;
-        this.yearFilter = "all";
-      } else if (/^\d{4}$/.test(targetFromUrl)) {
-        this.yearFilter = targetFromUrl;
-        if (this.statusFilter === "limited") {
-          this.statusFilter = "all";
-        }
+      this._searchTypingActive = false;
+      if (this._searchTypingTimer) {
+        window.clearTimeout(this._searchTypingTimer);
+        this._searchTypingTimer = null;
       }
+      this.webviewMode = resolveWebviewModeFromUrl();
+      this.applyFiltersFromUrl();
       this.syncFilterControlsUi();
       this.updateView(false);
     });
   }
 
-  syncUrlTarget() {
+  /**
+   * Reads feature filters (`?q=` / `?search=` / `?feature=` / `?filter=`, `?target=`, `?status=`,
+   * `?year=`, `?group=` / `?category=`, `?avail=`, `?min_avail=`, `?max_avail=`, `?sort=`)
+   * from the current URL query string and populates component state and input elements.
+   */
+  applyFiltersFromUrl() {
+    let params;
+    try {
+      params = new URLSearchParams(window.location.search);
+    } catch {
+      params = new URLSearchParams();
+    }
+
+    // 1. Search bar query (?q=, ?search=, ?feature=, ?filter=)
+    const rawSearch =
+      params.get("q") ??
+      params.get("search") ??
+      params.get("feature") ??
+      params.get("filter") ??
+      "";
+    this.searchRaw = rawSearch.trim();
+    this.searchQuery = this.searchRaw.toLowerCase();
+    if (this.searchInput && this.searchInput.value !== this.searchRaw) {
+      this.searchInput.value = this.searchRaw;
+    }
+
+    // 2. Baseline status & year (?target=, ?status=, ?year=)
+    const targetFromUrl = resolveTargetFromUrl();
+    viewState.urlTargetId = targetFromUrl;
+    this.statusFilter = "all";
+    this.yearFilter = "all";
+    if (
+      targetFromUrl === "widely" ||
+      targetFromUrl === "newly" ||
+      targetFromUrl === "limited"
+    ) {
+      this.statusFilter = targetFromUrl;
+    } else if (targetFromUrl && /^\d{4}$/.test(targetFromUrl)) {
+      this.yearFilter = targetFromUrl;
+    }
+
+    const rawStatus = (params.get("status") || "").trim().toLowerCase();
+    if (rawStatus === "widely" || rawStatus === "newly" || rawStatus === "limited") {
+      this.statusFilter = rawStatus;
+    }
+    const rawYear = (params.get("year") || "").trim();
+    if (/^\d{4}$/.test(rawYear) && VALID_TARGET_IDS.has(rawYear)) {
+      this.yearFilter = rawYear;
+    }
+    if (this.statusFilter === "limited" && this.yearFilter !== "all") {
+      this.yearFilter = "all";
+    }
+
+    // 3. Category / group (?group=, ?category=)
+    this.groupFilter = "all";
+    const rawGroup = (params.get("group") ?? params.get("category") ?? "").trim().toLowerCase();
+    if (rawGroup && rawGroup !== "all") {
+      const validGroups = Array.isArray(this.bundle?.groups)
+        ? this.bundle.groups.map((g) => String(g.id).toLowerCase())
+        : [];
+      if (validGroups.includes(rawGroup)) {
+        this.groupFilter = rawGroup;
+      }
+    }
+
+    // 4. User availability threshold / range (?avail=, ?min_avail=, ?max_avail=)
+    this.availOp = "all";
+    this.availVal = null;
+    this.availMax = null;
+    const rawAvail = (params.get("avail") || "").trim().toLowerCase();
+    const rawMinAvail = (params.get("min_avail") || "").trim();
+    const rawMaxAvail = (params.get("max_avail") || "").trim();
+    const clampPct = (n) => Math.min(100, Math.max(0, n));
+
+    if (rawMinAvail !== "" || rawMaxAvail !== "") {
+      const minNum = rawMinAvail !== "" ? Number(rawMinAvail) : null;
+      const maxNum = rawMaxAvail !== "" ? Number(rawMaxAvail) : null;
+      const validMin = minNum !== null && !Number.isNaN(minNum) ? clampPct(minNum) : null;
+      const validMax = maxNum !== null && !Number.isNaN(maxNum) ? clampPct(maxNum) : null;
+      if (validMin !== null && validMax !== null) {
+        this.availOp = "between";
+        this.availVal = validMin;
+        this.availMax = validMax;
+      } else if (validMin !== null) {
+        this.availOp = "gte";
+        this.availVal = validMin;
+      } else if (validMax !== null) {
+        this.availOp = "lte";
+        this.availVal = validMax;
+      }
+    } else if (rawAvail && rawAvail !== "all") {
+      const betweenMatch = rawAvail.match(/^between:(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/);
+      const opMatch = rawAvail.match(/^(gte|gt|lte|lt):(\d+(?:\.\d+)?)$/);
+      const numMatch = rawAvail.match(/^(\d+(?:\.\d+)?)$/);
+      if (betweenMatch) {
+        this.availOp = "between";
+        this.availVal = clampPct(Number(betweenMatch[1]));
+        this.availMax = clampPct(Number(betweenMatch[2]));
+      } else if (opMatch) {
+        this.availOp = opMatch[1];
+        this.availVal = clampPct(Number(opMatch[2]));
+      } else if (numMatch) {
+        this.availOp = "gte";
+        this.availVal = clampPct(Number(numMatch[1]));
+      }
+    }
+    if (this.availValInput) {
+      this.availValInput.value = this.availVal !== null ? String(this.availVal) : "";
+    }
+    if (this.availMaxInput) {
+      this.availMaxInput.value = this.availMax !== null ? String(this.availMax) : "";
+    }
+
+    // 5. Sort order (?sort=)
+    this.sortOrder = "pct-desc";
+    const rawSort = (params.get("sort") || "").trim().toLowerCase();
+    if (
+      rawSort === "pct-desc" ||
+      rawSort === "pct-asc" ||
+      rawSort === "name-asc" ||
+      rawSort === "date-desc" ||
+      rawSort === "date-asc"
+    ) {
+      this.sortOrder = rawSort;
+    }
+
+    this.updateViewStateFeatureFilters();
+  }
+
+  updateViewStateFeatureFilters() {
     if (this.yearFilter !== "all") {
       viewState.urlTargetId = this.yearFilter;
     } else if (this.statusFilter !== "all") {
@@ -4553,7 +4895,26 @@ class BaselineFeaturesExplorer extends HTMLElement {
     } else {
       viewState.urlTargetId = null;
     }
-    pushUrlState();
+    viewState.featureFilters = {
+      q: this.searchRaw || "",
+      status: this.statusFilter || "all",
+      year: this.yearFilter || "all",
+      group: this.groupFilter || "all",
+      availOp: this.availOp || "all",
+      availVal: this.availVal,
+      availMax: this.availMax,
+      sort: this.sortOrder || "pct-desc",
+    };
+  }
+
+  /**
+   * Synchronizes all active feature filters (search query, status, year, category, availability, sort)
+   * into `viewState` and updates the browser URL / history entry.
+   * @param {{ replace?: boolean }} [options]
+   */
+  syncUrlState(options = {}) {
+    this.updateViewStateFeatureFilters();
+    pushUrlState(options);
   }
 
   hasActiveAvailabilityFilter() {
@@ -5043,6 +5404,54 @@ function initAppDrawer() {
   }
 }
 
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_err) {
+      // Fall back to execCommand below
+    }
+  }
+
+  const tempInput = document.createElement("textarea");
+  tempInput.value = text;
+  tempInput.className = "sr-only";
+  tempInput.setAttribute("readonly", "");
+  tempInput.setAttribute("tabindex", "-1");
+  tempInput.setAttribute("aria-hidden", "true");
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch (_err) {
+    copied = false;
+  }
+  tempInput.remove();
+  return copied;
+}
+
+function triggerCopyButtonFeedback(btn, liveRegion, announcement, resetTimers) {
+  btn.setAttribute("data-copied", "true");
+  if (liveRegion) {
+    liveRegion.textContent = "";
+    requestAnimationFrame(() => {
+      liveRegion.textContent = announcement;
+    });
+  }
+
+  const prevTimer = resetTimers.get(btn);
+  if (prevTimer) {
+    window.clearTimeout(prevTimer);
+  }
+  const timer = window.setTimeout(() => {
+    btn.removeAttribute("data-copied");
+    resetTimers.delete(btn);
+  }, 2000);
+  resetTimers.set(btn, timer);
+}
+
 function initSectionLinkCopyButtons() {
   const buttons = document.querySelectorAll("button[data-copy-section-link]");
   const liveRegion = document.querySelector("[data-copy-link-live-region]");
@@ -5064,57 +5473,48 @@ function initSectionLinkCopyButtons() {
         `${url.pathname}${url.search}${url.hash}`
       );
 
-      const shareUrl = url.toString();
-      let copied = false;
-
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        try {
-          await navigator.clipboard.writeText(shareUrl);
-          copied = true;
-        } catch (_err) {
-          copied = false;
-        }
-      }
-
-      if (!copied) {
-        const tempInput = document.createElement("textarea");
-        tempInput.value = shareUrl;
-        tempInput.setAttribute("readonly", "");
-        tempInput.style.position = "fixed";
-        tempInput.style.opacity = "0";
-        tempInput.style.pointerEvents = "none";
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        try {
-          document.execCommand("copy");
-          copied = true;
-        } catch (_err) {
-          copied = false;
-        }
-        tempInput.remove();
-      }
-
+      const copied = await copyTextToClipboard(url.toString());
       if (!copied) return;
 
-      btn.setAttribute("data-copied", "true");
-      if (liveRegion) {
-        liveRegion.textContent = "";
-        requestAnimationFrame(() => {
-          liveRegion.textContent = "Copied section link to clipboard.";
-        });
-      }
-
-      const prevTimer = resetTimers.get(btn);
-      if (prevTimer) {
-        window.clearTimeout(prevTimer);
-      }
-      const timer = window.setTimeout(() => {
-        btn.removeAttribute("data-copied");
-        resetTimers.delete(btn);
-      }, 2000);
-      resetTimers.set(btn, timer);
+      triggerCopyButtonFeedback(
+        btn,
+        liveRegion,
+        "Copied section link to clipboard.",
+        resetTimers
+      );
     });
   }
+
+  document.addEventListener("click", async (e) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target) return;
+    const btn = target.closest("button[data-copy-feature-link]");
+    if (!btn) return;
+
+    const featureId = btn.getAttribute("data-copy-feature-link");
+    if (!featureId) return;
+    const featureName = btn.getAttribute("data-feature-name") || featureId;
+
+    const explorer = document.querySelector("baseline-features-explorer");
+    if (explorer && typeof explorer.updateViewStateFeatureFilters === "function") {
+      explorer.updateViewStateFeatureFilters();
+    }
+
+    const shareUrl = buildUrlWithActiveState({
+      qOverride: featureId,
+      clearHash: true,
+    }).toString();
+
+    const copied = await copyTextToClipboard(shareUrl);
+    if (!copied) return;
+
+    triggerCopyButtonFeedback(
+      btn,
+      liveRegion,
+      `Copied link to ${featureName} to clipboard.`,
+      resetTimers
+    );
+  });
 }
 
 initThemeToggle();
