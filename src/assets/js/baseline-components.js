@@ -121,6 +121,12 @@ const viewState = {
     availMax: null,
     sort: "pct-desc",
   },
+  regionsView: {
+    groupBy: "region",
+    sortCol: "name",
+    sortDir: "asc",
+    q: "",
+  },
 };
 
 function notifyStateChange(source) {
@@ -781,6 +787,8 @@ function resolveWebviewModeFromUrl() {
 function syncDrawerLinksWithUrl() {
   try {
     const currentParams = new URLSearchParams(window.location.search);
+    const isOnFeaturesPage = Boolean(document.querySelector("baseline-features-explorer"));
+    const isOnRegionsPage = Boolean(document.querySelector("baseline-regions-table"));
     const sharedKeys = ["country", "region", "exclude", "target", "webviews"];
     const featureKeys = [
       "q",
@@ -804,16 +812,38 @@ function syncDrawerLinksWithUrl() {
       }
     }
     const featuresParams = new URLSearchParams(sharedParams);
-    for (const key of featureKeys) {
-      const val = currentParams.get(key);
-      if (val) {
-        featuresParams.set(key, val);
+    if (isOnFeaturesPage) {
+      for (const key of featureKeys) {
+        const val = currentParams.get(key);
+        if (val) {
+          featuresParams.set(key, val);
+        }
+      }
+    }
+    const regionsParams = new URLSearchParams();
+    if (isOnRegionsPage) {
+      for (const key of ["group_by", "sort", "q", "webviews"]) {
+        const val = currentParams.get(key);
+        if (val) {
+          regionsParams.set(key, val);
+        }
+      }
+    } else {
+      const wv = currentParams.get("webviews");
+      if (wv) {
+        regionsParams.set("webviews", wv);
       }
     }
     document.querySelectorAll(".Drawer-list a.Drawer-link[href]").forEach((link) => {
       const linkUrl = new URL(link.getAttribute("href"), window.location.origin);
       const isFeaturesLink = linkUrl.pathname.includes("/features");
-      const queryStr = (isFeaturesLink ? featuresParams : sharedParams).toString();
+      const isRegionsLink = linkUrl.pathname.includes("/regions");
+      const targetParams = isRegionsLink
+        ? regionsParams
+        : isFeaturesLink
+          ? featuresParams
+          : sharedParams;
+      const queryStr = targetParams.toString();
       linkUrl.search = queryStr ? `?${queryStr}` : "";
       link.setAttribute("href", `${linkUrl.pathname}${linkUrl.search}`);
     });
@@ -825,8 +855,9 @@ function syncDrawerLinksWithUrl() {
 /**
  * Builds a `URL` object for the current page reflecting all active filters in `viewState`:
  * location (`?country=`, `?region=`, `?exclude=`), WebView mode (`?webviews=exclude`),
- * selected Baseline target (`?target=`), and Features view filters (`?q=`, `?status=`,
- * `?group=`, `?avail=`, `?min_avail=`, `?max_avail=`, `?sort=`).
+ * selected Baseline target (`?target=`), Features view filters (`?q=`, `?status=`,
+ * `?group=`, `?avail=`, `?min_avail=`, `?max_avail=`, `?sort=`), or Regions view state
+ * (`?group_by=`, `?sort=`, `?q=`).
  * @param {{ qOverride?: string, clearHash?: boolean }} [options]
  * @returns {URL}
  */
@@ -840,6 +871,31 @@ function buildUrlWithActiveState(options = {}) {
   url.searchParams.delete("exclude");
   url.searchParams.delete("target");
   url.searchParams.delete("webviews");
+
+  if (document.querySelector("baseline-regions-table")) {
+    url.searchParams.delete("group_by");
+    url.searchParams.delete("view");
+    url.searchParams.delete("sort");
+    url.searchParams.delete("q");
+
+    if (viewState.webviewMode === "exclude") {
+      url.searchParams.set("webviews", "exclude");
+    }
+
+    const rv = viewState.regionsView || {};
+    if (rv.groupBy === "country") {
+      url.searchParams.set("group_by", "country");
+    }
+    if (rv.sortCol && !(rv.sortCol === "name" && (rv.sortDir || "asc") === "asc")) {
+      url.searchParams.set("sort", `${rv.sortCol}-${rv.sortDir || "desc"}`);
+    }
+    const qVal =
+      typeof options.qOverride === "string" ? options.qOverride : rv.q || "";
+    if (qVal) {
+      url.searchParams.set("q", qVal);
+    }
+    return url;
+  }
 
   const locVal = viewState.locationValue || "all";
   const locMeta = viewState.locationMeta || {};
@@ -927,9 +983,8 @@ function buildUrlWithActiveState(options = {}) {
 
 /**
  * Pushes (or replaces) a browser history entry reflecting the current location (`?country=`, `?region=`, `?exclude=`),
- * WebView mode (`?webviews=exclude`), selected Baseline target (`?target=`), and Features view filters
- * (`?q=`, `?status=`, `?group=`, `?avail=`, `?min_avail=`, `?max_avail=`, `?sort=`) so browser
- * Back/Forward and shared/copied links preserve all active filters.
+ * WebView mode (`?webviews=exclude`), selected Baseline target (`?target=`), and Features/Regions view state
+ * so browser Back/Forward and shared/copied links preserve all active filters.
  * @param {{ replace?: boolean }} [options]
  */
 function pushUrlState(options = {}) {
@@ -946,6 +1001,7 @@ function pushUrlState(options = {}) {
         targetId: viewState.urlTargetId,
         webviewMode: viewState.webviewMode,
         featureFilters: viewState.featureFilters ? { ...viewState.featureFilters } : undefined,
+        regionsView: viewState.regionsView ? { ...viewState.regionsView } : undefined,
       };
       if (replace && typeof window.history.replaceState === "function") {
         window.history.replaceState(stateObj, "", nextHref);
@@ -5517,6 +5573,752 @@ function initSectionLinkCopyButtons() {
   });
 }
 
+/**
+ * <baseline-regions-table>:
+ * Interactive controller for `/regions/` supporting:
+ * - Expandable UN M49 macro-region / subregion / intermediate region hierarchy with animated chevron feedback
+ * - Top-level toggle between "Group by region" and "Group by country"
+ * - Sorting by location name (A–Z / Z–A) or any numerical column (Widely, Newly, 2026..2015)
+ * - Synchronized Include WebViews / Exclude WebViews mode and URL query parameters
+ */
+class BaselineRegionsTable extends HTMLElement {
+  connectedCallback() {
+    this.tableEl = this.querySelector("#regions-stats-table");
+    this.globalTbody = this.querySelector("[data-global-tbody]");
+    this.tbody = this.querySelector("[data-regions-tbody]");
+    if (!this.tableEl || !this.tbody) return;
+
+    this.groupByBtns = Array.from(this.querySelectorAll("button[data-group-by-btn]"));
+    this.webviewBtns = Array.from(this.querySelectorAll("button[data-webview-mode]"));
+    this.sortBtns = Array.from(this.querySelectorAll("button[data-sort-btn]"));
+    this.sortThs = Array.from(this.querySelectorAll("th[data-sort-th]"));
+    this.nameColLabelEl = this.querySelector("[data-name-col-label]");
+    this.groupByBadgeEl = this.querySelector("[data-groupby-badge]");
+    this.subtitleEl = this.querySelector("[data-regions-subtitle]");
+    this.webviewSubtitleNoteEl = this.querySelector("[data-webview-subtitle-note]");
+    this.treeActionsEl = this.querySelector("[data-tree-actions]");
+    this.expandAllBtn = this.querySelector("[data-expand-all-btn]");
+    this.collapseAllBtn = this.querySelector("[data-collapse-all-btn]");
+    this.searchInput = this.querySelector("[data-regions-search]");
+    this.searchClearBtn = this.querySelector("[data-regions-search-clear]");
+    this.emptyStateEl = this.querySelector("[data-regions-empty]");
+    this.emptyResetBtn = this.querySelector("[data-regions-empty-reset]");
+    this.liveRegionEl = this.querySelector("[data-regions-live-region]");
+
+    this.collator = new Intl.Collator("en", { sensitivity: "base" });
+    this.validSortCols = new Set(
+      this.sortBtns.map((btn) => btn.dataset.sortBtn).filter(Boolean)
+    );
+
+    this.globalNode = null;
+    if (this.globalTbody) {
+      const globalTr = this.globalTbody.querySelector("tr.region-table-row");
+      if (globalTr) {
+        this.globalNode = this.parseRowElement(globalTr);
+      }
+    }
+
+    const rowEls = Array.from(this.tbody.querySelectorAll("tr.region-table-row"));
+    this.allNodes = [];
+    this.nodeById = new Map();
+    this.rootRegionNodes = [];
+    this.countryNodes = [];
+    this.expandableRegionIds = [];
+
+    for (const tr of rowEls) {
+      tr.hidden = false;
+      const node = this.parseRowElement(tr);
+      this.allNodes.push(node);
+      this.nodeById.set(node.id, node);
+      if (node.hasChildren) {
+        this.expandableRegionIds.push(node.id);
+      }
+      if (node.kind === "country") {
+        this.countryNodes.push(node);
+      }
+    }
+
+    for (const node of this.allNodes) {
+      if (node.parentId && this.nodeById.has(node.parentId)) {
+        const parent = this.nodeById.get(node.parentId);
+        node.parent = parent;
+        parent.children.push(node);
+      } else if (node.kind === "region") {
+        this.rootRegionNodes.push(node);
+      }
+    }
+
+    this.expandedIds = new Set();
+    this.searchCollapsedOverrides = new Set();
+    this.groupBy = "region";
+    this.sortCol = "name";
+    this.sortDir = "asc";
+    this.searchRaw = "";
+    this.searchQuery = "";
+    this._lastSortedColHighlight = null;
+    this._lastWebviewModeApplied = "include";
+    this._searchTypingActive = false;
+    this._searchTypingTimer = null;
+
+    this.readStateFromUrl();
+    this.syncViewStateSlice();
+    syncDrawerLinksWithUrl();
+
+    this.onGroupByClick = (e) => {
+      const btn = e.currentTarget;
+      const nextMode = btn.dataset.groupByBtn === "country" ? "country" : "region";
+      if (nextMode === this.groupBy) return;
+      this.groupBy = nextMode;
+      this.syncViewStateSlice();
+      pushUrlState();
+      const modeDesc =
+        nextMode === "country"
+          ? `Grouped by country (${this.countryNodes.length} countries).`
+          : "Grouped by UN M49 region.";
+      this.renderView({ preserveExisting: false, announceText: modeDesc });
+    };
+
+    this.onWebviewClick = (e) => {
+      const mode = e.currentTarget.getAttribute("data-webview-mode");
+      if ((mode !== "include" && mode !== "exclude") || mode === viewState.webviewMode) {
+        return;
+      }
+      viewState.webviewMode = mode;
+      pushUrlState();
+      notifyStateChange("webview-mode");
+      window.dispatchEvent(
+        new CustomEvent("baseline:webview-mode-change", { detail: { mode } })
+      );
+      this.applyWebviewMode(true);
+    };
+
+    this.onSortBtnClick = (e) => {
+      const col = e.currentTarget.dataset.sortBtn;
+      if (!col || !this.validSortCols.has(col)) return;
+      if (this.sortCol === col) {
+        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        this.sortCol = col;
+        this.sortDir = col === "name" ? "asc" : "desc";
+      }
+      this.syncViewStateSlice();
+      pushUrlState();
+      const colLabel =
+        col === "name"
+          ? this.groupBy === "country"
+            ? "Country"
+            : "Region / Country"
+          : col === "traffic"
+            ? "proportion of global traffic"
+            : col === "widely"
+              ? "Baseline Widely available"
+              : col === "newly"
+                ? "Baseline Newly available"
+                : `Baseline ${col}`;
+      const dirLabel =
+        col === "name"
+          ? this.sortDir === "asc"
+            ? "A to Z"
+            : "Z to A"
+          : this.sortDir === "asc"
+            ? "lowest to highest"
+            : "highest to lowest";
+      this.renderView({
+        preserveExisting: false,
+        announceText: `Sorted table by ${colLabel}, ${dirLabel}.`,
+      });
+    };
+
+    this.onTbodyClick = (e) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target || this.groupBy !== "region") return;
+      if (target.closest("[data-drilldown-link]")) return;
+
+      const selection = window.getSelection ? window.getSelection() : null;
+      if (selection && selection.toString().length > 0) return;
+
+      const tr = target.closest("tr.region-table-row");
+      if (!tr) return;
+      const node = this.nodeById.get(tr.dataset.nodeId || "");
+      if (!node || !node.hasChildren) return;
+
+      let nowExpanded;
+      if (this.searchQuery) {
+        const isCurrentlyExpanded = tr.classList.contains("is-expanded");
+        if (isCurrentlyExpanded) {
+          this.searchCollapsedOverrides.add(node.id);
+          nowExpanded = false;
+        } else {
+          this.searchCollapsedOverrides.delete(node.id);
+          this.expandedIds.add(node.id);
+          nowExpanded = true;
+        }
+      } else if (this.expandedIds.has(node.id)) {
+        this.expandedIds.delete(node.id);
+        nowExpanded = false;
+      } else {
+        this.expandedIds.add(node.id);
+        nowExpanded = true;
+      }
+
+      this.renderView({
+        preserveExisting: true,
+        announceText: `${nowExpanded ? "Expanded" : "Collapsed"} ${node.name}.`,
+      });
+    };
+
+    this.onExpandAll = () => {
+      for (const id of this.expandableRegionIds) {
+        this.expandedIds.add(id);
+      }
+      this.searchCollapsedOverrides.clear();
+      this.renderView({
+        preserveExisting: true,
+        announceText: "Expanded all regions and subregions.",
+      });
+    };
+
+    this.onCollapseAll = () => {
+      this.expandedIds.clear();
+      if (this.searchQuery) {
+        for (const id of this.expandableRegionIds) {
+          this.searchCollapsedOverrides.add(id);
+        }
+      }
+      this.renderView({
+        preserveExisting: true,
+        announceText: "Collapsed all regions.",
+      });
+    };
+
+    this.onSearchInput = () => {
+      this.searchRaw = (this.searchInput.value || "").trim();
+      this.searchQuery = this.searchRaw.toLowerCase();
+      this.searchCollapsedOverrides.clear();
+      this.syncViewStateSlice();
+
+      const shouldReplace = Boolean(this._searchTypingActive);
+      this._searchTypingActive = true;
+      if (this._searchTypingTimer) {
+        window.clearTimeout(this._searchTypingTimer);
+      }
+      this._searchTypingTimer = window.setTimeout(() => {
+        this._searchTypingActive = false;
+        this._searchTypingTimer = null;
+      }, 800);
+      pushUrlState({ replace: shouldReplace });
+
+      this.renderView({ preserveExisting: false });
+    };
+
+    this.onClearSearch = () => {
+      if (this.searchInput) {
+        this.searchInput.value = "";
+      }
+      this.searchRaw = "";
+      this.searchQuery = "";
+      this.searchCollapsedOverrides.clear();
+      this.syncViewStateSlice();
+      pushUrlState();
+      this.renderView({
+        preserveExisting: false,
+        announceText: "Cleared filter.",
+      });
+      if (this.searchInput) {
+        this.searchInput.focus();
+      }
+    };
+
+    this.onPopState = () => {
+      viewState.webviewMode = resolveWebviewModeFromUrl();
+      this.readStateFromUrl();
+      this.syncViewStateSlice();
+      this.applyWebviewMode(false);
+      this.renderView({ preserveExisting: false });
+    };
+
+    for (const btn of this.groupByBtns) {
+      btn.addEventListener("click", this.onGroupByClick);
+    }
+    for (const btn of this.webviewBtns) {
+      btn.addEventListener("click", this.onWebviewClick);
+    }
+    for (const btn of this.sortBtns) {
+      btn.addEventListener("click", this.onSortBtnClick);
+    }
+    this.tbody.addEventListener("click", this.onTbodyClick);
+    if (this.expandAllBtn) {
+      this.expandAllBtn.addEventListener("click", this.onExpandAll);
+    }
+    if (this.collapseAllBtn) {
+      this.collapseAllBtn.addEventListener("click", this.onCollapseAll);
+    }
+    if (this.searchInput) {
+      this.searchInput.addEventListener("input", this.onSearchInput);
+    }
+    if (this.searchClearBtn) {
+      this.searchClearBtn.addEventListener("click", this.onClearSearch);
+    }
+    if (this.emptyResetBtn) {
+      this.emptyResetBtn.addEventListener("click", this.onClearSearch);
+    }
+    window.addEventListener("popstate", this.onPopState);
+
+    this.applyWebviewMode(false);
+    this.renderView({ preserveExisting: false });
+  }
+
+  disconnectedCallback() {
+    for (const btn of this.groupByBtns || []) {
+      btn.removeEventListener("click", this.onGroupByClick);
+    }
+    for (const btn of this.webviewBtns || []) {
+      btn.removeEventListener("click", this.onWebviewClick);
+    }
+    for (const btn of this.sortBtns || []) {
+      btn.removeEventListener("click", this.onSortBtnClick);
+    }
+    if (this.tbody && this.onTbodyClick) {
+      this.tbody.removeEventListener("click", this.onTbodyClick);
+    }
+    if (this.expandAllBtn && this.onExpandAll) {
+      this.expandAllBtn.removeEventListener("click", this.onExpandAll);
+    }
+    if (this.collapseAllBtn && this.onCollapseAll) {
+      this.collapseAllBtn.removeEventListener("click", this.onCollapseAll);
+    }
+    if (this.searchInput && this.onSearchInput) {
+      this.searchInput.removeEventListener("input", this.onSearchInput);
+    }
+    if (this.searchClearBtn && this.onClearSearch) {
+      this.searchClearBtn.removeEventListener("click", this.onClearSearch);
+    }
+    if (this.emptyResetBtn && this.onClearSearch) {
+      this.emptyResetBtn.removeEventListener("click", this.onClearSearch);
+    }
+    window.removeEventListener("popstate", this.onPopState);
+  }
+
+  parseRowElement(tr) {
+    const cells = {};
+    for (const td of tr.querySelectorAll("td[data-col]")) {
+      const colId = td.dataset.col || "";
+      const rawPct = td.dataset.pct;
+      const rawNoWv = td.dataset.pctNowv;
+      cells[colId] = {
+        td,
+        pct: rawPct === "" || rawPct === undefined ? null : Number(rawPct),
+        pctNoWv: rawNoWv === "" || rawNoWv === undefined ? null : Number(rawNoWv),
+        staticDisplay: td.dataset.staticDisplay === "true",
+      };
+    }
+    const drilldownLink = tr.querySelector("[data-drilldown-link]");
+    const baseHref = drilldownLink ? drilldownLink.getAttribute("href") || "/" : "";
+    const code = tr.dataset.code || "";
+    const name = tr.dataset.name || "";
+    const breadcrumb = tr.dataset.breadcrumb || "";
+    const kind = tr.dataset.rowKind || "global";
+    const aliases = kind === "country" ? COUNTRY_SEARCH_ALIASES[code] || "" : "";
+
+    return {
+      id: tr.dataset.nodeId || "",
+      parentId: tr.dataset.parentId || "",
+      parent: null,
+      kind,
+      regionLevel: tr.dataset.regionLevel || "",
+      depth: Number(tr.dataset.treeDepth || 0),
+      code,
+      name,
+      breadcrumb,
+      searchText: `${name} ${code} ${breadcrumb} ${aliases}`.toLowerCase(),
+      hasChildren: tr.dataset.hasChildren === "true",
+      sortLast: tr.dataset.sortLast === "true",
+      tr,
+      expandBtn: tr.querySelector("[data-expand-btn]"),
+      drilldownLink,
+      baseHref,
+      cells,
+      children: [],
+    };
+  }
+
+  readStateFromUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const rawGroup = (params.get("group_by") || params.get("view") || "")
+        .trim()
+        .toLowerCase();
+      this.groupBy =
+        rawGroup === "country" || rawGroup === "countries" ? "country" : "region";
+
+      const rawSort = (params.get("sort") || "").trim().toLowerCase();
+      this.sortCol = "name";
+      this.sortDir = "asc";
+      if (rawSort) {
+        const dashIdx = rawSort.lastIndexOf("-");
+        if (dashIdx > 0) {
+          const maybeCol = rawSort.slice(0, dashIdx);
+          const maybeDir = rawSort.slice(dashIdx + 1);
+          if (
+            this.validSortCols.has(maybeCol) &&
+            (maybeDir === "asc" || maybeDir === "desc")
+          ) {
+            this.sortCol = maybeCol;
+            this.sortDir = maybeDir;
+          }
+        } else if (this.validSortCols.has(rawSort)) {
+          this.sortCol = rawSort;
+          this.sortDir = rawSort === "name" ? "asc" : "desc";
+        }
+      }
+
+      const rawQ = (params.get("q") || "").trim();
+      this.searchRaw = rawQ;
+      this.searchQuery = rawQ.toLowerCase();
+      if (this.searchInput && this.searchInput.value !== rawQ) {
+        this.searchInput.value = rawQ;
+      }
+    } catch {
+      this.groupBy = "region";
+      this.sortCol = "name";
+      this.sortDir = "asc";
+      this.searchRaw = "";
+      this.searchQuery = "";
+    }
+  }
+
+  syncViewStateSlice() {
+    viewState.regionsView = {
+      groupBy: this.groupBy,
+      sortCol: this.sortCol,
+      sortDir: this.sortDir,
+      q: this.searchRaw,
+    };
+  }
+
+  getNodeMetricValue(node, colId) {
+    const cell = node.cells[colId];
+    if (!cell) return null;
+    return viewState.webviewMode === "exclude" ? cell.pctNoWv : cell.pct;
+  }
+
+  compareNodes(a, b) {
+    if (this.sortCol === "name") {
+      if (a.sortLast !== b.sortLast) {
+        return a.sortLast ? 1 : -1;
+      }
+      const cmp = this.collator.compare(a.name, b.name);
+      return this.sortDir === "desc" ? -cmp : cmp;
+    }
+
+    const valA = this.getNodeMetricValue(a, this.sortCol);
+    const valB = this.getNodeMetricValue(b, this.sortCol);
+    const aNull = valA === null || Number.isNaN(valA);
+    const bNull = valB === null || Number.isNaN(valB);
+    if (aNull !== bNull) {
+      return aNull ? 1 : -1;
+    }
+    if (!aNull && !bNull) {
+      const diff = valA - valB;
+      if (diff !== 0) {
+        return this.sortDir === "asc" ? diff : -diff;
+      }
+    }
+    if (a.sortLast !== b.sortLast) {
+      return a.sortLast ? 1 : -1;
+    }
+    return this.collator.compare(a.name, b.name);
+  }
+
+  updateNodeCellsForWebviewMode(node, isExclude) {
+    if (!node) return;
+    for (const cell of Object.values(node.cells)) {
+      if (cell.staticDisplay) continue;
+      const val = isExclude ? cell.pctNoWv : cell.pct;
+      if (val === null || Number.isNaN(val)) {
+        cell.td.textContent = "—";
+        cell.td.classList.add("is-no-data");
+      } else {
+        cell.td.textContent = formatPct(val);
+        cell.td.classList.remove("is-no-data");
+      }
+    }
+    if (node.drilldownLink && node.baseHref) {
+      try {
+        const u = new URL(node.baseHref, window.location.origin);
+        if (isExclude) {
+          u.searchParams.set("webviews", "exclude");
+        } else {
+          u.searchParams.delete("webviews");
+        }
+        node.drilldownLink.setAttribute("href", `${u.pathname}${u.search}`);
+      } catch {
+        // Ignore invalid URL
+      }
+    }
+  }
+
+  applyWebviewMode(reRenderIfSorted = false) {
+    const mode = viewState.webviewMode === "exclude" ? "exclude" : "include";
+    const isExclude = mode === "exclude";
+
+    for (const btn of this.webviewBtns) {
+      const isSelected = btn.getAttribute("data-webview-mode") === mode;
+      btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    }
+
+    if (this.webviewSubtitleNoteEl) {
+      this.webviewSubtitleNoteEl.textContent = isExclude
+        ? "excluding WebViews"
+        : "including WebViews";
+    }
+
+    if (this._lastWebviewModeApplied !== mode) {
+      this.updateNodeCellsForWebviewMode(this.globalNode, isExclude);
+      for (const node of this.allNodes) {
+        this.updateNodeCellsForWebviewMode(node, isExclude);
+      }
+      this._lastWebviewModeApplied = mode;
+    }
+
+    if (reRenderIfSorted) {
+      const announceMsg = isExclude
+        ? "Updated regional and country stats to exclude Android and iOS WebViews."
+        : "Updated regional and country stats to include Android and iOS WebViews.";
+      this.renderView({
+        preserveExisting: this.sortCol === "name",
+        announceText: announceMsg,
+      });
+    }
+  }
+
+  nodeMatchesQuery(node, q) {
+    if (!q) return true;
+    if (node.kind === "country" && node.code.toLowerCase() === q) return true;
+    return node.searchText.includes(q);
+  }
+
+  computeTreeMatches(node, q, matchMap) {
+    const selfMatches = this.nodeMatchesQuery(node, q);
+    let descendantMatches = false;
+    for (const child of node.children) {
+      if (this.computeTreeMatches(child, q, matchMap)) {
+        descendantMatches = true;
+      }
+    }
+    const anyMatch = selfMatches || descendantMatches;
+    matchMap.set(node.id, { selfMatches, descendantMatches, anyMatch });
+    return anyMatch;
+  }
+
+  syncSortedColumnHighlight() {
+    const nextCol = this.sortCol !== "name" ? this.sortCol : null;
+    if (this._lastSortedColHighlight === nextCol) return;
+
+    const prevCol = this._lastSortedColHighlight;
+    const applyColClass = (node) => {
+      if (!node) return;
+      if (prevCol && node.cells[prevCol]) {
+        node.cells[prevCol].td.classList.remove("is-sorted-col");
+      }
+      if (nextCol && node.cells[nextCol]) {
+        node.cells[nextCol].td.classList.add("is-sorted-col");
+      }
+    };
+
+    applyColClass(this.globalNode);
+    for (const node of this.allNodes) {
+      applyColClass(node);
+    }
+    this._lastSortedColHighlight = nextCol;
+  }
+
+  syncHeaderControlsUi(visibleExpandableCount, currentlyExpandedCount) {
+    const isCountryMode = this.groupBy === "country";
+    this.tableEl.dataset.groupMode = this.groupBy;
+
+    for (const btn of this.groupByBtns) {
+      const active = btn.dataset.groupByBtn === this.groupBy;
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    }
+
+    if (this.nameColLabelEl) {
+      this.nameColLabelEl.textContent = isCountryMode
+        ? "Country"
+        : "Region / Country";
+    }
+
+    if (this.groupByBadgeEl) {
+      this.groupByBadgeEl.textContent = isCountryMode
+        ? "Grouped by country"
+        : "Grouped by region";
+    }
+
+    if (this.treeActionsEl) {
+      this.treeActionsEl.hidden = isCountryMode;
+    }
+
+    if (!isCountryMode) {
+      if (this.expandAllBtn) {
+        this.expandAllBtn.disabled =
+          visibleExpandableCount === 0 ||
+          currentlyExpandedCount >= visibleExpandableCount;
+      }
+      if (this.collapseAllBtn) {
+        this.collapseAllBtn.disabled = currentlyExpandedCount === 0;
+      }
+    }
+
+    if (this.searchClearBtn) {
+      this.searchClearBtn.hidden = this.searchRaw.length === 0;
+    }
+
+    for (const th of this.sortThs) {
+      const col = th.dataset.sortTh;
+      const isSorted = col === this.sortCol;
+      th.setAttribute(
+        "aria-sort",
+        isSorted
+          ? this.sortDir === "asc"
+            ? "ascending"
+            : "descending"
+          : "none"
+      );
+      th.classList.toggle("is-sorted-col", isSorted && col !== "name");
+    }
+
+    for (const btn of this.sortBtns) {
+      const col = btn.dataset.sortBtn;
+      const isSorted = col === this.sortCol;
+      btn.classList.toggle("is-sorted", isSorted);
+      btn.dataset.sortDir = isSorted ? this.sortDir : "none";
+    }
+
+    this.syncSortedColumnHighlight();
+  }
+
+  renderView(options = {}) {
+    const preserveExisting = Boolean(options.preserveExisting);
+    const announceText = options.announceText || "";
+    const q = this.searchQuery;
+
+    const desiredTrs = [];
+    let visibleExpandableCount = 0;
+    let currentlyExpandedCount = 0;
+
+    if (this.groupBy === "country") {
+      const matchingCountries = q
+        ? this.countryNodes.filter((n) => this.nodeMatchesQuery(n, q))
+        : this.countryNodes.slice();
+      matchingCountries.sort((a, b) => this.compareNodes(a, b));
+      for (const node of matchingCountries) {
+        desiredTrs.push(node.tr);
+      }
+    } else {
+      const matchMap = q ? new Map() : null;
+      if (q) {
+        for (const root of this.rootRegionNodes) {
+          this.computeTreeMatches(root, q, matchMap);
+        }
+      }
+
+      const sortedRoots = this.rootRegionNodes
+        .slice()
+        .sort((a, b) => this.compareNodes(a, b));
+
+      const visit = (node, ancestorSelfMatched) => {
+        if (q) {
+          const m = matchMap.get(node.id);
+          if (!ancestorSelfMatched && (!m || !m.anyMatch)) {
+            return;
+          }
+        }
+
+        let isExpanded = false;
+        if (node.hasChildren) {
+          visibleExpandableCount += 1;
+          if (q) {
+            const m = matchMap.get(node.id);
+            const autoExpandForSearch = Boolean(
+              m && (m.descendantMatches || m.selfMatches)
+            );
+            isExpanded =
+              !this.searchCollapsedOverrides.has(node.id) &&
+              (autoExpandForSearch || this.expandedIds.has(node.id));
+          } else {
+            isExpanded = this.expandedIds.has(node.id);
+          }
+
+          if (isExpanded) {
+            currentlyExpandedCount += 1;
+          }
+          node.tr.classList.toggle("is-expanded", isExpanded);
+          if (node.expandBtn) {
+            node.expandBtn.setAttribute(
+              "aria-expanded",
+              isExpanded ? "true" : "false"
+            );
+          }
+        }
+
+        desiredTrs.push(node.tr);
+
+        if (node.hasChildren && isExpanded) {
+          const selfMatched = q
+            ? ancestorSelfMatched || Boolean(matchMap.get(node.id)?.selfMatches)
+            : false;
+          const sortedChildren = node.children
+            .slice()
+            .sort((a, b) => this.compareNodes(a, b));
+          for (const child of sortedChildren) {
+            visit(child, selfMatched);
+          }
+        }
+      };
+
+      for (const root of sortedRoots) {
+        visit(root, false);
+      }
+    }
+
+    if (preserveExisting) {
+      const desiredSet = new Set(desiredTrs);
+      for (const existingTr of Array.from(this.tbody.children)) {
+        if (!desiredSet.has(existingTr)) {
+          existingTr.remove();
+        }
+      }
+      for (let i = 0; i < desiredTrs.length; i++) {
+        const tr = desiredTrs[i];
+        if (tr.parentNode !== this.tbody) {
+          tr.classList.add("is-revealing");
+          if (i === 0) {
+            this.tbody.prepend(tr);
+          } else {
+            desiredTrs[i - 1].after(tr);
+          }
+        }
+      }
+    } else {
+      for (const tr of desiredTrs) {
+        tr.classList.remove("is-revealing");
+      }
+      this.tbody.replaceChildren(...desiredTrs);
+    }
+
+    const hasMatches = desiredTrs.length > 0;
+    if (this.emptyStateEl) {
+      this.emptyStateEl.hidden = hasMatches;
+    }
+
+    this.syncHeaderControlsUi(visibleExpandableCount, currentlyExpandedCount);
+
+    if (announceText && this.liveRegionEl) {
+      this.liveRegionEl.textContent = announceText;
+    }
+  }
+}
+
 initThemeToggle();
 initAppDrawer();
 initSectionLinkCopyButtons();
@@ -5540,5 +6342,10 @@ if (!customElements.get("baseline-browser-breakdown")) {
 if (!customElements.get("baseline-features-explorer")) {
   customElements.define("baseline-features-explorer", BaselineFeaturesExplorer);
 }
+
+if (!customElements.get("baseline-regions-table")) {
+  customElements.define("baseline-regions-table", BaselineRegionsTable);
+}
+
 
 

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-10-23]
 
 ### Added
+- **Regions & countries availability page (`/regions/` & `<baseline-regions-table>`)**: Added a new navigation view listing each region and country's proportion of global traffic (`Global Traffic`) alongside top-level Baseline stats (`Widely`, `Newly`, and Baseline years `2026` down to `2015` from most recent to oldest) across UN M49 macro-regions, subregions, intermediate regions, and individual countries, with expandable region rows and animated chevron indicators, deeplinks to filtered charts on `/`, a top-level **Group by region / Group by country** toggle, **Include WebViews / Exclude WebViews** support, search filtering, and sorting across all numerical and alphabetical columns.
 - **Per-feature copy-link buttons on `/features/`**: Added a copy-link icon button (`button.feature-link-btn`) next to the name of each feature that copies a direct URL to the current page with `?q=<feature-id>` while preserving all active location/region (`?country=`, `?region=`, `?exclude=`), WebView (`?webviews=exclude`), and feature/availability filters (`?avail=`, `?min_avail=`, `?max_avail=`, `?target=`, `?status=`, `?group=`, `?sort=`).
 
 ## [2026-10-22]

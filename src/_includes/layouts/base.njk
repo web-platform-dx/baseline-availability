@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/css/styles.css">
   {% if includeFeaturesBundle %}
   <script src="/assets/js/baseline-features-data.js" defer></script>
-  {% else %}
+  {% elif not skipDefaultDataBundles %}
   <script src="/assets/js/baseline-initial-data.js" defer></script>
   <script src="/assets/js/baseline-browser-breakdown.js" defer></script>
   {% endif %}
@@ -118,6 +118,22 @@
                 <span class="Drawer-link-text">
                   <span class="Drawer-link-title">Baseline stats</span>
                   <span class="Drawer-link-subtitle">Aggregate availability &amp; browser breakdown</span>
+                </span>
+              </a>
+            </li>
+            <li class="Drawer-item">
+              <a
+                href="/regions/"
+                class="Drawer-link{% if page.url and page.url.startsWith('/regions') %} is-active{% endif %}"
+                {% if page.url and page.url.startsWith('/regions') %}aria-current="page"{% endif %}
+              >
+                <svg class="Drawer-link-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <span class="Drawer-link-text">
+                  <span class="Drawer-link-title">Regions &amp; countries</span>
+                  <span class="Drawer-link-subtitle">Top-level stats across UN M49 regions &amp; {{ baseline_country_summary.countryCount if baseline_country_summary and baseline_country_summary.countryCount else 243 }} countries</span>
                 </span>
               </a>
             </li>

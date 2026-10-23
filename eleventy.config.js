@@ -236,6 +236,409 @@ export default function (eleventyConfig) {
     return { regionTree, countryGroups };
   });
 
+  // Builds the structured Regions & Countries availability table model for /regions/
+  eleventyConfig.addFilter(
+    "buildRegionsTableModel",
+    (regionSummary, countrySummary, globalSummary) => {
+      if (!regionSummary || !countrySummary) {
+        return null;
+      }
+
+      const collator = new Intl.Collator("en", { sensitivity: "base" });
+      const round2 = (val) => Math.round(val * 100) / 100;
+
+      const sampleRows =
+        (Array.isArray(globalSummary?.rows) && globalSummary.rows.length > 0
+          ? globalSummary.rows
+          : regionSummary.unM49MacroRegions?.[0]?.rows) || [];
+
+      const widelyDef = sampleRows.find((r) => r.id === "widely");
+      const newlyDef = sampleRows.find((r) => r.id === "newly");
+      const yearDefs = sampleRows
+        .filter((r) => r.kind === "year" && r.year !== null && r.year !== undefined)
+        .slice()
+        .sort((a, b) => Number(b.year) - Number(a.year));
+
+      const globalTotalPageLoads = Number(
+        countrySummary.globalRecentTotalPageLoads || 0
+      );
+
+      const columns = [
+        {
+          id: "traffic",
+          shortLabel: "Global Traffic",
+          fullLabel: "Proportion of global traffic",
+          kind: "traffic",
+          year: null,
+        },
+      ];
+      if (widelyDef) {
+        columns.push({
+          id: "widely",
+          shortLabel: "Widely",
+          fullLabel: "Baseline Widely available",
+          kind: "widely",
+          year: null,
+        });
+      }
+      if (newlyDef) {
+        columns.push({
+          id: "newly",
+          shortLabel: "Newly",
+          fullLabel: "Baseline Newly available",
+          kind: "newly",
+          year: null,
+        });
+      }
+      for (const yRow of yearDefs) {
+        columns.push({
+          id: String(yRow.id),
+          shortLabel: String(yRow.year),
+          fullLabel: yRow.label || `Baseline ${yRow.year}`,
+          kind: "year",
+          year: Number(yRow.year),
+        });
+      }
+
+      const computeMetrics = (entity, isGlobal = false) => {
+        const entityRows = Array.isArray(entity?.rows) ? entity.rows : [];
+        const hasData = isGlobal
+          ? entityRows.length > 0
+          : Number(entity?.mappedPageLoads || 0) > 0 && entityRows.length > 0;
+
+        const rowById = new Map();
+        let maxWvPctOfMapped = 0;
+        for (const r of entityRows) {
+          rowById.set(String(r.id), r);
+          const p = Number(r.avgPercentage || 0);
+          const wv =
+            Number(r.avgAndroidWebviewPercentage || 0) +
+            Number(r.avgIosWebviewPercentage || 0);
+          const wvPct = (p * wv) / 100;
+          if (wvPct > maxWvPctOfMapped) {
+            maxWvPctOfMapped = wvPct;
+          }
+        }
+
+        const denom = Math.max(0, 100 - maxWvPctOfMapped);
+        const hasNoWvData = hasData && denom > 0.0001;
+
+        const totalLoads = Number(entity?.totalPageLoads || 0);
+        const exactTrafficShare = isGlobal
+          ? 100
+          : globalTotalPageLoads > 0 && totalLoads > 0
+            ? Number(((totalLoads / globalTotalPageLoads) * 100).toPrecision(8))
+            : Number(entity?.shareOfGlobalTraffic || 0);
+        const trafficDisplay = isGlobal
+          ? "100.00%"
+          : totalLoads <= 0 && exactTrafficShare <= 0
+            ? "0.00%"
+            : exactTrafficShare < 0.01
+              ? "<0.01%"
+              : `${exactTrafficShare.toFixed(2)}%`;
+
+        const cells = columns.map((col) => {
+          if (col.id === "traffic") {
+            return {
+              id: "traffic",
+              kind: "traffic",
+              pct: exactTrafficShare,
+              pctNoWv: exactTrafficShare,
+              display: trafficDisplay,
+            };
+          }
+          const r = rowById.get(col.id);
+          if (!hasData || !r) {
+            return {
+              id: col.id,
+              kind: col.kind,
+              pct: null,
+              pctNoWv: null,
+              display: null,
+            };
+          }
+          const pct = round2(Number(r.avgPercentage || 0));
+          let pctNoWv = null;
+          if (hasNoWvData) {
+            const wv =
+              Number(r.avgAndroidWebviewPercentage || 0) +
+              Number(r.avgIosWebviewPercentage || 0);
+            const nonWvCompat = Number(r.avgPercentage || 0) * (1 - wv / 100);
+            pctNoWv = round2(
+              Math.min(100, Math.max(0, (nonWvCompat / denom) * 100))
+            );
+          }
+          return {
+            id: col.id,
+            kind: col.kind,
+            pct,
+            pctNoWv,
+            display: `${pct.toFixed(2)}%`,
+          };
+        });
+
+        return { hasData, hasNoWvData, cells };
+      };
+
+      const macroList = (
+        Array.isArray(regionSummary.unM49MacroRegions)
+          ? regionSummary.unM49MacroRegions
+          : []
+      )
+        .slice()
+        .sort((a, b) => collator.compare(a.name, b.name));
+
+      const subList = Array.isArray(regionSummary.unM49Subregions)
+        ? regionSummary.unM49Subregions
+        : [];
+      const leafList = Array.isArray(regionSummary.unM49LeafRegions)
+        ? regionSummary.unM49LeafRegions
+        : [];
+      const countries = Array.isArray(countrySummary.countries)
+        ? countrySummary.countries
+        : [];
+
+      const rows = [];
+      let regionGroupCount = 0;
+
+      for (const macro of macroList) {
+        const macroCountries = countries.filter(
+          (c) => c.regions?.macroRegion === macro.code
+        );
+        const subs = subList
+          .filter((s) => s.macroRegion === macro.code && s.code !== macro.code)
+          .sort((a, b) => collator.compare(a.name, b.name));
+
+        const macroNodeId = `region:${macro.code}`;
+        const macroMetrics = computeMetrics(macro, false);
+        regionGroupCount += 1;
+        rows.push({
+          nodeId: macroNodeId,
+          parentId: "",
+          rowKind: "region",
+          regionLevel: "macro",
+          treeDepth: 0,
+          code: macro.code,
+          name: macro.name,
+          breadcrumb: macro.name,
+          countryCount: macroCountries.length,
+          hasChildren: subs.length > 0 || macroCountries.length > 0,
+          sortLast: false,
+          shareOfGlobalTraffic: Number(macro.shareOfGlobalTraffic || 0),
+          drilldownHref: `/?region=${encodeURIComponent(macro.code)}`,
+          ...macroMetrics,
+        });
+
+        if (subs.length > 0) {
+          for (const sub of subs) {
+            const subCountries = countries.filter(
+              (c) => c.regions?.subregion === sub.code
+            );
+            const leaves = leafList
+              .filter((l) => l.subregion === sub.code && l.code !== sub.code)
+              .sort((a, b) => collator.compare(a.name, b.name));
+
+            const subNodeId = `region:${sub.code}`;
+            const subBreadcrumb = `${macro.name} › ${sub.name}`;
+            const subMetrics = computeMetrics(sub, false);
+            regionGroupCount += 1;
+            rows.push({
+              nodeId: subNodeId,
+              parentId: macroNodeId,
+              rowKind: "region",
+              regionLevel: "subregion",
+              treeDepth: 1,
+              code: sub.code,
+              name: sub.name,
+              breadcrumb: subBreadcrumb,
+              countryCount: subCountries.length,
+              hasChildren: leaves.length > 0 || subCountries.length > 0,
+              sortLast: false,
+              shareOfGlobalTraffic: Number(sub.shareOfGlobalTraffic || 0),
+              drilldownHref: `/?region=${encodeURIComponent(sub.code)}`,
+              ...subMetrics,
+            });
+
+            if (leaves.length > 0) {
+              for (const leaf of leaves) {
+                const leafCountries = countries
+                  .filter((c) => c.regions?.leafRegion === leaf.code)
+                  .sort((a, b) => collator.compare(a.name, b.name));
+                const leafNodeId = `region:${leaf.code}`;
+                const leafBreadcrumb = `${subBreadcrumb} › ${leaf.name}`;
+                const leafMetrics = computeMetrics(leaf, false);
+                regionGroupCount += 1;
+                rows.push({
+                  nodeId: leafNodeId,
+                  parentId: subNodeId,
+                  rowKind: "region",
+                  regionLevel: "leaf",
+                  treeDepth: 2,
+                  code: leaf.code,
+                  name: leaf.name,
+                  breadcrumb: leafBreadcrumb,
+                  countryCount: leafCountries.length,
+                  hasChildren: leafCountries.length > 0,
+                  sortLast: false,
+                  shareOfGlobalTraffic: Number(leaf.shareOfGlobalTraffic || 0),
+                  drilldownHref: `/?region=${encodeURIComponent(leaf.code)}`,
+                  ...leafMetrics,
+                });
+
+                for (const country of leafCountries) {
+                  const cMetrics = computeMetrics(country, false);
+                  rows.push({
+                    nodeId: `country:${country.code}`,
+                    parentId: leafNodeId,
+                    rowKind: "country",
+                    regionLevel: "",
+                    treeDepth: 3,
+                    code: country.code,
+                    name: country.name,
+                    breadcrumb: leafBreadcrumb,
+                    countryCount: 0,
+                    hasChildren: false,
+                    sortLast: false,
+                    shareOfGlobalTraffic: Number(
+                      country.shareOfGlobalTraffic || 0
+                    ),
+                    drilldownHref: `/?country=${encodeURIComponent(country.code)}`,
+                    ...cMetrics,
+                  });
+                }
+              }
+            } else {
+              const sortedSubCountries = subCountries
+                .slice()
+                .sort((a, b) => collator.compare(a.name, b.name));
+              for (const country of sortedSubCountries) {
+                const cMetrics = computeMetrics(country, false);
+                rows.push({
+                  nodeId: `country:${country.code}`,
+                  parentId: subNodeId,
+                  rowKind: "country",
+                  regionLevel: "",
+                  treeDepth: 2,
+                  code: country.code,
+                  name: country.name,
+                  breadcrumb: subBreadcrumb,
+                  countryCount: 0,
+                  hasChildren: false,
+                  sortLast: false,
+                  shareOfGlobalTraffic: Number(
+                    country.shareOfGlobalTraffic || 0
+                  ),
+                  drilldownHref: `/?country=${encodeURIComponent(country.code)}`,
+                  ...cMetrics,
+                });
+              }
+            }
+          }
+        } else {
+          const sortedMacroCountries = macroCountries
+            .slice()
+            .sort((a, b) => collator.compare(a.name, b.name));
+          for (const country of sortedMacroCountries) {
+            const cMetrics = computeMetrics(country, false);
+            rows.push({
+              nodeId: `country:${country.code}`,
+              parentId: macroNodeId,
+              rowKind: "country",
+              regionLevel: "",
+              treeDepth: 1,
+              code: country.code,
+              name: country.name,
+              breadcrumb: macro.name,
+              countryCount: 0,
+              hasChildren: false,
+              sortLast: false,
+              shareOfGlobalTraffic: Number(country.shareOfGlobalTraffic || 0),
+              drilldownHref: `/?country=${encodeURIComponent(country.code)}`,
+              ...cMetrics,
+            });
+          }
+        }
+      }
+
+      const unmappedCountries = countries
+        .filter((c) => !c.regions?.macroRegion)
+        .sort((a, b) => collator.compare(a.name, b.name));
+
+      if (unmappedCountries.length > 0) {
+        const primaryUnmapped = unmappedCountries[0];
+        const unmappedGroupMetrics = computeMetrics(primaryUnmapped, false);
+        const unmappedNodeId = "region:XX";
+        regionGroupCount += 1;
+        rows.push({
+          nodeId: unmappedNodeId,
+          parentId: "",
+          rowKind: "region",
+          regionLevel: "macro",
+          treeDepth: 0,
+          code: "XX",
+          name: "Other / Unspecified",
+          breadcrumb: "Other / Unspecified",
+          countryCount: unmappedCountries.length,
+          hasChildren: true,
+          sortLast: true,
+          shareOfGlobalTraffic: Number(
+            primaryUnmapped.shareOfGlobalTraffic || 0
+          ),
+          drilldownHref: "/?country=XX",
+          ...unmappedGroupMetrics,
+        });
+
+        for (const country of unmappedCountries) {
+          const cMetrics = computeMetrics(country, false);
+          rows.push({
+            nodeId: `country:${country.code}`,
+            parentId: unmappedNodeId,
+            rowKind: "country",
+            regionLevel: "",
+            treeDepth: 1,
+            code: country.code,
+            name: country.name,
+            breadcrumb: "Other / Unspecified",
+            countryCount: 0,
+            hasChildren: false,
+            sortLast: true,
+            shareOfGlobalTraffic: Number(country.shareOfGlobalTraffic || 0),
+            drilldownHref: `/?country=${encodeURIComponent(country.code)}`,
+            ...cMetrics,
+          });
+        }
+      }
+
+      const globalRow = globalSummary
+        ? {
+            nodeId: "global:WW",
+            name: "Worldwide",
+            code: "WW",
+            shareOfGlobalTraffic: 100,
+            drilldownHref: "/",
+            ...computeMetrics(globalSummary, true),
+          }
+        : null;
+
+      return {
+        columns,
+        globalRow,
+        rows,
+        macroCount: macroList.length,
+        regionGroupCount,
+        countryCount: countries.length,
+        recentWindowDays:
+          globalSummary?.recentWindowDays ||
+          regionSummary.recentWindowDays ||
+          7,
+        recentStartDate:
+          globalSummary?.recentStartDate || regionSummary.recentStartDate || "",
+        recentEndDate:
+          globalSummary?.recentEndDate || regionSummary.recentEndDate || "",
+      };
+    }
+  );
+
   // Unpacks per-day files in src/_data/bigquery/global_daily_aggregates/<YYYY-MM-DD>.json
   // using each file's `schema` array to map compact row arrays into objects for display.
   eleventyConfig.addFilter("summarizeDailyAggregates", (dailyMap, limit = 25) => {
