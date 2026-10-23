@@ -1,0 +1,347 @@
+---
+layout: layouts/base.njk
+title: Regions & Countries — Baseline Availability
+description: Compare top-level Baseline Widely available, Newly available, and yearly Baseline availability across UN M49 regions, subregions, and countries.
+skipDefaultDataBundles: true
+---
+
+{% set regionsModel = baseline_region_summary | buildRegionsTableModel(baseline_country_summary, baseline_summary) %}
+
+{% if regionsModel and regionsModel.rows and regionsModel.rows.length > 0 %}
+<baseline-regions-table id="baseline-regions-table" class="regions-page-shell">
+  <section class="hero-section" aria-labelledby="page-main-heading">
+    <h1 id="page-main-heading" class="sr-only">Regions and Countries Baseline Availability</h1>
+    <p class="lead">
+      Compare top-level Baseline availability across UN M49 regions, subregions, and individual countries over the last {{ regionsModel.recentWindowDays }} days of Cloudflare BEACON RUM Archive traffic.
+    </p>
+
+    <div class="meta-pills" role="region" aria-label="Dataset summary">
+      <span class="meta-pill">
+        <strong>{{ regionsModel.recentWindowDays }}-day window:</strong>
+        <code>{{ regionsModel.recentStartDate }}</code> <span aria-hidden="true">&rarr;</span><span class="sr-only">to</span> <code>{{ regionsModel.recentEndDate }}</code>
+      </span>
+      <span class="meta-pill">
+        <strong>Coverage:</strong>
+        <span>{{ regionsModel.macroCount }} macro-regions &bull; {{ regionsModel.countryCount }} countries &amp; territories</span>
+      </span>
+      {% if baseline_summary and baseline_summary.avgMappedPercentage %}
+      <span class="meta-pill">
+        <strong>Global mapped traffic:</strong>
+        <span>{{ baseline_summary.avgMappedPercentage | formatPct }}</span><a href="#footnote-mapped-traffic" id="footnote-ref-mapped-traffic" class="footnote-ref" aria-label="Footnote: Why some traffic is not mapped" title="Why some traffic is not mapped">*</a>
+      </span>
+      {% endif %}
+    </div>
+
+    <div class="regions-top-bar" role="region" aria-label="Table grouping and WebView controls">
+      <div class="regions-control-group">
+        <span id="regions-groupby-label" class="location-filter-label">
+          <svg class="location-filter-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span>View</span>
+        </span>
+        <div class="metric-toggle-group" role="group" aria-labelledby="regions-groupby-label">
+          <button
+            type="button"
+            class="metric-toggle-btn"
+            data-group-by-btn="region"
+            aria-pressed="true"
+            id="btn-group-by-region"
+          >
+            Group by region
+          </button>
+          <button
+            type="button"
+            class="metric-toggle-btn"
+            data-group-by-btn="country"
+            aria-pressed="false"
+            id="btn-group-by-country"
+          >
+            Group by country
+          </button>
+        </div>
+      </div>
+
+      <div class="regions-control-group">
+        <span id="regions-webview-label" class="location-filter-label">
+          <svg class="location-filter-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span>WebViews</span>
+        </span>
+        <div class="metric-toggle-group" role="group" aria-labelledby="regions-webview-label">
+          <button
+            type="button"
+            class="metric-toggle-btn"
+            data-webview-mode="include"
+            aria-pressed="true"
+            id="btn-regions-webview-include"
+            aria-label="Include Android and iOS WebViews"
+          >
+            Include WebViews
+          </button>
+          <button
+            type="button"
+            class="metric-toggle-btn"
+            data-webview-mode="exclude"
+            aria-pressed="false"
+            id="btn-regions-webview-exclude"
+            aria-label="Exclude Android and iOS WebViews"
+          >
+            Exclude WebViews
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sr-only" aria-live="polite" aria-atomic="true" data-copy-link-live-region></div>
+  <div class="sr-only" aria-live="polite" aria-atomic="true" data-regions-live-region></div>
+
+  <section id="regional-availability" class="status-card regions-card" aria-labelledby="regional-availability-heading">
+    <div class="status-header regions-card-header">
+      <div class="status-header-main">
+        <h2 id="regional-availability-heading" class="status-heading-row">
+          <span class="status-heading-title">Regions &amp; Countries Availability</span>
+          <button
+            type="button"
+            class="section-link-btn"
+            data-copy-section-link="regional-availability"
+            data-section-title="Regions &amp; Countries Availability"
+            aria-label="Copy link to Regions and Countries Availability section"
+            title="Copy link to this section"
+          >
+            <svg class="section-link-icon section-link-icon-chain" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6.75 9.25a3.18 3.18 0 0 0 4.5 0l2-2a3.18 3.18 0 0 0-4.5-4.5l-1.1 1.1"></path>
+              <path d="M9.25 6.75a3.18 3.18 0 0 0-4.5 0l-2 2a3.18 3.18 0 0 0 4.5 4.5l1.1-1.1"></path>
+            </svg>
+            <svg class="section-link-icon section-link-icon-check" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3.5 8.5 6.5 11.5 12.5 4.5"></polyline>
+            </svg>
+            <span class="section-link-copied-badge" aria-hidden="true">Copied!</span>
+          </button>
+          <span class="scope-heading-badge" data-groupby-badge>Grouped by region</span>
+        </h2>
+        <p class="section-subtitle" data-regions-subtitle>
+          Expand any region row to view subregions and countries within, or select any column header to sort (<span data-webview-subtitle-note>including WebViews</span>).
+        </p>
+      </div>
+
+      <div class="regions-toolbar">
+        <div class="regions-search-wrap">
+          <label for="regions-search-input" class="sr-only">Filter regions or countries by name or ISO code</label>
+          <svg class="regions-search-icon" viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="9" cy="9" r="6"></circle>
+            <path d="m13.5 13.5 4 4"></path>
+          </svg>
+          <input
+            type="search"
+            id="regions-search-input"
+            class="regions-search-input"
+            data-regions-search
+            placeholder="Filter regions or countries..."
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button
+            type="button"
+            class="regions-search-clear"
+            data-regions-search-clear
+            hidden
+            aria-label="Clear filter"
+            title="Clear filter"
+          >
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 4l8 8M12 4l-8 8"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="regions-tree-actions" data-tree-actions role="group" aria-label="Expand or collapse all regions">
+          <button type="button" class="regions-tree-action-btn" data-expand-all-btn>Expand all</button>
+          <button type="button" class="regions-tree-action-btn" data-collapse-all-btn>Collapse all</button>
+        </div>
+      </div>
+    </div>
+
+    <svg class="sr-only" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="icon-drilldown-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 11 11 5"></path>
+          <path d="M6 5h5v5"></path>
+        </symbol>
+        <symbol id="icon-sort-chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2.25v7.5"></path>
+          <path d="m3 6.75 3 3 3-3"></path>
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="table-wrapper regions-table-wrapper">
+      <table class="data-table regions-table" id="regions-stats-table" data-group-mode="region">
+        <caption class="sr-only" data-regions-caption>
+          Last {{ regionsModel.recentWindowDays }} days average Baseline availability across UN M49 regions and countries
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="region-sticky-col region-header-name" aria-sort="ascending" data-sort-th="name">
+              <button
+                type="button"
+                class="regions-sort-btn regions-sort-btn-name is-sorted"
+                data-sort-btn="name"
+                data-sort-dir="asc"
+              >
+                <span data-name-col-label>Region / Country</span>
+                <span class="regions-sort-indicator" aria-hidden="true">
+                  <svg class="regions-sort-svg" width="11" height="11"><use href="#icon-sort-chevron"></use></svg>
+                </span>
+              </button>
+            </th>
+            {%- for col in regionsModel.columns %}
+            <th scope="col" class="num-col region-header-metric region-header-{{ col.kind }}" aria-sort="none" data-sort-th="{{ col.id }}">
+              <button
+                type="button"
+                class="regions-sort-btn regions-sort-btn-num"
+                data-sort-btn="{{ col.id }}"
+                data-sort-dir="none"
+                aria-label="Sort by {{ col.fullLabel }}"
+                title="Sort by {{ col.fullLabel }}"
+              >
+                {%- if col.kind == "widely" %}
+                <img src="/assets/img/baseline-widely-icon.svg" alt="" width="20" height="12" aria-hidden="true" class="regions-th-logo">
+                {%- elif col.kind == "newly" %}
+                <img src="/assets/img/baseline-newly-icon.svg" alt="" width="20" height="12" aria-hidden="true" class="regions-th-logo">
+                {%- endif %}
+                <span>{{ col.shortLabel }}</span>
+                <span class="regions-sort-indicator" aria-hidden="true">
+                  <svg class="regions-sort-svg" width="11" height="11"><use href="#icon-sort-chevron"></use></svg>
+                </span>
+              </button>
+            </th>
+            {%- endfor %}
+          </tr>
+        </thead>
+
+        {% if regionsModel.globalRow %}
+        <tbody class="regions-global-tbody" data-global-tbody>
+          <tr
+            class="region-table-row region-row-global"
+            data-node-id="{{ regionsModel.globalRow.nodeId }}"
+            data-has-data="{{ 'true' if regionsModel.globalRow.hasData else 'false' }}"
+            data-has-nowv-data="{{ 'true' if regionsModel.globalRow.hasNoWvData else 'false' }}"
+          >
+            <th scope="row" class="region-sticky-col region-name-cell">
+              <div class="region-cell-inner">
+                <span class="region-leaf-identity">
+                  <span class="opt-badge opt-badge-global">Global</span>
+                  <span class="region-label-text">{{ regionsModel.globalRow.name }}</span>
+                </span>
+                <a
+                  href="{{ regionsModel.globalRow.drilldownHref }}"
+                  class="region-drilldown-link"
+                  data-drilldown-link
+                  aria-label="View detailed charts for Worldwide"
+                  title="View detailed charts for Worldwide"
+                >
+                  <svg width="13" height="13" aria-hidden="true"><use href="#icon-drilldown-arrow"></use></svg>
+                </a>
+              </div>
+            </th>
+            {%- for cell in regionsModel.globalRow.cells %}
+            <td
+              class="num-col region-metric-cell region-col-{{ cell.kind }}{% if cell.pct === null %} is-no-data{% endif %}"
+              data-col="{{ cell.id }}"
+              data-pct="{{ '' if cell.pct === null else cell.pct }}"
+              data-pct-nowv="{{ '' if cell.pctNoWv === null else cell.pctNoWv }}"
+              {%- if cell.kind == "traffic" %} data-static-display="true"{% endif %}
+            >{% if cell.display %}{{ cell.display }}{% elif cell.pct === null %}&mdash;{% else %}{{ cell.pct | formatPct }}{% endif %}</td>
+            {%- endfor %}
+          </tr>
+        </tbody>
+        {% endif %}
+
+        <tbody class="regions-body-tbody" data-regions-tbody>
+          {%- for row in regionsModel.rows %}
+          <tr
+            class="region-table-row region-row-{{ row.rowKind }}{% if row.regionLevel %} region-level-{{ row.regionLevel }}{% endif %}{% if row.hasChildren %} is-expandable{% endif %}"
+            data-node-id="{{ row.nodeId }}"
+            data-parent-id="{{ row.parentId }}"
+            data-row-kind="{{ row.rowKind }}"
+            data-region-level="{{ row.regionLevel }}"
+            data-tree-depth="{{ row.treeDepth }}"
+            data-code="{{ row.code }}"
+            data-name="{{ row.name }}"
+            data-breadcrumb="{{ row.breadcrumb }}"
+            data-has-children="{{ 'true' if row.hasChildren else 'false' }}"
+            data-sort-last="{{ 'true' if row.sortLast else 'false' }}"
+            data-has-data="{{ 'true' if row.hasData else 'false' }}"
+            data-has-nowv-data="{{ 'true' if row.hasNoWvData else 'false' }}"
+            {% if row.treeDepth > 0 %}hidden{% endif %}
+          >
+            <th scope="row" class="region-sticky-col region-name-cell">
+              <div class="region-cell-inner">
+                {%- if row.hasChildren %}
+                <button
+                  type="button"
+                  class="region-expand-btn"
+                  data-expand-btn
+                  aria-expanded="false"
+                  aria-label="{{ row.name }} ({{ row.countryCount }} {% if row.countryCount == 1 %}country{% else %}countries{% endif %})"
+                >
+                  <span class="region-chevron-wrap" aria-hidden="true">
+                    <svg class="region-expand-chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m6 3.5 4.5 4.5L6 12.5"></path>
+                    </svg>
+                  </span>
+                  <span class="region-label-text">{{ row.name }}</span>
+                  <span class="region-child-badge" title="{{ row.countryCount }} {% if row.countryCount == 1 %}country{% else %}countries{% endif %}">{{ row.countryCount }}</span>
+                </button>
+                {%- else %}
+                <span class="region-leaf-identity">
+                  <span class="opt-badge opt-badge-country">{{ row.code }}</span>
+                  <span class="region-label-text">{{ row.name }}</span>
+                </span>
+                {%- endif %}
+                <a
+                  href="{{ row.drilldownHref }}"
+                  class="region-drilldown-link"
+                  data-drilldown-link
+                  aria-label="View detailed charts for {{ row.name }}"
+                  title="View detailed charts for {{ row.name }}"
+                >
+                  <svg width="13" height="13" aria-hidden="true"><use href="#icon-drilldown-arrow"></use></svg>
+                </a>
+              </div>
+            </th>
+            {%- for cell in row.cells %}
+            <td
+              class="num-col region-metric-cell region-col-{{ cell.kind }}{% if cell.pct === null %} is-no-data{% endif %}"
+              data-col="{{ cell.id }}"
+              data-pct="{{ '' if cell.pct === null else cell.pct }}"
+              data-pct-nowv="{{ '' if cell.pctNoWv === null else cell.pctNoWv }}"
+              {%- if cell.kind == "traffic" %} data-static-display="true"{% endif %}
+            >{% if cell.display %}{{ cell.display }}{% elif cell.pct === null %}&mdash;{% else %}{{ cell.pct | formatPct }}{% endif %}</td>
+            {%- endfor %}
+          </tr>
+          {%- endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="features-empty-state regions-empty-state" data-regions-empty hidden>
+      <p class="features-empty-title">No regions or countries match your filter.</p>
+      <button type="button" class="regions-tree-action-btn" data-regions-empty-reset>Clear filter</button>
+    </div>
+  </section>
+
+  {% include "partials/mapped-traffic-footnote.njk" %}
+</baseline-regions-table>
+{% else %}
+<section class="status-card">
+  <p class="empty-state">
+    No regional Baseline summary data generated yet. Run <code>npm run fetch-data</code> to query BigQuery and compute regional and country Baseline metrics.
+  </p>
+</section>
+{% endif %}
