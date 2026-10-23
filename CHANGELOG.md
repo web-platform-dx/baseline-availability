@@ -5,6 +5,16 @@ Update this changelog whenever a user-facing feature, data calculation change, o
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-10-23]
+
+### Added
+- **Per-feature copy-link buttons on `/features/`**: Added a copy-link icon button (`button.feature-link-btn`) next to the name of each feature that copies a direct URL to the current page with `?q=<feature-id>` while preserving all active location/region (`?country=`, `?region=`, `?exclude=`), WebView (`?webviews=exclude`), and feature/availability filters (`?avail=`, `?min_avail=`, `?max_avail=`, `?target=`, `?status=`, `?group=`, `?sort=`).
+
+## [2026-10-22]
+
+### Added
+- **Feature search & filter URL query parameters on `/features/`**: Synced the feature search bar (`?q=<query>`, also accepting `?search=`, `?feature=`, and `?filter=`), category dropdown (`?group=`), user availability threshold/range (`?avail=`, `?min_avail=`, `?max_avail=`), and sort order (`?sort=`) in `<baseline-features-explorer>` with the page URL and browser history (`pushState` / `replaceState` while typing and `popstate` restoration) so links to specific feature searches can be shared directly.
+
 ## [2026-10-15]
 
 ### Added

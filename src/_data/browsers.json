@@ -1,5 +1,5 @@
 {
-  "description": "Browser shortname definitions mapping RUM Archive USERAGENTFAMILY values to compact codes and baseline-browser-mapping identifiers.",
+  "description": "Browser shortname definitions mapping Cloudflare BEACON RUM Archive USERAGENTFAMILY values to compact codes and baseline-browser-mapping identifiers.",
   "familyToShort": {
     "Chrome": "c",
     "Chrome Mobile": "ca",

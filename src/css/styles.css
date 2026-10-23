@@ -3358,6 +3358,28 @@ baseline-features-explorer {
   color: var(--text-primary);
 }
 
+.feature-link-btn {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  margin-inline-start: -0.15rem;
+  color: var(--text-muted);
+}
+
+.feature-link-btn .section-link-icon {
+  inline-size: 0.85rem;
+  block-size: 0.85rem;
+}
+
+.feature-link-btn .section-link-copied-badge {
+  inset-block-end: auto;
+  inset-block-start: calc(100% + 0.25rem);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.feature-link-btn[data-copied="true"] .section-link-copied-badge {
+  transform: translateX(-50%) translateY(0);
+}
+
 .feature-id-badge {
   font-family: var(--font-mono);
   font-size: 0.74rem;
